@@ -38,7 +38,6 @@ require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-cache.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-api.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-admin.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-frontend.php';
-require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-updater.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-plugin.php';
 
 /**

@@ -70,7 +70,6 @@ final class Jiuliu_Immersive_Preloader {
 		require_once JIP_PLUGIN_DIR . 'includes/class-jip-settings.php';
 		require_once JIP_PLUGIN_DIR . 'includes/class-jip-admin.php';
 		require_once JIP_PLUGIN_DIR . 'includes/class-jip-frontend.php';
-		require_once JIP_PLUGIN_DIR . 'includes/class-jip-updater.php';
 	}
 
 	/**
@@ -125,7 +124,6 @@ final class Jiuliu_Immersive_Preloader {
 	public function init_modules() {
 		if ( is_admin() ) {
 			JIP_Admin::instance();
-			JIP_Updater::instance();
 		}
 		// 前台模块在前后台都需要注册，因为 wp_enqueue_scripts 是前台钩子。
 		JIP_Frontend::instance();

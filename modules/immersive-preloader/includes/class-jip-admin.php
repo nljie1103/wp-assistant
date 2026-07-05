@@ -126,8 +126,6 @@ class JIP_Admin {
 			'jip-admin',
 			'JIP_ADMIN',
 			array(
-				'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-				'nonce'       => wp_create_nonce( 'jip_admin_nonce' ),
 				'mediaTitle'  => '选择 Logo 图片',
 				'mediaButton' => '使用此图片',
 				'defaultLogo' => JIP_PLUGIN_URL . 'assets/images/default-logo.svg',
@@ -144,6 +142,16 @@ class JIP_Admin {
 		}
 		$options = JIP_Settings::get_options();
 		$effects = JIP_Settings::get_effects();
+		$tab     = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'basic'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tabs    = array(
+			'basic'    => '基础设置',
+			'effects'  => '效果选择',
+			'logo'     => 'Logo 设置',
+			'advanced' => '高级设置',
+		);
+		if ( ! isset( $tabs[ $tab ] ) ) {
+			$tab = 'basic';
+		}
 		?>
 		<div class="wrap jip-wrap">
 			<div class="jiuliu-admin-header">
@@ -154,9 +162,16 @@ class JIP_Admin {
 				<span class="jiuliu-version-badge">v<?php echo esc_html( JIP_VERSION ); ?></span>
 			</div>
 
+			<h2 class="nav-tab-wrapper jip-tabs">
+				<?php foreach ( $tabs as $key => $label ) : ?>
+					<a class="nav-tab <?php echo $tab === $key ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . JIP_MENU_SLUG . '&tab=' . $key ) ); ?>"><?php echo esc_html( $label ); ?></a>
+				<?php endforeach; ?>
+			</h2>
+
 			<form method="post" action="options.php" class="jip-form">
 				<?php settings_fields( 'jip_settings_group' ); ?>
 
+				<div class="jip-tab-panel <?php echo 'basic' === $tab ? 'is-active' : ''; ?>">
 				<!-- 1. 基础设置 -->
 				<div class="jip-card">
 					<h2 class="jip-card-title">基础设置</h2>
@@ -190,7 +205,9 @@ class JIP_Admin {
 						</tr>
 					</table>
 				</div>
+				</div>
 
+				<div class="jip-tab-panel <?php echo 'effects' === $tab ? 'is-active' : ''; ?>">
 				<!-- 2. 效果选择 -->
 				<div class="jip-card">
 					<h2 class="jip-card-title">效果选择</h2>
@@ -208,9 +225,11 @@ class JIP_Admin {
 						<?php endforeach; ?>
 					</div>
 				</div>
+				</div>
 
+				<div class="jip-tab-panel <?php echo 'logo' === $tab ? 'is-active' : ''; ?>">
 				<!-- 3. 自定义 Logo 设置（仅核心效果显示） -->
-				<div class="jip-card jip-logo-card" data-show-when-effect="logo3d" style="<?php echo ( 'logo3d' === $options['effect'] ) ? '' : 'display:none;'; ?>">
+				<div class="jip-card jip-logo-card" data-show-when-effect="logo3d" style="<?php echo ( defined( 'JLWA_IS_SUITE' ) || 'logo3d' === $options['effect'] ) ? '' : 'display:none;'; ?>">
 					<h2 class="jip-card-title">自定义 Logo 设置</h2>
 					<p class="description">仅核心效果（立体 Logo 开场）使用此 Logo。</p>
 					<table class="form-table" role="presentation">
@@ -243,7 +262,9 @@ class JIP_Admin {
 						</tr>
 					</table>
 				</div>
+				</div>
 
+				<div class="jip-tab-panel <?php echo 'advanced' === $tab ? 'is-active' : ''; ?>">
 				<!-- 4. 高级设置 -->
 				<div class="jip-card">
 					<h2 class="jip-card-title">高级设置</h2>
@@ -293,54 +314,10 @@ class JIP_Admin {
 						</tr>
 					</table>
 				</div>
+				</div>
 
 				<?php submit_button( '保存设置' ); ?>
 			</form>
-
-			<div class="jip-card jip-update-card">
-				<h2 class="jip-card-title">在线更新</h2>
-				<table class="form-table" role="presentation">
-					<tr>
-						<th scope="row">当前版本</th>
-						<td><strong>v<?php echo esc_html( JIP_VERSION ); ?></strong></td>
-					</tr>
-					<tr>
-						<th scope="row">远程仓库</th>
-						<td>
-							<a href="https://github.com/nljie1103/wp-immersive-preloader" target="_blank" rel="noopener">github.com/nljie1103/wp-immersive-preloader</a>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">检查更新</th>
-						<td>
-							<button type="button" class="button button-secondary" id="jip-check-update">
-								<span class="dashicons dashicons-update"></span>
-								立即检查更新
-							</button>
-							<button type="button" class="button" id="jip-do-update" disabled>
-								<span class="dashicons dashicons-download"></span>
-								一键在线更新
-							</button>
-							<div id="jip-update-status" class="jip-update-status">点击“立即检查更新”来对比本地与远程版本。</div>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">变更日志（最新）</th>
-						<td>
-							<pre id="jip-changelog" class="jip-changelog">（暂未获取，请先点击“立即检查更新”）</pre>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">数据保留说明</th>
-						<td>
-							<div class="jip-safety-note">
-								<strong>设置会保留。</strong><br>
-								插件设置存储在 WordPress 数据库的 <code>jiuliu_immersive_preloader_options</code> 中；在线更新只覆盖插件目录下的代码文件，不会删除数据库设置。更新前还会自动快照到 <code>jip_settings_backup</code>。
-							</div>
-						</td>
-					</tr>
-				</table>
-			</div>
 
 			<div class="jip-footer">
 				<p>作者：<a href="https://www.jiuliu.org" target="_blank" rel="noopener">九流</a> · 许可证：GPLv2+ · 版本：<?php echo esc_html( JIP_VERSION ); ?></p>

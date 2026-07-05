@@ -55,7 +55,6 @@ class JLWA_Module_Loader {
 				'constant'    => 'WPAIAS_VERSION',
 				'version'     => '1.0.9',
 				'repo'        => 'https://github.com/nljie1103/WP-AI-Article-Summary',
-				'update_url'  => admin_url( 'admin.php?page=wpaias-settings&tab=update' ),
 				'standalone'  => array(
 					'WP-AI-Article-Summary/wp-ai-article-summary.php',
 					'wp-ai-article-summary/wp-ai-article-summary.php',

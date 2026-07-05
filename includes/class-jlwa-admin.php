@@ -86,6 +86,15 @@ class JLWA_Admin {
 		}
 
 		wp_enqueue_style( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/css/admin.css', array(), JLWA_VERSION );
+		wp_enqueue_script( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/js/admin.js', array(), JLWA_VERSION, true );
+		wp_localize_script(
+			'jlwa-admin',
+			'JLWA_ADMIN',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'jlwa_update_nonce' ),
+			)
+		);
 	}
 
 	/**
@@ -163,27 +172,40 @@ class JLWA_Admin {
 		}
 		?>
 		<div class="wrap jlwa-wrap">
-			<?php $this->render_header( '更新中心', '集中查看四个模块版本、仓库来源和模块内更新入口。' ); ?>
+			<?php $this->render_header( '更新中心', '九流WP助手只从 nljie1103/wp-assistant 主仓库更新整个套件。' ); ?>
 
-			<div class="jlwa-update-list">
-				<?php foreach ( JLWA_Module_Loader::modules() as $key => $module ) : ?>
-					<?php $status = $this->get_status( $key ); ?>
-					<section class="jlwa-update-row">
-						<div>
-							<h2><?php echo esc_html( $module['label'] ); ?></h2>
-							<p>本地版本：<strong><?php echo esc_html( $this->module_version( $key, $module ) ); ?></strong></p>
-							<p><a href="<?php echo esc_url( $module['repo'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $module['repo'] ); ?></a></p>
+			<section class="jlwa-update-box">
+				<div class="jlwa-update-box__main">
+					<div class="jlwa-version-tile">
+						<span>当前版本</span>
+						<strong>v<?php echo esc_html( JLWA_VERSION ); ?></strong>
+					</div>
+					<div class="jlwa-update-source">
+						<h2>主仓库更新源</h2>
+						<p><a href="https://github.com/nljie1103/wp-assistant" target="_blank" rel="noopener noreferrer">github.com/nljie1103/wp-assistant</a></p>
+						<p>更新会覆盖九流WP助手整个插件目录，四个模块随主仓库一起发布，不再分别更新。</p>
+					</div>
+				</div>
+				<div class="jlwa-update-actions">
+					<button type="button" class="button button-secondary" id="jlwa-check-update">立即检查更新</button>
+					<button type="button" class="button button-primary" id="jlwa-do-update" disabled>一键更新套件</button>
+					<a class="button" href="https://github.com/nljie1103/wp-assistant/releases" target="_blank" rel="noopener noreferrer">打开 Releases</a>
+				</div>
+				<div id="jlwa-update-status" class="jlwa-update-status">点击“立即检查更新”来对比本地与主仓库版本。</div>
+				<pre id="jlwa-update-log" class="jlwa-update-log">（暂未获取，请先点击“立即检查更新”）</pre>
+			</section>
+
+			<section class="jlwa-module-versions">
+				<h2>套件内模块版本</h2>
+				<div class="jlwa-version-grid">
+					<?php foreach ( JLWA_Module_Loader::modules() as $key => $module ) : ?>
+						<div class="jlwa-version-card">
+							<strong><?php echo esc_html( $module['label'] ); ?></strong>
+							<span>v<?php echo esc_html( $this->module_version( $key, $module ) ); ?></span>
 						</div>
-						<div class="jlwa-update-row__actions">
-							<?php if ( ! empty( $status['loaded'] ) ) : ?>
-								<a class="button button-primary" href="<?php echo esc_url( $this->module_update_url( $key, $module ) ); ?>">进入模块更新</a>
-							<?php else : ?>
-								<span class="jlwa-status-badge is-off">模块未加载</span>
-							<?php endif; ?>
-						</div>
-					</section>
-				<?php endforeach; ?>
-			</div>
+					<?php endforeach; ?>
+				</div>
+			</section>
 		</div>
 		<?php
 	}
@@ -239,25 +261,6 @@ class JLWA_Admin {
 	}
 
 	/**
-	 * Module update URL.
-	 *
-	 * @param string $key Module key.
-	 * @param array  $module Module definition.
-	 * @return string
-	 */
-	protected function module_update_url( $key, $module ) {
-		if ( ! empty( $module['update_url'] ) ) {
-			return $module['update_url'];
-		}
-
-		if ( 'ai-article-summary' === $key ) {
-			return admin_url( 'admin.php?page=' . $module['slug'] . '&tab=update' );
-		}
-
-		return $this->module_admin_url( $module );
-	}
-
-	/**
 	 * Module version.
 	 *
 	 * @param string $key Module key.
@@ -294,7 +297,7 @@ class JLWA_Admin {
 		$descriptions = array(
 			'page-effects'        => '樱花、雪花、灯笼、粒子、右键菜单、背景音乐等页面氛围与交互增强。',
 			'relative-media-urls' => '反向代理、多入口域名、媒体相对地址、历史内容扫描与 Nginx 配置辅助。',
-			'ai-article-summary'  => '文章 AI 摘要生成、模型选择、样式预览、缓存管理和在线更新。',
+			'ai-article-summary'  => '文章 AI 摘要生成、模型选择、样式预览、缓存管理和主题兼容设置。',
 			'immersive-preloader' => '首页沉浸式预加载动画、自定义 Logo、加载时长与跳过策略。',
 		);
 

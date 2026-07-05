@@ -7,6 +7,18 @@
 	max-width: 1100px;
 }
 
+.jip-tabs {
+	margin-bottom: 18px;
+}
+
+.jip-tab-panel {
+	display: none;
+}
+
+.jip-tab-panel.is-active {
+	display: block;
+}
+
 .jiuliu-admin-header {
 	align-items: center;
 	background: #fff;
@@ -194,61 +206,4 @@
 	text-align: center;
 	color: #888;
 	font-size: 12px;
-}
-
-.jip-update-card .button .dashicons {
-	vertical-align: middle;
-	margin: 3px 4px 0 0;
-}
-
-.jip-update-card #jip-do-update {
-	margin-left: 8px;
-}
-
-.jip-update-status {
-	margin-top: 10px;
-	padding: 10px 12px;
-	border-left: 4px solid #c3c4c7;
-	background: #f6f7f7;
-	color: #3c434a;
-}
-
-.jip-update-status.ok {
-	border-left-color: #00a32a;
-	background: #f0f8f1;
-}
-
-.jip-update-status.warn {
-	border-left-color: #dba617;
-	background: #fcf9e8;
-}
-
-.jip-update-status.fail {
-	border-left-color: #d63638;
-	background: #fcf0f1;
-}
-
-.jip-update-status.pending {
-	border-left-color: #2271b1;
-	background: #f0f6fc;
-}
-
-.jip-changelog {
-	max-width: 720px;
-	max-height: 220px;
-	overflow: auto;
-	margin: 0;
-	padding: 12px;
-	background: #1d2327;
-	color: #f0f0f1;
-	border-radius: 6px;
-	white-space: pre-wrap;
-}
-
-.jip-safety-note {
-	max-width: 720px;
-	padding: 12px;
-	background: #f6f7f7;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
 }

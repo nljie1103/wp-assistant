@@ -6,6 +6,9 @@
 @media (max-width: 782px){ .jiuliu-admin-header { align-items:flex-start; flex-direction:column; } }
 .xjpe-wrap { max-width: 1320px; }
 .xjpe-subtitle { font-size: 15px; color: #666; }
+.xjpe-tabs { margin-bottom:18px; }
+.xjpe-tab-panel { display:none; }
+.xjpe-tab-panel.is-active { display:block; }
 .xjpe-savebar,
 .xjpe-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:16px 0; }
 .xjpe-savebar-note { color:#666; }
@@ -32,12 +35,4 @@
 .xjpe-tip { color:#646970; background:#f6f7f7; border-left:4px solid #72aee6; padding:10px 12px; }
 .xjpe-code-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
 .xjpe-code-field textarea { font-family:Consolas, Monaco, monospace; }
-.xjpe-update-card { border:1px solid #dcdcde; border-radius:14px; padding:16px; background:#f8f9fa; }
-.xjpe-update-main { display:flex; gap:18px; flex-wrap:wrap; align-items:stretch; }
-.xjpe-version-badge { min-width:140px; border-radius:14px; background:#2271b1; color:#fff; padding:14px 18px; }
-.xjpe-version-badge span { display:block; opacity:.86; }
-.xjpe-version-badge strong { font-size:26px; }
-.xjpe-version-source { display:flex; flex-direction:column; gap:6px; justify-content:center; }
-.xjpe-update-result { margin-top:12px; padding:12px; border-radius:10px; background:#fff; border:1px solid #dcdcde; }
-.xjpe-update-log { margin-top:12px; padding:12px; max-height:260px; overflow:auto; background:#1d2327; color:#f0f0f1; border-radius:10px; white-space:pre-wrap; }
 @media (max-width: 782px){ .xjpe-global-panel { grid-template-columns:1fr; } }

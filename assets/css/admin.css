@@ -122,6 +122,124 @@
 	gap: 14px;
 }
 
+.jlwa-update-box,
+.jlwa-module-versions {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+	margin-bottom: 16px;
+	padding: 18px 20px;
+}
+
+.jlwa-update-box__main {
+	align-items: center;
+	display: flex;
+	gap: 18px;
+}
+
+.jlwa-version-tile {
+	background: #f0f6fc;
+	border: 1px solid #c5d9ed;
+	border-radius: 10px;
+	color: #135e96;
+	min-width: 150px;
+	padding: 14px 16px;
+}
+
+.jlwa-version-tile span {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.jlwa-version-tile strong {
+	font-size: 26px;
+	line-height: 1;
+}
+
+.jlwa-update-source h2,
+.jlwa-module-versions h2 {
+	font-size: 16px;
+	margin: 0 0 8px;
+}
+
+.jlwa-update-source p {
+	color: #50575e;
+	line-height: 1.6;
+	margin: 4px 0;
+}
+
+.jlwa-update-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+.jlwa-update-status {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	color: #50575e;
+	margin-top: 14px;
+	padding: 10px 12px;
+}
+
+.jlwa-update-status.is-success {
+	background: #edfaef;
+	border-color: #b8e6bf;
+	color: #008a20;
+}
+
+.jlwa-update-status.is-warning {
+	background: #fff8e5;
+	border-color: #f0c36d;
+	color: #8a5a00;
+}
+
+.jlwa-update-status.is-error {
+	background: #fcf0f1;
+	border-color: #facfd2;
+	color: #b32d2e;
+}
+
+.jlwa-update-log {
+	background: #1d2327;
+	border-radius: 8px;
+	color: #f0f0f1;
+	margin: 12px 0 0;
+	max-height: 260px;
+	overflow: auto;
+	padding: 12px;
+	white-space: pre-wrap;
+}
+
+.jlwa-version-grid {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.jlwa-version-card {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding: 12px 14px;
+}
+
+.jlwa-version-card strong,
+.jlwa-version-card span {
+	display: block;
+}
+
+.jlwa-version-card span {
+	color: #646970;
+	margin-top: 4px;
+}
+
 .jlwa-update-row__actions {
 	justify-content: flex-end;
 	margin-top: 0;
@@ -139,5 +257,10 @@
 	.jlwa-update-row__actions {
 		justify-content: flex-start;
 		min-width: 0;
+	}
+
+	.jlwa-update-box__main {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 }

@@ -4,7 +4,7 @@ Tags: wordpress, ai summary, media urls, effects, preloader
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 * 如果检测到旧独立插件已启用，会跳过对应模块，避免同名类冲突。
 
 == Changelog ==
+
+= 0.1.1 =
+* 将页面美化和沉浸式预加载改为类似 AI 文章摘要的 tab 分区后台。
+* 移除套件内四个模块各自的在线更新入口。
+* 新增九流WP助手主仓库统一更新中心，仅从 nljie1103/wp-assistant 更新整个套件。
 
 = 0.1.0 =
 * 新增九流WP助手套件插件骨架。

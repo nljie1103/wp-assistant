@@ -133,25 +133,6 @@
 }
 .wpaias-mb .button-link-delete { color: #b32424; cursor: pointer; }
 
-/* 在线更新 */
-.wpaias-update-box { background: #fff; border: 1px solid #e2e4e7; border-radius: 8px; padding: 8px 24px; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
-
-.wpaias-update-status {
-	display: block;
-	margin-top: 10px;
-	padding: 10px 14px;
-	border-radius: 6px;
-	font-size: 13px;
-	line-height: 1.6;
-	border: 1px solid #ddd;
-	background: #f6f7f7;
-	color: #444;
-}
-.wpaias-update-status.pending { background: #fff8e1; border-color: #ffe08a; color: #715a14; }
-.wpaias-update-status.ok      { background: #e7f5e7; border-color: #a3d4a3; color: #1f7a1f; }
-.wpaias-update-status.warn    { background: #fff4e5; border-color: #ffb86b; color: #9a4f00; }
-.wpaias-update-status.fail    { background: #fde8e8; border-color: #f5b1b1; color: #b32424; }
-
 /* ==========================================================================
    外观样式 Tab - 卡片预设网格 + 颜色选择器 + 实时预览
    ========================================================================== */

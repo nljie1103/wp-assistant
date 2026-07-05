@@ -45,10 +45,6 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
             register_activation_hook( __FILE__, array( __CLASS__, 'activate' ) );
             add_action( 'template_redirect', array( $this, 'maybe_start_buffer_injection' ), 0 );
 
-            if ( is_admin() ) {
-                require_once plugin_dir_path( __FILE__ ) . 'includes/class-xjpe-updater.php';
-                XJPE_Updater::instance( __FILE__ );
-            }
         }
 
         public static function activate() {
@@ -165,14 +161,6 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                     'injection_mode' => 'buffer',
                     'body_wait'     => 1,
                     'safe_mode'     => 1,
-                ),
-                'update' => array(
-                    'enabled'      => 1,
-                    'github_owner' => 'nljie1103',
-                    'github_repo'  => 'wp-page-effects',
-                    'branch'       => 'main',
-                    'main_file'    => 'wp-page-effects.php',
-                    'zip_url'      => '',
                 ),
                 'effects' => array(
                     'sakura' => array(
@@ -353,16 +341,6 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
             $output['compat']['body_wait']     = empty( $compat['body_wait'] ) ? 0 : 1;
             $output['compat']['safe_mode']     = empty( $compat['safe_mode'] ) ? 0 : 1;
 
-            $update = isset( $input['update'] ) && is_array( $input['update'] ) ? $input['update'] : array();
-            $output['update']['enabled']      = empty( $update['enabled'] ) ? 0 : 1;
-            $output['update']['github_owner'] = sanitize_key( $update['github_owner'] ?? 'nljie1103' );
-            $output['update']['github_repo']  = sanitize_key( $update['github_repo'] ?? 'wp-page-effects' );
-            $output['update']['branch']       = sanitize_key( $update['branch'] ?? 'main' );
-            $main_file = isset( $update['main_file'] ) ? wp_strip_all_tags( (string) $update['main_file'] ) : 'wp-page-effects.php';
-            $main_file = preg_replace( '/[^a-zA-Z0-9_\-\.\/]/', '', $main_file );
-            $output['update']['main_file']    = $main_file ? ltrim( $main_file, '/' ) : 'wp-page-effects.php';
-            $output['update']['zip_url']      = esc_url_raw( $update['zip_url'] ?? '' );
-
             $effects = isset( $input['effects'] ) && is_array( $input['effects'] ) ? $input['effects'] : array();
 
             foreach ( $defaults['effects'] as $key => $default_effect ) {
@@ -475,15 +453,6 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
             wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
             wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
-            wp_localize_script(
-                'xjpe-admin',
-                'XJPE_ADMIN',
-                array(
-                    'ajax_url' => admin_url( 'admin-ajax.php' ),
-                    'nonce'    => wp_create_nonce( 'xjpe_admin_nonce' ),
-                    'version'  => self::VERSION,
-                )
-            );
         }
 
         public function enqueue_frontend_assets() {
@@ -652,6 +621,16 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
             $options = $this->get_options();
             $defs    = self::effect_definitions();
+            $tab     = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'basic'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            $tabs    = array(
+                'basic'       => '基础设置',
+                'effects'     => '特效管理',
+                'custom-code' => '自定义代码',
+                'diagnostics' => '前台诊断',
+            );
+            if ( ! isset( $tabs[ $tab ] ) ) {
+                $tab = 'basic';
+            }
             ?>
             <div class="wrap xjpe-wrap">
                 <div class="jiuliu-admin-header">
@@ -665,6 +644,12 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                     <div class="notice notice-success inline"><p><strong>配置已保存。</strong> 请刷新前台页面，或点击“打开前台预览”测试特效。</p></div>
                 <?php endif; ?>
 
+                <h2 class="nav-tab-wrapper xjpe-tabs">
+                    <?php foreach ( $tabs as $key => $label ) : ?>
+                        <a class="nav-tab <?php echo $tab === $key ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=' . $key ) ); ?>"><?php echo esc_html( $label ); ?></a>
+                    <?php endforeach; ?>
+                </h2>
+
                 <form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>" class="xjpe-form" id="xjpe-settings-form">
                     <input type="hidden" name="xjpe_direct_save" value="1">
                     <input type="hidden" name="action" value="xjpe_save_options">
@@ -676,123 +661,101 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                         <span class="xjpe-savebar-note">保存后页面会返回并显示“配置已保存”，不会悄悄无反应。</span>
                     </div>
 
-                    <section class="xjpe-panel xjpe-global-panel">
-                        <div>
-                            <h2>全局设置</h2>
-                            <p>控制插件是否加载、是否在手机端启用、是否尊重系统减少动态效果。</p>
-                        </div>
-                        <div class="xjpe-global-grid">
-                            <?php $this->render_checkbox( 'global', 'enabled', '启用插件总开关', $options['global']['enabled'] ); ?>
-                            <?php $this->render_checkbox( 'global', 'mobile_enabled', '手机端也启用', $options['global']['mobile_enabled'] ); ?>
-                            <?php $this->render_checkbox( 'global', 'respect_reduce_motion', '尊重系统减少动态效果', $options['global']['respect_reduce_motion'] ); ?>
-                            <label class="xjpe-field">
-                                <span>层级 z-index</span>
-                                <input type="number" min="1000" max="2147483000" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][z_index]" value="<?php echo esc_attr( $options['global']['z_index'] ); ?>">
-                            </label>
-                        </div>
-                    </section>
+                    <div class="xjpe-tab-panel <?php echo 'basic' === $tab ? 'is-active' : ''; ?>">
+                        <section class="xjpe-panel xjpe-global-panel">
+                            <div>
+                                <h2>基础设置</h2>
+                                <p>控制插件是否加载、移动端策略和全站层级。</p>
+                            </div>
+                            <div class="xjpe-global-grid">
+                                <?php $this->render_checkbox( 'global', 'enabled', '启用插件总开关', $options['global']['enabled'] ); ?>
+                                <?php $this->render_checkbox( 'global', 'mobile_enabled', '手机端也启用', $options['global']['mobile_enabled'] ); ?>
+                                <?php $this->render_checkbox( 'global', 'respect_reduce_motion', '尊重系统减少动态效果', $options['global']['respect_reduce_motion'] ); ?>
+                                <label class="xjpe-field">
+                                    <span>层级 z-index</span>
+                                    <input type="number" min="1000" max="2147483000" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][z_index]" value="<?php echo esc_attr( $options['global']['z_index'] ); ?>">
+                                </label>
+                            </div>
+                        </section>
 
-                    <section class="xjpe-panel">
-                        <h2>主题兼容设置</h2>
-                        <p>美化插件默认不插入文章正文，而是使用独立的全站覆盖层，适配 Zibll、子比、Astra、Divi、Elementor、古腾堡区块主题、FSE 等大多数主题。</p>
-                        <div class="xjpe-global-grid">
-                            <label class="xjpe-field">
-                                <span>注入模式</span>
-                                <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][injection_mode]">
-                                    <option value="enqueue" <?php selected( $options['compat']['injection_mode'], 'enqueue' ); ?>>标准模式：WordPress 队列加载，推荐正常主题</option>
-                                    <option value="head_footer" <?php selected( $options['compat']['injection_mode'], 'head_footer' ); ?>>强制钩子模式：直接输出资源，适合魔改主题</option>
-                                    <option value="buffer" <?php selected( $options['compat']['injection_mode'], 'buffer' ); ?>>终极兼容模式：HTML 缓冲注入，适合缺失 wp_head/wp_footer 的主题</option>
-                                </select>
-                            </label>
-                            <label class="xjpe-field">
-                                <span>前台 JS 加载位置</span>
-                                <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][load_location]">
-                                    <option value="head" <?php selected( $options['compat']['load_location'], 'head' ); ?>>头部加载：兼容优先</option>
-                                    <option value="footer" <?php selected( $options['compat']['load_location'], 'footer' ); ?>>页脚加载：性能优先</option>
-                                </select>
-                            </label>
-                            <?php $this->render_checkbox( 'compat', 'body_wait', '等待 DOM 完成后再创建特效层', $options['compat']['body_wait'] ); ?>
-                            <?php $this->render_checkbox( 'compat', 'safe_mode', '安全模式：特效层默认不拦截鼠标点击', $options['compat']['safe_mode'] ); ?>
-                        </div>
-                        <p class="xjpe-tip">兼容原则：不用 the_content，不依赖主题文章容器，不修改主题文件；如果标准模式无效，改成“强制钩子模式”，再不行改成“终极兼容模式”。</p>
-                    </section>
-
-                    <div class="xjpe-toolbar">
-                        <button type="button" class="button" data-xjpe-enable-all>全部启用</button>
-                        <button type="button" class="button" data-xjpe-disable-all>全部关闭</button>
-                        <a class="button" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">打开前台预览</a>
+                        <section class="xjpe-panel">
+                            <h2>主题兼容设置</h2>
+                            <p>不插入文章正文，而是使用独立的全站覆盖层，适配 Zibll、Astra、Divi、Elementor、FSE 等主题。</p>
+                            <div class="xjpe-global-grid">
+                                <label class="xjpe-field">
+                                    <span>注入模式</span>
+                                    <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][injection_mode]">
+                                        <option value="enqueue" <?php selected( $options['compat']['injection_mode'], 'enqueue' ); ?>>标准模式：WordPress 队列加载，推荐正常主题</option>
+                                        <option value="head_footer" <?php selected( $options['compat']['injection_mode'], 'head_footer' ); ?>>强制钩子模式：直接输出资源，适合魔改主题</option>
+                                        <option value="buffer" <?php selected( $options['compat']['injection_mode'], 'buffer' ); ?>>终极兼容模式：HTML 缓冲注入，适合缺失 wp_head/wp_footer 的主题</option>
+                                    </select>
+                                </label>
+                                <label class="xjpe-field">
+                                    <span>前台 JS 加载位置</span>
+                                    <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][load_location]">
+                                        <option value="head" <?php selected( $options['compat']['load_location'], 'head' ); ?>>头部加载：兼容优先</option>
+                                        <option value="footer" <?php selected( $options['compat']['load_location'], 'footer' ); ?>>页脚加载：性能优先</option>
+                                    </select>
+                                </label>
+                                <?php $this->render_checkbox( 'compat', 'body_wait', '等待 DOM 完成后再创建特效层', $options['compat']['body_wait'] ); ?>
+                                <?php $this->render_checkbox( 'compat', 'safe_mode', '安全模式：特效层默认不拦截鼠标点击', $options['compat']['safe_mode'] ); ?>
+                            </div>
+                            <p class="xjpe-tip">如果标准模式无效，改成“强制钩子模式”，再不行改成“终极兼容模式”。</p>
+                        </section>
                     </div>
 
-                    <section class="xjpe-effects-grid">
-                        <?php foreach ( $defs as $key => $def ) : ?>
-                            <?php $effect = $options['effects'][ $key ]; ?>
-                            <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card>
-                                <label class="xjpe-card-head">
-                                    <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?>>
-                                    <span class="xjpe-icon"><?php echo esc_html( $def['icon'] ); ?></span>
-                                    <span class="xjpe-card-text">
-                                        <strong><?php echo esc_html( $def['title'] ); ?></strong>
-                                        <small><?php echo esc_html( $def['desc'] ); ?></small>
-                                        <em class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '● 已启用' : '○ 未启用'; ?></em>
-                                    </span>
+                    <div class="xjpe-tab-panel <?php echo 'effects' === $tab ? 'is-active' : ''; ?>">
+                        <div class="xjpe-toolbar">
+                            <button type="button" class="button" data-xjpe-enable-all>全部启用</button>
+                            <button type="button" class="button" data-xjpe-disable-all>全部关闭</button>
+                            <a class="button" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">打开前台预览</a>
+                        </div>
+
+                        <section class="xjpe-effects-grid">
+                            <?php foreach ( $defs as $key => $def ) : ?>
+                                <?php $effect = $options['effects'][ $key ]; ?>
+                                <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card>
+                                    <label class="xjpe-card-head">
+                                        <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?>>
+                                        <span class="xjpe-icon"><?php echo esc_html( $def['icon'] ); ?></span>
+                                        <span class="xjpe-card-text">
+                                            <strong><?php echo esc_html( $def['title'] ); ?></strong>
+                                            <small><?php echo esc_html( $def['desc'] ); ?></small>
+                                            <em class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '● 已启用' : '○ 未启用'; ?></em>
+                                        </span>
+                                    </label>
+                                    <div class="xjpe-card-body">
+                                        <?php $this->render_effect_fields( $key, $effect ); ?>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </section>
+                    </div>
+
+                    <div class="xjpe-tab-panel <?php echo 'custom-code' === $tab ? 'is-active' : ''; ?>">
+                        <section class="xjpe-panel">
+                            <h2>自定义代码注入</h2>
+                            <p>只有管理员能填写。用于补充你自己的全站 CSS / JS；不填写就不加载。</p>
+                            <div class="xjpe-code-grid">
+                                <label class="xjpe-field xjpe-code-field">
+                                    <span>自定义 CSS</span>
+                                    <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_css]" rows="8" spellcheck="false" placeholder="body { } ..."><?php echo esc_textarea( $options['global']['custom_css'] ); ?></textarea>
                                 </label>
-                                <div class="xjpe-card-body">
-                                    <?php $this->render_effect_fields( $key, $effect ); ?>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </section>
-
-                    <section class="xjpe-panel xjpe-update-panel" id="xjpe-update-panel">
-                        <h2>在线更新</h2>
-                        <p>这一块已经按 <strong>WP-AI-Article-Summary</strong> 的方式重做：固定从 GitHub 仓库读取主插件文件 Version，读取 readme.txt 变更日志，下载 GitHub 分支 ZIP，解压后覆盖当前插件目录，并在更新前保存当前配置快照。</p>
-
-                        <div class="xjpe-update-card">
-                            <div class="xjpe-update-main">
-                                <div class="xjpe-version-badge">
-                                    <span>当前版本</span>
-                                    <strong>v<?php echo esc_html( self::VERSION ); ?></strong>
-                                </div>
-                                <div class="xjpe-version-source">
-                                    <strong>更新源</strong>
-                                    <code>github.com/nljie1103/wp-page-effects</code>
-                                    <small>主文件：<code>wp-page-effects.php</code>；分支：<code>main</code></small>
-                                </div>
+                                <label class="xjpe-field xjpe-code-field">
+                                    <span>自定义 JS</span>
+                                    <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_js]" rows="8" spellcheck="false" placeholder="console.log('hello');"><?php echo esc_textarea( $options['global']['custom_js'] ); ?></textarea>
+                                </label>
                             </div>
+                        </section>
+                    </div>
 
-                            <div class="xjpe-toolbar xjpe-update-actions">
-                                <button type="button" class="button" id="xjpe-check-update">检查更新</button>
-                                <button type="button" class="button button-primary" id="xjpe-do-update" disabled>立即更新</button>
-                                <a class="button" href="https://github.com/nljie1103/wp-page-effects" target="_blank" rel="noopener noreferrer">打开 GitHub 仓库</a>
-                            </div>
-
-                            <div id="xjpe-update-result" class="xjpe-update-result">当前版本：v<?php echo esc_html( self::VERSION ); ?>。点击“检查更新”后会显示远程版本。</div>
-                            <pre id="xjpe-update-log" class="xjpe-update-log" hidden></pre>
-                        </div>
-
-                        <p class="xjpe-tip">说明：后台更新不会改文章、不清空特效配置；更新前会备份 <code>xjpe_options</code> 到 <code>xjpe_options_backup</code>。以后只要把新版代码推送到 GitHub，并提升插件头部 <code>Version</code>，这里就能检测到。</p>
-                    </section>
-
-                    <section class="xjpe-panel">
-                        <h2>自定义代码注入</h2>
-                        <p>只有管理员能填写。用于补充你自己的全站 CSS / JS；不填写就不加载。</p>
-                        <div class="xjpe-code-grid">
-                            <label class="xjpe-field xjpe-code-field">
-                                <span>自定义 CSS</span>
-                                <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_css]" rows="8" spellcheck="false" placeholder="body { } ..."><?php echo esc_textarea( $options['global']['custom_css'] ); ?></textarea>
-                            </label>
-                            <label class="xjpe-field xjpe-code-field">
-                                <span>自定义 JS</span>
-                                <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_js]" rows="8" spellcheck="false" placeholder="console.log('hello');"><?php echo esc_textarea( $options['global']['custom_js'] ); ?></textarea>
-                            </label>
-                        </div>
-                    </section>
-
-                    <section class="xjpe-panel">
-                        <h2>前台诊断</h2>
-                        <p>保存后打开前台源代码，搜索 <code>九流页面美化特效</code> 或 <code>xjpe-frontend-js</code>。能搜到说明插件已经注入；看不到则把注入模式改成“终极兼容模式”。</p>
-                        <p class="xjpe-tip">当前注入模式：<strong><?php echo esc_html( $options['compat']['injection_mode'] ); ?></strong>；当前已启用特效：<strong><?php echo esc_html( $this->enabled_effect_names( $options, $defs ) ); ?></strong></p>
-                    </section>
+                    <div class="xjpe-tab-panel <?php echo 'diagnostics' === $tab ? 'is-active' : ''; ?>">
+                        <section class="xjpe-panel">
+                            <h2>前台诊断</h2>
+                            <p>保存后打开前台源代码，搜索 <code>九流页面美化特效</code> 或 <code>xjpe-frontend-js</code>。能搜到说明插件已经注入；看不到则把注入模式改成“终极兼容模式”。</p>
+                            <p class="xjpe-tip">当前注入模式：<strong><?php echo esc_html( $options['compat']['injection_mode'] ); ?></strong>；当前已启用特效：<strong><?php echo esc_html( $this->enabled_effect_names( $options, $defs ) ); ?></strong></p>
+                        </section>
+                    </div>
 
                     <?php submit_button( '保存美化配置' ); ?>
                 </form>
