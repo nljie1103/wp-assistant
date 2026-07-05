@@ -1,0 +1,23 @@
+# 操作系统垃圾
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# 构建产物
+*.zip
+*.tar.gz
+node_modules/
+vendor/
+
+# 日志
+*.log
+
+# WordPress 本地测试用临时文件
+*.bak

@@ -1,0 +1,143 @@
+.jlwa-wrap {
+	max-width: 1180px;
+}
+
+.jiuliu-admin-header {
+	align-items: center;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 12px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+	display: flex;
+	gap: 16px;
+	justify-content: space-between;
+	margin: 16px 0 18px;
+	padding: 18px 20px;
+}
+
+.jiuliu-admin-header h1 {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+	font-size: 24px !important;
+	font-weight: 600;
+	line-height: 1.25;
+	margin: 0 !important;
+}
+
+.jiuliu-admin-header .dashicons {
+	color: #2271b1;
+	font-size: 28px;
+	height: 28px;
+	width: 28px;
+}
+
+.jiuliu-admin-subtitle {
+	color: #646970;
+	font-size: 14px;
+	line-height: 1.6;
+	margin: 6px 0 0;
+}
+
+.jiuliu-version-badge,
+.jlwa-status-badge {
+	background: #f0f6fc;
+	border: 1px solid #c5d9ed;
+	border-radius: 999px;
+	color: #135e96;
+	display: inline-flex;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.4;
+	padding: 5px 10px;
+	white-space: nowrap;
+}
+
+.jlwa-status-badge.is-on {
+	background: #edfaef;
+	border-color: #b8e6bf;
+	color: #008a20;
+}
+
+.jlwa-status-badge.is-off {
+	background: #fcf0f1;
+	border-color: #facfd2;
+	color: #b32d2e;
+}
+
+.jlwa-module-grid {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.jlwa-module-card,
+.jlwa-update-row {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+	padding: 18px 20px;
+}
+
+.jlwa-module-card__head,
+.jlwa-update-row {
+	align-items: flex-start;
+	display: flex;
+	gap: 16px;
+	justify-content: space-between;
+}
+
+.jlwa-module-card h2,
+.jlwa-update-row h2 {
+	font-size: 16px;
+	line-height: 1.4;
+	margin: 0;
+}
+
+.jlwa-module-card p,
+.jlwa-update-row p {
+	color: #50575e;
+	line-height: 1.6;
+	margin: 10px 0 0;
+}
+
+.jlwa-module-card__meta {
+	color: #646970;
+	font-size: 13px;
+	margin-top: 12px;
+}
+
+.jlwa-module-card__actions,
+.jlwa-update-row__actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.jlwa-update-list {
+	display: grid;
+	gap: 14px;
+}
+
+.jlwa-update-row__actions {
+	justify-content: flex-end;
+	margin-top: 0;
+	min-width: 160px;
+}
+
+@media (max-width: 782px) {
+	.jiuliu-admin-header,
+	.jlwa-module-card__head,
+	.jlwa-update-row {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.jlwa-update-row__actions {
+		justify-content: flex-start;
+		min-width: 0;
+	}
+}

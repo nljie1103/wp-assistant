@@ -1,0 +1,394 @@
+/**
+ * 九流沉浸式预加载 - 前台样式
+ * 版本：1.0.6
+ * 作者：九流（https://www.jiuliu.org）
+ * 许可证：GPLv2+
+ */
+
+/* ============== 全局通用 ============== */
+#jip-preloader,
+#jip-preloader * {
+	box-sizing: border-box;
+}
+
+#jip-preloader {
+	font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif;
+	color: #fff;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+#jip-preloader .jip-stage {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 32px;
+	max-width: 90vmin;
+}
+
+#jip-preloader .jip-site-title {
+	font-size: clamp(18px, 3vw, 28px);
+	font-weight: 500;
+	letter-spacing: 0.15em;
+	text-align: center;
+	opacity: 0;
+	transform: translateY(20px) scale(0.8);
+	transition: opacity .9s cubic-bezier(.2,.7,.2,1) 1.5s,
+				transform .9s cubic-bezier(.2,.7,.2,1) 1.5s;
+	text-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+#jip-preloader.jip-titled .jip-site-title,
+#jip-preloader .jip-site-title.jip-in {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+
+#jip-preloader .jip-skip-tip {
+	position: absolute;
+	bottom: 32px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 12px;
+	letter-spacing: 0.2em;
+	color: rgba(255,255,255,0.5);
+	opacity: 0;
+	transition: opacity .6s ease 2s;
+}
+
+#jip-preloader.jip-ready .jip-skip-tip { opacity: 1; }
+
+/* 隐藏过渡（淡出 + 微放大） */
+#jip-preloader.jip-hide {
+	opacity: 0;
+	transform: scale(1.1);
+	pointer-events: none;
+	transition: opacity 1s cubic-bezier(.4,0,.2,1), transform 1s cubic-bezier(.4,0,.2,1);
+}
+
+/* ============== 效果一：立体 Logo（核心，222.mp4 复刻精致版） ============== */
+#jip-preloader.jip-effect-logo3d .jip-frame {
+	position: relative;
+	width: clamp(180px, 32vmin, 320px);
+	height: clamp(180px, 32vmin, 320px);
+	perspective: 1000px;
+	transform-style: preserve-3d;
+	/* 多层霓虹光晕：蓝 → 紫 → 玫红 → 酒红 */
+	filter:
+		drop-shadow(0 0 6px  rgba( 80, 160, 255, 0.55))
+		drop-shadow(0 0 18px rgba(150,  80, 255, 0.45))
+		drop-shadow(0 0 36px rgba(255,  80, 160, 0.35))
+		drop-shadow(0 0 60px rgba(160,  24,  56, 0.25))
+		drop-shadow(0 18px 50px rgba(0, 0, 0, 0.55));
+	animation: jip-frame-in 1s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes jip-frame-in {
+	0%   { opacity: 0; transform: scale(0.88) rotateX(-14deg); }
+	100% { opacity: 1; transform: scale(1)    rotateX(0deg); }
+}
+
+/* 边框主体：conic-gradient 实现蓝→紫→玫红→酒红 循环渐变 */
+#jip-preloader.jip-effect-logo3d .jip-frame-border {
+	position: absolute;
+	inset: 0;
+	border-radius: 14px;
+	background: conic-gradient(from 0deg,
+		#2a7dff 0%,
+		#7a3bff 22%,
+		#c83bff 38%,
+		#ff3b9a 55%,
+		#d62562 72%,
+		#a01838 88%,
+		#2a7dff 100%);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+			mask-composite: exclude;
+	padding: 3px;
+	animation: jip-spin 8s linear infinite;
+	will-change: transform, filter;
+	filter: blur(0.3px) brightness(1.25) saturate(1.25);
+}
+
+/* 边框外圈柔光辉光层：制造朦胧霓虹辉光 */
+#jip-preloader.jip-effect-logo3d .jip-frame-border::after {
+	content: "";
+	position: absolute;
+	inset: -8px;
+	border-radius: 18px;
+	background: conic-gradient(from 0deg,
+		rgba( 42, 125, 255, 0.45) 0%,
+		rgba(122,  59, 255, 0.55) 25%,
+		rgba(255,  59, 154, 0.55) 50%,
+		rgba(160,  24,  56, 0.45) 75%,
+		rgba( 42, 125, 255, 0.45) 100%);
+	filter: blur(14px) saturate(1.4);
+	opacity: 0.75;
+	pointer-events: none;
+	animation: jip-spin 8s linear infinite;
+	z-index: -1;
+}
+
+/* 边框上表面高光：模拟边框真实厚度的反光 */
+#jip-preloader.jip-effect-logo3d .jip-frame-border::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 14px;
+	padding: 3px;
+	background: linear-gradient(135deg,
+		rgba(255,255,255,0.55) 0%,
+		rgba(255,255,255,0.05) 18%,
+		rgba(255,255,255,0)    50%,
+		rgba(255,255,255,0.08) 82%,
+		rgba(255,255,255,0.35) 100%);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+			mask-composite: exclude;
+	mix-blend-mode: screen;
+	pointer-events: none;
+	animation: jip-spin 8s linear infinite;
+}
+
+@keyframes jip-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* 内部容器（Logo 所在区域） */
+#jip-preloader.jip-effect-logo3d .jip-frame-inner {
+	position: absolute;
+	inset: 6px;
+	border-radius: 9px;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: radial-gradient(ellipse at center,
+		rgba(255,255,255,0.04) 0%,
+		rgba(0,0,0,0) 70%);
+}
+
+/* Logo 蒙版：从上到下显现 */
+#jip-preloader.jip-effect-logo3d .jip-logo-mask {
+	width: var(--jip-logo-size, 80%);
+	height: var(--jip-logo-size, 80%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	-webkit-mask: linear-gradient(to bottom, #000 0%, #000 0%, transparent 0%);
+			mask: linear-gradient(to bottom, #000 0%, #000 0%, transparent 0%);
+	-webkit-mask-size: 100% 100%;
+			mask-size: 100% 100%;
+	transform: translateY(5px);
+	animation: jip-logo-mask-reveal 1s cubic-bezier(.2,.7,.2,1) 0.5s forwards,
+			   jip-logo-rise 1s cubic-bezier(.2,.7,.2,1) 0.5s forwards;
+}
+
+@keyframes jip-logo-mask-reveal {
+	0%   { -webkit-mask-image: linear-gradient(to bottom, #000 0%,    #000 0%,    transparent 0%);
+			       mask-image: linear-gradient(to bottom, #000 0%,    #000 0%,    transparent 0%); }
+	100% { -webkit-mask-image: linear-gradient(to bottom, #000 0%,    #000 100%,  transparent 100%);
+			       mask-image: linear-gradient(to bottom, #000 0%,    #000 100%,  transparent 100%); }
+}
+
+@keyframes jip-logo-rise {
+	from { transform: translateY(5px); }
+	to   { transform: translateY(0); }
+}
+
+/* Logo：多层 drop-shadow 营造前后立体光影层次（浮雕质感） */
+#jip-preloader.jip-effect-logo3d .jip-logo-img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+	filter:
+		drop-shadow(0 1px 0   rgba(255,255,255,0.18))
+		drop-shadow(0 -1px 0  rgba(0,0,0,0.25))
+		drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45))
+		drop-shadow(0 8px 18px rgba( 30,  60, 120, 0.35))
+		drop-shadow(0 0 14px rgba(160,  80, 255, 0.20));
+}
+
+/* 荧光扫描线：增强柔和发光拖尾 + 虚化光晕 */
+#jip-preloader.jip-effect-logo3d .jip-scanline {
+	position: absolute;
+	left: -14%;
+	right: -14%;
+	top: -10%;
+	height: 22px;
+	background: linear-gradient(to bottom,
+		rgba(255,255,255,0)    0%,
+		rgba(200,230,255,0.45) 25%,
+		rgba(255,255,255,1)    50%,
+		rgba(200,230,255,0.45) 75%,
+		rgba(255,255,255,0)    100%);
+	filter: blur(3.5px) saturate(1.2);
+	box-shadow:
+		0 0 18px  rgba(255,255,255,0.9),
+		0 0 36px  rgba(180,220,255,0.7),
+		0 0 60px  rgba(120,180,255,0.5),
+		0 0 100px rgba( 90,150,255,0.25);
+	opacity: 0;
+	pointer-events: none;
+	animation: jip-scan 2.4s cubic-bezier(.4,.05,.4,1) 2s infinite;
+}
+
+@keyframes jip-scan {
+	0%   { transform: translateY(-30%); opacity: 0; }
+	8%   { opacity: 1; }
+	92%  { opacity: 1; }
+	100% { transform: translateY(160%);  opacity: 0; }
+}
+
+/* ============== 效果二：粒子汇聚 ============== */
+#jip-preloader.jip-effect-particles .jip-particles-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+#jip-preloader.jip-effect-particles .jip-particles-target {
+	width: clamp(180px, 30vmin, 280px);
+	height: clamp(180px, 30vmin, 280px);
+	object-fit: contain;
+	opacity: 0;
+	transition: opacity .8s ease;
+}
+
+#jip-preloader.jip-effect-particles.jip-particles-ready .jip-particles-target {
+	opacity: 0; /* canvas 接管渲染，img 仅用于采样 */
+}
+
+/* ============== 效果三：渐变穿梭 ============== */
+#jip-preloader.jip-effect-gradient .jip-gradient-layer {
+	position: absolute;
+	inset: -25%;
+	border-radius: 50%;
+	mix-blend-mode: screen;
+	filter: blur(60px);
+	opacity: 0.85;
+	will-change: transform;
+}
+
+#jip-preloader.jip-effect-gradient .jip-g1 {
+	background: radial-gradient(circle, #2a7dff 0%, transparent 60%);
+	animation: jip-g-move-1 6s ease-in-out infinite alternate;
+}
+#jip-preloader.jip-effect-gradient .jip-g2 {
+	background: radial-gradient(circle, #ff3b6b 0%, transparent 60%);
+	animation: jip-g-move-2 7s ease-in-out infinite alternate;
+}
+#jip-preloader.jip-effect-gradient .jip-g3 {
+	background: radial-gradient(circle, #7a3bff 0%, transparent 60%);
+	animation: jip-g-move-3 5s ease-in-out infinite alternate;
+}
+
+@keyframes jip-g-move-1 {
+	from { transform: translate(-15%, -10%) scale(1); }
+	to   { transform: translate( 20%,  15%) scale(1.2); }
+}
+@keyframes jip-g-move-2 {
+	from { transform: translate( 20%, -15%) scale(1.1); }
+	to   { transform: translate(-15%,  20%) scale(0.9); }
+}
+@keyframes jip-g-move-3 {
+	from { transform: translate(  0%,  10%) scale(0.95); }
+	to   { transform: translate( 10%, -20%) scale(1.15); }
+}
+
+#jip-preloader.jip-effect-gradient .jip-gradient-title {
+	background: linear-gradient(90deg, #fff, #b8e6ff, #ffb8ee, #fff);
+	background-size: 300% 100%;
+	-webkit-background-clip: text;
+			background-clip: text;
+	color: transparent;
+	animation: jip-grad-text 4s linear infinite;
+	font-weight: 700;
+}
+
+@keyframes jip-grad-text {
+	from { background-position: 0% 50%; }
+	to   { background-position: 300% 50%; }
+}
+
+/* ============== 效果四：线条勾勒 ============== */
+#jip-preloader.jip-effect-lines .jip-lines-svg {
+	width: clamp(160px, 28vmin, 260px);
+	height: clamp(160px, 28vmin, 260px);
+	color: #fff;
+	filter: drop-shadow(0 0 8px rgba(120,180,255,0.6));
+}
+
+#jip-preloader.jip-effect-lines .jip-line-path {
+	stroke-dasharray: 1000;
+	stroke-dashoffset: 1000;
+	animation: jip-draw 2.4s cubic-bezier(.4,.05,.2,1) forwards infinite;
+}
+
+#jip-preloader.jip-effect-lines .jip-line-path:nth-child(2) { animation-delay: 0.3s; }
+#jip-preloader.jip-effect-lines .jip-line-path:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes jip-draw {
+	0%   { stroke-dashoffset: 1000; }
+	60%  { stroke-dashoffset: 0; }
+	80%  { stroke-dashoffset: 0; opacity: 1; }
+	100% { stroke-dashoffset: 0; opacity: 0.2; }
+}
+
+/* ============== 效果五：玻璃质感边框 ============== */
+#jip-preloader.jip-effect-glass .jip-glass-box {
+	position: relative;
+	width: clamp(160px, 28vmin, 260px);
+	height: clamp(160px, 28vmin, 260px);
+	border-radius: 18px;
+	background: linear-gradient(135deg,
+		rgba(255,255,255,0.12),
+		rgba(255,255,255,0.04));
+	border: 1px solid rgba(255,255,255,0.18);
+	box-shadow:
+		0 10px 40px rgba(0,0,0,0.35),
+		inset 0 1px 0 rgba(255,255,255,0.25);
+	backdrop-filter: blur(20px) saturate(160%);
+	-webkit-backdrop-filter: blur(20px) saturate(160%);
+	animation: jip-spin 6s linear infinite;
+}
+
+#jip-preloader.jip-effect-glass .jip-glass-inner {
+	position: absolute;
+	inset: 18%;
+	border-radius: 12px;
+	background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+	border: 1px solid rgba(255,255,255,0.25);
+	animation: jip-spin 6s linear infinite reverse;
+}
+
+/* ============== 响应式 / 降级 ============== */
+@media (max-width: 480px) {
+	#jip-preloader .jip-stage { gap: 22px; }
+	#jip-preloader .jip-site-title { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#jip-preloader,
+	#jip-preloader * {
+		animation-duration: 0.001s !important;
+		transition-duration: 0.001s !important;
+	}
+}
+
+/* 不支持 backdrop-filter 时的兜底 */
+@supports not (backdrop-filter: blur(10px)) {
+	#jip-preloader.jip-effect-glass .jip-glass-box {
+		background: linear-gradient(135deg, rgba(80,80,100,0.6), rgba(30,30,50,0.6));
+	}
+}

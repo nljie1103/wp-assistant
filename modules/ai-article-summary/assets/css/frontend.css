@@ -1,0 +1,350 @@
+/* ==========================================================================
+   九流 - AI 摘要插件 · 前端样式（暗黑极简卡片）
+   ----------------------------------------------------------------------------
+   说明：所有动画规则采用 高优先级选择器 + !important 双重保险，
+        以确保在 Zibll / Astra Pro / Divi / Elementor / Block 编辑器主题
+        强样式 `*` 通配规则环境下仍能正常生效。
+   ========================================================================== */
+
+/* 卡片基础（颜色由 inline style 通过 CSS 变量提供，可被预设 class 覆盖） */
+aside.wpaias-summary,
+.wpaias-summary {
+	box-sizing: border-box !important;
+	display: block !important;
+	background: var( --wpaias-bg, #1a1a1a ) !important;
+	color: var( --wpaias-text, #cccccc ) !important;
+	border: 1px solid var( --wpaias-border, #333333 ) !important;
+	border-radius: 8px !important;
+	padding: 18px 22px !important;
+	margin: 0 0 26px !important;
+	font-size: 15px !important;
+	line-height: 1.85 !important;
+	position: relative;
+	overflow: hidden;
+	-webkit-font-smoothing: antialiased;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+aside.wpaias-summary *,
+aside.wpaias-summary *:before,
+aside.wpaias-summary *:after,
+.wpaias-summary *,
+.wpaias-summary *:before,
+.wpaias-summary *:after {
+	box-sizing: border-box;
+}
+
+aside.wpaias-summary .wpaias-summary__header,
+.wpaias-summary .wpaias-summary__header {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	margin-bottom: 10px !important;
+	padding-bottom: 10px !important;
+	border-bottom: 1px dashed #2a2a2a !important;
+}
+
+aside.wpaias-summary .wpaias-summary__icon,
+.wpaias-summary .wpaias-summary__icon {
+	color: var( --wpaias-accent, #ffd95a ) !important;
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+}
+
+aside.wpaias-summary .wpaias-summary__title,
+.wpaias-summary .wpaias-summary__title {
+	color: var( --wpaias-title, #ffffff ) !important;
+	font-size: 15px !important;
+	font-weight: 600 !important;
+	letter-spacing: .3px !important;
+	margin: 0 !important;
+}
+
+aside.wpaias-summary .wpaias-summary__badge,
+.wpaias-summary .wpaias-summary__badge {
+	margin-left: auto !important;
+	font-size: 11px !important;
+	color: var( --wpaias-accent, #888 ) !important;
+	padding: 2px 8px !important;
+	border: 1px solid var( --wpaias-border, #333 ) !important;
+	border-radius: 999px !important;
+	background: transparent !important;
+	line-height: 1.4 !important;
+	opacity: .85;
+}
+
+aside.wpaias-summary .wpaias-summary__body,
+.wpaias-summary .wpaias-summary__body {
+	min-height: 1.8em !important;
+}
+
+aside.wpaias-summary .wpaias-summary__text,
+.wpaias-summary .wpaias-summary__text {
+	color: var( --wpaias-text, #cccccc ) !important;
+	white-space: pre-wrap !important;
+	word-break: break-word !important;
+	margin: 0 !important;
+	display: block !important;
+}
+
+/* 加载占位 */
+aside.wpaias-summary .wpaias-summary__placeholder,
+.wpaias-summary .wpaias-summary__placeholder {
+	display: flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	color: #888 !important;
+	font-size: 13px !important;
+}
+
+.wpaias-summary .wpaias-summary__loading-text { margin-left: 8px !important; }
+
+.wpaias-summary .wpaias-dot {
+	display: inline-block !important;
+	width: 6px !important;
+	height: 6px !important;
+	border-radius: 50% !important;
+	background: #888 !important;
+	animation: wpaias-dot 1.2s infinite ease-in-out !important;
+}
+.wpaias-summary .wpaias-dot:nth-child(2) { animation-delay: .2s !important; }
+.wpaias-summary .wpaias-dot:nth-child(3) { animation-delay: .4s !important; }
+
+@keyframes wpaias-dot {
+	0%, 80%, 100% { opacity: .2; transform: scale(.8); }
+	40%           { opacity: 1;  transform: scale(1); }
+}
+
+/* 移动端 */
+@media ( max-width: 640px ) {
+	aside.wpaias-summary,
+	.wpaias-summary {
+		padding: 14px 16px !important;
+		font-size: 14px !important;
+		line-height: 1.75 !important;
+		margin: 0 0 20px !important;
+	}
+	.wpaias-summary .wpaias-summary__title { font-size: 14px !important; }
+}
+
+/* ==========================================================================
+   动画效果（10 种） — 全部强制 !important 以对抗商业主题强样式
+   ========================================================================== */
+
+/* 1. 无动画 */
+.wpaias-summary.wpaias-anim-none .wpaias-summary__text {
+	opacity: 1 !important;
+	transform: none !important;
+}
+
+/* 2/3. 打字机：由 JS 控制；光标效果 */
+.wpaias-summary.wpaias-anim-typewriter .wpaias-summary__text {
+	opacity: 1 !important;
+	transform: none !important;
+}
+.wpaias-summary.wpaias-anim-typewriter .wpaias-summary__text.wpaias-with-cursor::after {
+	content: '' !important;
+	display: inline-block !important;
+	width: 2px !important;
+	height: 1em !important;
+	background: var( --wpaias-cursor-color, #fff ) !important;
+	margin-left: 2px !important;
+	vertical-align: -2px !important;
+	animation: wpaias-blink .8s steps(2) infinite !important;
+}
+.wpaias-summary.wpaias-anim-typewriter .wpaias-summary__text.wpaias-typed::after { display: none !important; }
+
+@keyframes wpaias-blink {
+	0%, 100% { opacity: 1; }
+	50%      { opacity: 0; }
+}
+
+/* 4. 全局淡入 */
+.wpaias-summary.wpaias-anim-fade .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: none !important;
+	transition: opacity var( --wpaias-anim-duration, 800ms ) ease !important;
+}
+.wpaias-summary.wpaias-anim-fade.wpaias-anim-active .wpaias-summary__text { opacity: 1 !important; }
+
+/* 5. 由下向上 */
+.wpaias-summary.wpaias-anim-slide-up .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: translateY( 14px ) !important;
+	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
+	            transform var( --wpaias-anim-duration, 800ms ) cubic-bezier(.16, .68, .3, 1) !important;
+}
+.wpaias-summary.wpaias-anim-slide-up.wpaias-anim-active .wpaias-summary__text {
+	opacity: 1 !important; transform: translateY(0) !important;
+}
+
+/* 6. 由上向下 */
+.wpaias-summary.wpaias-anim-slide-down .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: translateY( -14px ) !important;
+	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
+	            transform var( --wpaias-anim-duration, 800ms ) cubic-bezier(.16, .68, .3, 1) !important;
+}
+.wpaias-summary.wpaias-anim-slide-down.wpaias-anim-active .wpaias-summary__text {
+	opacity: 1 !important; transform: translateY(0) !important;
+}
+
+/* 7. 缩放淡入 */
+.wpaias-summary.wpaias-anim-zoom .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: scale( .96 ) !important;
+	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
+	            transform var( --wpaias-anim-duration, 800ms ) cubic-bezier(.2, .8, .2, 1) !important;
+}
+.wpaias-summary.wpaias-anim-zoom.wpaias-anim-active .wpaias-summary__text {
+	opacity: 1 !important; transform: scale(1) !important;
+}
+
+/* 8. 弹跳 */
+.wpaias-summary.wpaias-anim-bounce .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: translateY( 8px ) scale( .98 ) !important;
+}
+.wpaias-summary.wpaias-anim-bounce.wpaias-anim-active .wpaias-summary__text {
+	animation: wpaias-bounce-in var( --wpaias-anim-duration, 800ms ) cubic-bezier(.2, .9, .3, 1.4) forwards !important;
+	animation-fill-mode: both !important;
+}
+@keyframes wpaias-bounce-in {
+	0%   { opacity: 0; transform: translateY(10px) scale(.96); }
+	60%  { opacity: 1; transform: translateY(-4px) scale(1.02); }
+	100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 9. 逐行渐入（JS 拆分 .wpaias-line） */
+.wpaias-summary.wpaias-anim-line-fade .wpaias-summary__text {
+	opacity: 1 !important;
+	transform: none !important;
+}
+.wpaias-summary.wpaias-anim-line-fade .wpaias-line {
+	display: inline !important;
+	opacity: 0 !important;
+	transform: translateY( 6px ) !important;
+	animation: wpaias-line-fade var( --wpaias-anim-duration, 800ms ) ease forwards !important;
+	animation-fill-mode: both !important;
+}
+@keyframes wpaias-line-fade {
+	from { opacity: 0; transform: translateY(6px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 10. 霓虹微光呼吸 */
+.wpaias-summary.wpaias-anim-neon {
+	box-shadow: 0 0 0 0 rgba(120, 200, 255, 0) !important;
+	animation: wpaias-neon 3.6s ease-in-out infinite !important;
+	border-color: #2a3a55 !important;
+}
+@keyframes wpaias-neon {
+	0%, 100% {
+		box-shadow: 0 0 10px rgba(80, 160, 255, .08),
+		            inset 0 0 8px rgba(80, 160, 255, .04);
+		border-color: #2a3a55;
+	}
+	50% {
+		box-shadow: 0 0 22px rgba(120, 200, 255, .25),
+		            inset 0 0 14px rgba(120, 200, 255, .10);
+		border-color: #3a5a8c;
+	}
+}
+.wpaias-summary.wpaias-anim-neon .wpaias-summary__text {
+	opacity: 0 !important;
+	transform: none !important;
+	transition: opacity var( --wpaias-anim-duration, 800ms ) ease !important;
+}
+.wpaias-summary.wpaias-anim-neon.wpaias-anim-active .wpaias-summary__text { opacity: 1 !important; }
+
+/* ----- 防主题 `*` 通配冲突的兜底 ----- */
+.wpaias-summary,
+.wpaias-summary * {
+	-webkit-text-fill-color: initial;
+	text-decoration: none;
+}
+
+/* ==========================================================================
+   预设样式装饰（在基础卡片之上叠加特殊视觉效果）
+   ========================================================================== */
+
+/* 玻璃磨砂 */
+aside.wpaias-summary.wpaias-style-glass,
+.wpaias-summary.wpaias-style-glass {
+	background: rgba( 255, 255, 255, 0.55 ) !important;
+	backdrop-filter: blur( 16px ) saturate( 180% ) !important;
+	-webkit-backdrop-filter: blur( 16px ) saturate( 180% ) !important;
+	border: 1px solid rgba( 255, 255, 255, 0.6 ) !important;
+	box-shadow: 0 8px 32px rgba( 31, 38, 135, 0.12 ) !important;
+}
+
+/* 蓝紫渐变 */
+aside.wpaias-summary.wpaias-style-gradient-blue,
+.wpaias-summary.wpaias-style-gradient-blue {
+	background: linear-gradient( 135deg, #1e3a8a 0%, #6366f1 50%, #a855f7 100% ) !important;
+	border: 0 !important;
+	box-shadow: 0 12px 30px rgba( 30, 58, 138, 0.35 ) !important;
+}
+
+/* 粉橙渐变 */
+aside.wpaias-summary.wpaias-style-gradient-pink,
+.wpaias-summary.wpaias-style-gradient-pink {
+	background: linear-gradient( 135deg, #fb7185 0%, #f97316 100% ) !important;
+	border: 0 !important;
+	box-shadow: 0 12px 30px rgba( 244, 63, 94, 0.30 ) !important;
+}
+
+/* 青绿渐变 */
+aside.wpaias-summary.wpaias-style-gradient-cyan,
+.wpaias-summary.wpaias-style-gradient-cyan {
+	background: linear-gradient( 135deg, #0891b2 0%, #22d3ee 50%, #34d399 100% ) !important;
+	border: 0 !important;
+	box-shadow: 0 12px 30px rgba( 8, 145, 178, 0.30 ) !important;
+}
+
+/* 细描边 */
+aside.wpaias-summary.wpaias-style-outline,
+.wpaias-summary.wpaias-style-outline {
+	background: transparent !important;
+	border: 2px dashed var( --wpaias-border, #2271b1 ) !important;
+	box-shadow: none !important;
+}
+
+/* 米色纸张（带左侧色带） */
+aside.wpaias-summary.wpaias-style-paper,
+.wpaias-summary.wpaias-style-paper {
+	border-left: 5px solid var( --wpaias-accent, #a3781e ) !important;
+	box-shadow: 0 1px 0 rgba( 0, 0, 0, 0.04 ), inset 0 0 0 1px rgba( 163, 120, 30, 0.05 ) !important;
+}
+
+/* 赛博朋克霓虹 */
+aside.wpaias-summary.wpaias-style-neon-cyber,
+.wpaias-summary.wpaias-style-neon-cyber {
+	border: 1px solid var( --wpaias-border, #00ffff ) !important;
+	box-shadow: 0 0 18px rgba( 0, 255, 255, 0.35 ),
+	            inset 0 0 18px rgba( 255, 0, 255, 0.15 ) !important;
+	text-shadow: 0 0 6px rgba( 0, 255, 255, 0.45 );
+}
+aside.wpaias-summary.wpaias-style-neon-cyber .wpaias-summary__title,
+.wpaias-summary.wpaias-style-neon-cyber .wpaias-summary__title {
+	text-shadow: 0 0 8px rgba( 0, 255, 255, 0.8 ), 0 0 16px rgba( 255, 0, 255, 0.45 ) !important;
+}
+
+/* 笔记本横线 */
+aside.wpaias-summary.wpaias-style-notebook,
+.wpaias-summary.wpaias-style-notebook {
+	background:
+		var( --wpaias-bg, #fffef5 )
+		repeating-linear-gradient( to bottom, transparent 0, transparent 27px, rgba(180, 130, 70, 0.18) 28px, rgba(180, 130, 70, 0.18) 28px ) !important;
+	border-left: 3px double var( --wpaias-accent, #c0392b ) !important;
+}
+
+/* 白卡浮起阴影 */
+aside.wpaias-summary.wpaias-style-card-shadow,
+.wpaias-summary.wpaias-style-card-shadow {
+	border: 0 !important;
+	box-shadow: 0 10px 30px rgba( 0, 0, 0, 0.08 ), 0 2px 6px rgba( 0, 0, 0, 0.04 ) !important;
+}
