@@ -1,0 +1,63 @@
+name: Export wp-assistant v2.0.1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Build clean WordPress package
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist/wp-assistant
+          rsync -a --exclude='.git' --exclude='.github' --exclude='dist' ./ dist/wp-assistant/
+          test "$(grep -R --include='*.php' -h 'Plugin Name:' dist/wp-assistant | wc -l)" -eq 1
+          test "$(grep -R --include='*.php' -h 'register_activation_hook' dist/wp-assistant | wc -l)" -eq 1
+          grep -q "JLWA_VERSION', '2.0.1'" dist/wp-assistant/jiuliu-wp-assistant.php
+          find dist/wp-assistant -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find dist/wp-assistant/assets dist/wp-assistant/features -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          cd dist
+          zip -qr jiuliu-wp-assistant-2.0.1.zip wp-assistant
+          sha256sum jiuliu-wp-assistant-2.0.1.zip > jiuliu-wp-assistant-2.0.1.zip.sha256.txt
+          unzip -t jiuliu-wp-assistant-2.0.1.zip
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET="$(git rev-parse HEAD)"
+          NOTES=$(cat <<'EOF'
+          九流WP助手 2.0.1 修复功能页正文 UI：
+
+          - 修复旧功能资源 hook 不匹配造成的正文无样式问题。
+          - 统一强制加载四项功能的后台 CSS、JavaScript、媒体上传器和颜色选择器。
+          - 新增统一功能状态卡、内容画布、表单、选项卡和响应式布局。
+          - 重做页面美化卡片、AI 摘要设置、预加载效果网格和媒体扫描诊断界面。
+          - 增加未保存修改提示与卡片选择状态同步。
+          EOF
+          )
+          if gh release view v2.0.1 >/dev/null 2>&1; then
+            gh release edit v2.0.1 --title '九流WP助手 2.0.1' --notes "$NOTES"
+          else
+            gh release create v2.0.1 --target "$TARGET" --title '九流WP助手 2.0.1' --notes "$NOTES"
+          fi
+          gh release upload v2.0.1 dist/jiuliu-wp-assistant-2.0.1.zip dist/jiuliu-wp-assistant-2.0.1.zip.sha256.txt --clobber
+      - name: Upload conversation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jlwa-2.0.1-package
+          path: |
+            dist/jiuliu-wp-assistant-2.0.1.zip
+            dist/jiuliu-wp-assistant-2.0.1.zip.sha256.txt
+          retention-days: 1
