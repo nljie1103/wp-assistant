@@ -4,7 +4,7 @@ on:
   push:
     branches: [release/2.1.0]
     paths:
-      - '.release/2.1.0/patch.b64'
+      - '.release/2.1.0/part-005.txt'
 
 permissions:
   contents: write
@@ -21,7 +21,8 @@ jobs:
       - name: Apply validated source patch
         run: |
           set -euxo pipefail
-          base64 -d .release/2.1.0/patch.b64 | gzip -d > /tmp/jlwa-2.1.0.patch
+          cat .release/2.1.0/part-*.txt > /tmp/jlwa-2.1.0.patch.b64
+          base64 -d /tmp/jlwa-2.1.0.patch.b64 | gzip -d > /tmp/jlwa-2.1.0.patch
           git apply --check /tmp/jlwa-2.1.0.patch
           git apply /tmp/jlwa-2.1.0.patch
       - name: PHP and JavaScript syntax
@@ -59,31 +60,18 @@ jobs:
         run: |
           set -euxo pipefail
           for file in \
-            assets/css/admin.css \
-            assets/js/admin.js \
-            includes/class-jlwa-admin.php \
-            includes/class-jlwa-module-loader.php \
-            includes/class-jlwa-updater.php \
-            modules/page-effects/wp-page-effects.php \
-            modules/page-effects/assets/js/frontend.js \
+            assets/css/admin.css assets/js/admin.js includes/class-jlwa-admin.php \
+            includes/class-jlwa-module-loader.php includes/class-jlwa-updater.php \
+            modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js \
             modules/relative-media-urls/jiuliu-relative-media-urls.php \
             modules/ai-article-summary/wp-ai-article-summary.php \
-            modules/immersive-preloader/jiuliu-immersive-preloader.php \
-            readme.txt uninstall.php; do test -f "$file"; done
+            modules/immersive-preloader/jiuliu-immersive-preloader.php readme.txt uninstall.php; do test -f "$file"; done
           for file in \
-            assets/css/admin.css \
-            assets/css/admin-content.css \
-            assets/js/admin.js \
-            assets/js/admin-content.js \
-            includes/class-jlwa-admin.php \
-            includes/class-jlwa-feature-registry.php \
-            includes/class-jlwa-updater.php \
-            features/page-effects/bootstrap.php \
-            features/page-effects/assets/js/frontend.js \
-            features/relative-media-urls/bootstrap.php \
-            features/ai-article-summary/bootstrap.php \
-            features/immersive-preloader/bootstrap.php \
-            readme.txt uninstall.php; do test -f "$file"; done
+            assets/css/admin.css assets/css/admin-content.css assets/js/admin.js assets/js/admin-content.js \
+            includes/class-jlwa-admin.php includes/class-jlwa-feature-registry.php includes/class-jlwa-updater.php \
+            features/page-effects/bootstrap.php features/page-effects/assets/js/frontend.js \
+            features/relative-media-urls/bootstrap.php features/ai-article-summary/bootstrap.php \
+            features/immersive-preloader/bootstrap.php readme.txt uninstall.php; do test -f "$file"; done
       - name: Commit final source and self-clean
         run: |
           set -euxo pipefail
