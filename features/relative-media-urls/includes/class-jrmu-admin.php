@@ -31,36 +31,10 @@ class JRMU_Admin {
 
 	/** Hooks。 */
 	private function init_hooks() {
-		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_jrmu_apply_post_action', array( $this, 'handle_apply_post_action' ) );
 		add_action( 'admin_post_jrmu_clear_logs', array( $this, 'handle_clear_logs' ) );
-	}
-
-	/** 菜单。 */
-	public function add_admin_menu() {
-		if ( defined( 'JLWA_MENU_SLUG' ) ) {
-			add_submenu_page(
-				JLWA_MENU_SLUG,
-				'九流媒体相对地址',
-				'媒体相对地址',
-				'manage_options',
-				JRMU_MENU_SLUG,
-				array( $this, 'render_page' )
-			);
-			return;
-		}
-
-		add_menu_page(
-			'九流媒体相对地址',
-			'媒体相对地址',
-			'manage_options',
-			JRMU_MENU_SLUG,
-			array( $this, 'render_page' ),
-			'dashicons-admin-customizer',
-			58
-		);
 	}
 
 	/** 注册设置。 */

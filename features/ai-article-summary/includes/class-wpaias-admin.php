@@ -23,7 +23,6 @@ class WPAIAS_Admin {
 	 * 注册 hooks。
 	 */
 	public function register() {
-		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
@@ -47,47 +46,6 @@ class WPAIAS_Admin {
 		add_action( 'save_post', array( $this, 'on_save_post' ), 10, 2 );
 		add_action( 'before_delete_post', array( $this, 'on_delete_post' ) );
 
-		// 插件页操作链接。
-		add_filter( 'plugin_action_links_' . WPAIAS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
-	}
-
-	/**
-	 * 插件操作链接。
-	 *
-	 * @param array $links 链接数组。
-	 * @return array
-	 */
-	public function plugin_action_links( $links ) {
-		$url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
-		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( '设置', 'wp-ai-article-summary' ) . '</a>' );
-		return $links;
-	}
-
-	/**
-	 * 注册顶级菜单（位置在 外观 与 插件 之间）。
-	 */
-	public function add_menu() {
-		if ( defined( 'JLWA_MENU_SLUG' ) ) {
-			add_submenu_page(
-				JLWA_MENU_SLUG,
-				__( '九流 AI 文章摘要', 'wp-ai-article-summary' ),
-				__( 'AI 文章摘要', 'wp-ai-article-summary' ),
-				'manage_options',
-				self::MENU_SLUG,
-				array( $this, 'render_settings_page' )
-			);
-			return;
-		}
-
-		add_menu_page(
-			__( '九流 AI 文章摘要', 'wp-ai-article-summary' ),
-			__( 'AI 文章摘要', 'wp-ai-article-summary' ),
-			'manage_options',
-			self::MENU_SLUG,
-			array( $this, 'render_settings_page' ),
-			'dashicons-admin-customizer',
-			63 // 外观=60, 插件=65，63 居中。
-		);
 	}
 
 	/**
@@ -100,7 +58,7 @@ class WPAIAS_Admin {
 			array(
 				'type'              => 'array',
 				'sanitize_callback' => array( $this, 'sanitize_settings' ),
-				'default'           => WPAIAS_Plugin::get_default_settings(),
+				'default'           => JLWA_AI_Summary_Feature::get_default_settings(),
 			)
 		);
 	}
@@ -141,7 +99,7 @@ class WPAIAS_Admin {
 					'ajax_url'   => admin_url( 'admin-ajax.php' ),
 					'nonce'      => wp_create_nonce( 'wpaias_admin_nonce' ),
 					'providers'  => WPAIAS_Providers::js_map(),
-					'api_keys'   => $is_settings_page ? WPAIAS_Plugin::get_settings()['api_keys'] : array(),
+					'api_keys'   => $is_settings_page ? JLWA_AI_Summary_Feature::get_settings()['api_keys'] : array(),
 					'i18n'       => array(
 						'testing'    => __( '正在测试…', 'wp-ai-article-summary' ),
 						'test_ok'    => __( '连通成功！', 'wp-ai-article-summary' ),
@@ -170,7 +128,7 @@ class WPAIAS_Admin {
 	 * @return array
 	 */
 	public function sanitize_settings( $input ) {
-		$defaults = WPAIAS_Plugin::get_default_settings();
+		$defaults = JLWA_AI_Summary_Feature::get_default_settings();
 		$saved    = get_option( WPAIAS_OPTION_KEY, array() );
 		if ( ! is_array( $saved ) ) {
 			$saved = array();
@@ -271,7 +229,7 @@ class WPAIAS_Admin {
 			if ( isset( $input['api_keys'] ) && is_array( $input['api_keys'] ) ) {
 				$api_keys = array_merge( $api_keys, $input['api_keys'] );
 			}
-			$out['api_keys'] = WPAIAS_Plugin::sanitize_api_keys( $api_keys );
+			$out['api_keys'] = JLWA_AI_Summary_Feature::sanitize_api_keys( $api_keys );
 			if ( isset( $input['temperature'] ) ) {
 				$out['temperature'] = max( 0, min( 2, (float) $input['temperature'] ) );
 			}
@@ -343,7 +301,7 @@ class WPAIAS_Admin {
 			return;
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$tab      = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'basic'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tabs     = array(
 			'basic'    => __( '基础设置', 'wp-ai-article-summary' ),
@@ -359,7 +317,7 @@ class WPAIAS_Admin {
 		$cache_count = WPAIAS_Cache::count();
 		$providers   = WPAIAS_Providers::all();
 		$key_model   = ( 'custom' === $settings['provider'] && ! empty( $settings['custom_model'] ) ) ? $settings['custom_model'] : $settings['model'];
-		$current_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $settings['provider'], $key_model );
+		$current_key = JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $settings['provider'], $key_model );
 		$api_keys_json = wp_json_encode( isset( $settings['api_keys'] ) ? $settings['api_keys'] : array() );
 		?>
 		<div class="wrap wpaias-wrap">
@@ -812,7 +770,7 @@ class WPAIAS_Admin {
 			wp_send_json_error( array( 'message' => __( '权限不足。', 'wp-ai-article-summary' ) ) );
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 
 		// 允许临时表单参数覆盖。
 		$test_provider = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( $_POST['provider'] ) ) : $settings['provider'];
@@ -824,7 +782,7 @@ class WPAIAS_Admin {
 		$overrides = array(
 			'provider'        => $test_provider,
 			'model'           => $test_model,
-			'current_api_key' => isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : WPAIAS_Plugin::get_api_key_for_model( $settings, $test_provider, $test_model ),
+			'current_api_key' => isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $test_provider, $test_model ),
 			'endpoint'        => isset( $_POST['endpoint'] ) ? esc_url_raw( wp_unslash( $_POST['endpoint'] ) ) : $settings['custom_endpoint'],
 			'temperature'     => isset( $_POST['temperature'] ) ? (float) wp_unslash( $_POST['temperature'] ) : $settings['temperature'],
 			'max_tokens'      => 32,
@@ -880,7 +838,7 @@ class WPAIAS_Admin {
 			wp_send_json_error( array( 'message' => __( '文章不存在。', 'wp-ai-article-summary' ) ) );
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$content  = wp_strip_all_tags( (string) $post->post_content );
 
 		$result = WPAIAS_API::generate_summary( $content, $settings );
@@ -977,7 +935,7 @@ class WPAIAS_Admin {
 	 * 添加编辑页 meta box。
 	 */
 	public function add_meta_box() {
-		$settings   = WPAIAS_Plugin::get_settings();
+		$settings   = JLWA_AI_Summary_Feature::get_settings();
 		$post_types = (array) $settings['post_types'];
 		foreach ( $post_types as $pt ) {
 			add_meta_box(

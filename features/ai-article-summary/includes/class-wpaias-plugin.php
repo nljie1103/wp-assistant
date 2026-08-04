@@ -10,14 +10,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class WPAIAS_Plugin
+ * Class JLWA_AI_Summary_Feature
  */
-class WPAIAS_Plugin {
+class JLWA_AI_Summary_Feature {
 
 	/**
 	 * 单例。
 	 *
-	 * @var WPAIAS_Plugin|null
+	 * @var JLWA_AI_Summary_Feature|null
 	 */
 	protected static $instance = null;
 
@@ -38,7 +38,7 @@ class WPAIAS_Plugin {
 	/**
 	 * 获取单例。
 	 *
-	 * @return WPAIAS_Plugin
+	 * @return JLWA_AI_Summary_Feature
 	 */
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -52,7 +52,7 @@ class WPAIAS_Plugin {
 	 * 启动。
 	 */
 	protected function boot() {
-		load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( WPAIAS_PLUGIN_BASENAME ) . '/languages' );
+		load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( JLWA_PLUGIN_BASENAME ) . '/features/ai-article-summary/languages' );
 
 		if ( is_admin() ) {
 			$this->admin = new WPAIAS_Admin();

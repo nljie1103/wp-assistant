@@ -1,6 +1,6 @@
 <?php
 /**
- * Safe suite updater for 九流WP助手.
+ * Safe unified plugin updater for 九流WP助手.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
