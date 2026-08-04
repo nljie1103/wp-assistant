@@ -1,0 +1,175 @@
+{
+  "wp-page-effects": {
+    "module_path": "modules/page-effects",
+    "standalone_headers": [
+      {
+        "file": "wp-page-effects.php",
+        "name": "九流页面美化特效",
+        "version": "1.6.0",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "embedded_headers": [
+      {
+        "file": "wp-page-effects.php",
+        "name": "九流页面美化特效",
+        "version": "1.5.1",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "standalone_file_count": 9,
+    "embedded_file_count": 7,
+    "missing_in_suite": [
+      "includes/class-xjpe-updater.php",
+      "readme.txt"
+    ],
+    "extra_in_suite": [],
+    "changed_files": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "assets/js/frontend.js",
+      "uninstall.php",
+      "wp-page-effects.php"
+    ],
+    "functional_differences": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "assets/js/frontend.js",
+      "includes/class-xjpe-updater.php",
+      "uninstall.php",
+      "wp-page-effects.php"
+    ],
+    "identical_functional_source": false
+  },
+  "wp-immersive-preloader": {
+    "module_path": "modules/immersive-preloader",
+    "standalone_headers": [
+      {
+        "file": "jiuliu-immersive-preloader.php",
+        "name": "九流沉浸式预加载",
+        "version": "1.0.6",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "embedded_headers": [
+      {
+        "file": "jiuliu-immersive-preloader.php",
+        "name": "九流沉浸式预加载",
+        "version": "1.0.6",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "standalone_file_count": 27,
+    "embedded_file_count": 24,
+    "missing_in_suite": [
+      "README.md",
+      "includes/class-jip-updater.php",
+      "readme.txt"
+    ],
+    "extra_in_suite": [],
+    "changed_files": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "includes/class-jip-admin.php",
+      "jiuliu-immersive-preloader.php"
+    ],
+    "functional_differences": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "includes/class-jip-admin.php",
+      "includes/class-jip-updater.php",
+      "jiuliu-immersive-preloader.php"
+    ],
+    "identical_functional_source": false
+  },
+  "wp-relative-media-urls": {
+    "module_path": "modules/relative-media-urls",
+    "standalone_headers": [
+      {
+        "file": "jiuliu-relative-media-urls.php",
+        "name": "九流媒体相对地址",
+        "version": "4.1.1",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "embedded_headers": [
+      {
+        "file": "jiuliu-relative-media-urls.php",
+        "name": "九流媒体相对地址",
+        "version": "4.1.1",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "standalone_file_count": 18,
+    "embedded_file_count": 16,
+    "missing_in_suite": [
+      "README.md",
+      "readme.txt"
+    ],
+    "extra_in_suite": [],
+    "changed_files": [
+      "assets/css/admin.css",
+      "includes/class-jrmu-admin.php",
+      "includes/class-jrmu-settings.php",
+      "jiuliu-relative-media-urls.php"
+    ],
+    "functional_differences": [
+      "assets/css/admin.css",
+      "includes/class-jrmu-admin.php",
+      "includes/class-jrmu-settings.php",
+      "jiuliu-relative-media-urls.php"
+    ],
+    "identical_functional_source": false
+  },
+  "WP-AI-Article-Summary": {
+    "module_path": "modules/ai-article-summary",
+    "standalone_headers": [
+      {
+        "file": "wp-ai-article-summary.php",
+        "name": "九流 AI 文章摘要",
+        "version": "1.0.9",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "embedded_headers": [
+      {
+        "file": "wp-ai-article-summary.php",
+        "name": "九流 AI 文章摘要",
+        "version": "1.0.9",
+        "requires_php": "7.4",
+        "requires_wp": "5.8"
+      }
+    ],
+    "standalone_file_count": 24,
+    "embedded_file_count": 21,
+    "missing_in_suite": [
+      "README.md",
+      "includes/class-wpaias-updater.php",
+      "readme.txt"
+    ],
+    "extra_in_suite": [],
+    "changed_files": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "includes/class-wpaias-admin.php",
+      "includes/class-wpaias-plugin.php",
+      "wp-ai-article-summary.php"
+    ],
+    "functional_differences": [
+      "assets/css/admin.css",
+      "assets/js/admin.js",
+      "includes/class-wpaias-admin.php",
+      "includes/class-wpaias-plugin.php",
+      "includes/class-wpaias-updater.php",
+      "wp-ai-article-summary.php"
+    ],
+    "identical_functional_source": false
+  }
+}
