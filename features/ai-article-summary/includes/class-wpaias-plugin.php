@@ -52,7 +52,7 @@ class JLWA_AI_Summary_Feature {
 	 * 启动。
 	 */
 	protected function boot() {
-		load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( WPAIAS_PLUGIN_BASENAME ) . '/languages' );
+		load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( JLWA_PLUGIN_BASENAME ) . '/features/ai-article-summary/languages' );
 
 		if ( is_admin() ) {
 			$this->admin = new WPAIAS_Admin();
