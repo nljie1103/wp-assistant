@@ -37,18 +37,8 @@ class JIP_Admin {
 	 * 构造函数。
 	 */
 	private function __construct() {
-		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-	}
-
-	/**
-	 * 注册后台菜单。
-	 *
-	 * 期望位置：外观（60）和插件（65）之间，使用 61.5 让它落在中间。
-	 */
-	public function register_menu() {
-		return;
 	}
 
 	/**

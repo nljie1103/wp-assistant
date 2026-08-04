@@ -35,7 +35,6 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             if ( false === get_option( self::OPTION_NAME, false ) ) {
                 add_option( self::OPTION_NAME, self::default_options(), '', false );
             }
-            set_transient( 'xjpe_activated_notice', 1, 60 );
         }
 
         public function maybe_upgrade_options() {
@@ -112,16 +111,6 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             );
             wp_safe_redirect( $redirect );
             exit;
-        }
-
-        public function activation_notice() {
-		return;
-	}
-
-        public function plugin_action_links( $links ) {
-            $settings_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
-            array_unshift( $links, '<a href="' . esc_url( $settings_url ) . '">特效设置</a>' );
-            return $links;
         }
 
         public static function default_options() {
@@ -231,10 +220,6 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'welcome' => array( 'icon' => '🎉', 'title' => '节日欢迎弹窗', 'desc' => '节日自动弹窗祝福', 'group' => '节日与音乐' ),
             );
         }
-
-        public function add_admin_menu() {
-		return;
-	}
 
         public function register_settings() {
             register_setting(

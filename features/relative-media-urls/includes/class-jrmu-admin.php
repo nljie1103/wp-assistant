@@ -31,16 +31,10 @@ class JRMU_Admin {
 
 	/** Hooks。 */
 	private function init_hooks() {
-		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_jrmu_apply_post_action', array( $this, 'handle_apply_post_action' ) );
 		add_action( 'admin_post_jrmu_clear_logs', array( $this, 'handle_clear_logs' ) );
-	}
-
-	/** 菜单。 */
-	public function add_admin_menu() {
-		return;
 	}
 
 	/** 注册设置。 */

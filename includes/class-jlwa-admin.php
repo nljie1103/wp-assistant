@@ -21,6 +21,7 @@ class JLWA_Admin {
 
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menus' ), 20 );
+		add_action( 'admin_menu', array( $this, 'rename_dashboard_submenu' ), 999 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ), 100 );
 		add_action( 'admin_notices', array( $this, 'render_conflict_notices' ) );
 		add_filter( 'plugin_action_links_' . JLWA_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
@@ -37,14 +38,6 @@ class JLWA_Admin {
 			array( $this, 'render_dashboard' ),
 			'dashicons-superhero-alt',
 			58.8
-		);
-		add_submenu_page(
-			JLWA_MENU_SLUG,
-			'助手总览',
-			'助手总览',
-			'manage_options',
-			JLWA_MENU_SLUG,
-			array( $this, 'render_dashboard' )
 		);
 		foreach ( JLWA_Feature_Registry::features() as $key => $feature ) {
 			add_submenu_page(
@@ -64,6 +57,14 @@ class JLWA_Admin {
 			'jlwa-update-center',
 			array( $this, 'render_update_center' )
 		);
+	}
+
+	/** Rename WordPress' automatic first submenu. */
+	public function rename_dashboard_submenu() {
+		global $submenu;
+		if ( isset( $submenu[ JLWA_MENU_SLUG ][0][0] ) ) {
+			$submenu[ JLWA_MENU_SLUG ][0][0] = '助手总览';
+		}
 	}
 
 	/** @param string $key Feature key. @return array<int,mixed> */

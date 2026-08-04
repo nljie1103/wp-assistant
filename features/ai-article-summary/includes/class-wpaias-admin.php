@@ -46,26 +46,6 @@ class WPAIAS_Admin {
 		add_action( 'save_post', array( $this, 'on_save_post' ), 10, 2 );
 		add_action( 'before_delete_post', array( $this, 'on_delete_post' ) );
 
-		// 插件页操作链接。
-	}
-
-	/**
-	 * 插件操作链接。
-	 *
-	 * @param array $links 链接数组。
-	 * @return array
-	 */
-	public function plugin_action_links( $links ) {
-		$url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
-		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( '设置', 'wp-ai-article-summary' ) . '</a>' );
-		return $links;
-	}
-
-	/**
-	 * 注册顶级菜单（位置在 外观 与 插件 之间）。
-	 */
-	public function add_menu() {
-		return;
 	}
 
 	/**
