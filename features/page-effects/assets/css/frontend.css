@@ -213,3 +213,80 @@
 @media (prefers-reduced-motion: reduce) {
   .xjpe-respect-motion * { animation: none !important; transition: none !important; }
 }
+
+/* 1.7.0: more ambient effects, copy protection and bottom waves. */
+.xjpe-leaf,
+.xjpe-bubble {
+  position: fixed;
+  left: 0;
+  top: 0;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.xjpe-leaf {
+  color: #d97706;
+  filter: drop-shadow(0 4px 5px rgba(120, 64, 12, .2));
+}
+.xjpe-bubble {
+  color: rgba(165, 225, 255, .92);
+  text-shadow: inset 0 0 8px rgba(255,255,255,.8), 0 0 10px rgba(84,180,255,.35);
+}
+.xjpe-cursor-firefly { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+.xjpe-cursor-heart { filter: drop-shadow(0 3px 4px rgba(255, 50, 110, .25)); }
+.xjpe-cursor-bubble { font-family: Arial, sans-serif; }
+
+.xjpe-waves {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--xjpe-wave-height, 72px);
+  overflow: hidden;
+  opacity: var(--xjpe-wave-opacity, .48);
+  pointer-events: none;
+}
+.xjpe-wave {
+  position: absolute;
+  left: -50%;
+  bottom: -32%;
+  width: 200%;
+  height: 135%;
+  border-radius: 44% 48% 43% 46%;
+  transform-origin: 50% 50%;
+  animation: xjpe-wave-roll var(--xjpe-wave-speed, 12s) linear infinite;
+}
+.xjpe-wave-a { background: var(--xjpe-wave-color-1, #5b8cff); }
+.xjpe-wave-b {
+  bottom: -45%;
+  background: var(--xjpe-wave-color-2, #9b5cff);
+  animation-direction: reverse;
+  animation-duration: calc(var(--xjpe-wave-speed, 12s) * 1.35);
+  opacity: .65;
+}
+@keyframes xjpe-wave-roll { to { transform: rotate(360deg); } }
+
+.xjpe-protect-selection body,
+.xjpe-protect-selection body * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+.xjpe-protect-selection input,
+.xjpe-protect-selection textarea,
+.xjpe-protect-selection select,
+.xjpe-protect-selection option,
+.xjpe-protect-selection pre,
+.xjpe-protect-selection code,
+.xjpe-protect-selection [contenteditable="true"],
+.xjpe-protect-selection [contenteditable=""] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+.xjpe-toast.is-success { background: rgba(22, 101, 52, .94); }
+.xjpe-toast.is-warning { background: rgba(146, 64, 14, .94); }
+.xjpe-toast.is-error { background: rgba(153, 27, 27, .94); }
+
+@media (max-width: 782px) {
+  .xjpe-waves { height: min(var(--xjpe-wave-height, 72px), 90px); }
+  .xjpe-toast { width: min(88vw, 430px); border-radius: 14px; text-align: center; }
+}

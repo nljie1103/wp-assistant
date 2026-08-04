@@ -158,6 +158,13 @@ class WPAIAS_Admin {
 		if ( $apply_basic ) {
 			$out['enabled']       = ! empty( $input['enabled'] ) ? 1 : 0;
 			$out['mobile_enable'] = ! empty( $input['mobile_enable'] ) ? 1 : 0;
+			$out['public_generation'] = ! empty( $input['public_generation'] ) ? 1 : 0;
+			if ( isset( $input['public_generation_hourly_limit'] ) ) {
+				$out['public_generation_hourly_limit'] = max( 1, min( 1000, (int) $input['public_generation_hourly_limit'] ) );
+			}
+			if ( isset( $input['max_source_chars'] ) ) {
+				$out['max_source_chars'] = max( 2000, min( 100000, (int) $input['max_source_chars'] ) );
+			}
 			if ( isset( $input['title'] ) ) {
 				$out['title'] = sanitize_text_field( $input['title'] );
 			}
@@ -280,6 +287,31 @@ class WPAIAS_Admin {
 					}
 				}
 			}
+
+			$valid_decoration_types = array( 'none', 'builtin', 'image' );
+			$decoration_type = isset( $input['decoration_type'] ) ? sanitize_key( $input['decoration_type'] ) : $out['decoration_type'];
+			$out['decoration_type'] = in_array( $decoration_type, $valid_decoration_types, true ) ? $decoration_type : 'none';
+
+			$valid_builtin = array( 'sparkles', 'robot', 'brain', 'quill', 'lightbulb', 'stars' );
+			$builtin = isset( $input['decoration_builtin'] ) ? sanitize_key( $input['decoration_builtin'] ) : $out['decoration_builtin'];
+			$out['decoration_builtin'] = in_array( $builtin, $valid_builtin, true ) ? $builtin : 'sparkles';
+
+			$out['decoration_image_id'] = isset( $input['decoration_image_id'] ) ? absint( $input['decoration_image_id'] ) : (int) $out['decoration_image_id'];
+			$out['decoration_image_url'] = isset( $input['decoration_image_url'] ) ? esc_url_raw( trim( (string) $input['decoration_image_url'] ) ) : (string) $out['decoration_image_url'];
+			if ( $out['decoration_image_id'] > 0 ) {
+				$attachment_url = wp_get_attachment_url( $out['decoration_image_id'] );
+				if ( $attachment_url ) {
+					$out['decoration_image_url'] = esc_url_raw( $attachment_url );
+				}
+			}
+
+			$valid_decoration_positions = array( 'top-left', 'top-right', 'left-center', 'right-center', 'background' );
+			$decoration_position = isset( $input['decoration_position'] ) ? sanitize_key( $input['decoration_position'] ) : $out['decoration_position'];
+			$out['decoration_position'] = in_array( $decoration_position, $valid_decoration_positions, true ) ? $decoration_position : 'top-right';
+			$out['decoration_size'] = isset( $input['decoration_size'] ) ? max( 20, min( 240, (int) $input['decoration_size'] ) ) : (int) $out['decoration_size'];
+			$out['decoration_opacity'] = isset( $input['decoration_opacity'] ) ? max( 0.05, min( 1, (float) $input['decoration_opacity'] ) ) : (float) $out['decoration_opacity'];
+			$out['decoration_offset_x'] = isset( $input['decoration_offset_x'] ) ? max( -200, min( 200, (int) $input['decoration_offset_x'] ) ) : (int) $out['decoration_offset_x'];
+			$out['decoration_offset_y'] = isset( $input['decoration_offset_y'] ) ? max( -200, min( 200, (int) $input['decoration_offset_y'] ) ) : (int) $out['decoration_offset_y'];
 		}
 
 		// Tab4 — 缓存。
@@ -427,6 +459,18 @@ class WPAIAS_Admin {
 									<span class="wpaias-slider"></span>
 								</label>
 							</td>
+						</tr>
+						<tr>
+							<th><label><?php esc_html_e( '访客自动生成', 'wp-ai-article-summary' ); ?></label></th>
+							<td><label class="wpaias-switch"><input type="checkbox" name="<?php echo esc_attr( $opt ); ?>[public_generation]" value="1" <?php checked( 1, (int) $settings['public_generation'] ); ?>><span class="wpaias-slider"></span></label> <span class="description"><?php esc_html_e( '默认关闭。关闭后普通访客只看到已缓存摘要；登录编辑者仍可在前台或编辑器生成，避免公开消耗 API 额度。', 'wp-ai-article-summary' ); ?></span></td>
+						</tr>
+						<tr>
+							<th><label><?php esc_html_e( '访客全站额度', 'wp-ai-article-summary' ); ?></label></th>
+							<td><input type="number" min="1" max="1000" name="<?php echo esc_attr( $opt ); ?>[public_generation_hourly_limit]" value="<?php echo esc_attr( $settings['public_generation_hourly_limit'] ); ?>"> <span class="description"><?php esc_html_e( '次/小时；即使访客更换 IP，也不会超过该站点总额度。管理员不受此限制。', 'wp-ai-article-summary' ); ?></span></td>
+						</tr>
+						<tr>
+							<th><label><?php esc_html_e( '发送正文上限', 'wp-ai-article-summary' ); ?></label></th>
+							<td><input type="number" min="2000" max="100000" step="1000" name="<?php echo esc_attr( $opt ); ?>[max_source_chars]" value="<?php echo esc_attr( $settings['max_source_chars'] ); ?>"> <span class="description"><?php esc_html_e( '字符；过长文章自动截断，降低费用和超时风险。', 'wp-ai-article-summary' ); ?></span></td>
 						</tr>
 					</table>
 
@@ -695,6 +739,16 @@ class WPAIAS_Admin {
 						</tr>
 					</table>
 
+					<h3 class="wpaias-section-title"><?php esc_html_e( '装饰图标与透明图片', 'wp-ai-article-summary' ); ?></h3>
+					<table class="form-table wpaias-table wpaias-decoration-table">
+						<tr><th>装饰来源</th><td><select name="<?php echo esc_attr( $opt ); ?>[decoration_type]" id="wpaias-decoration-type"><option value="none" <?php selected( 'none', $settings['decoration_type'] ); ?>>不显示</option><option value="builtin" <?php selected( 'builtin', $settings['decoration_type'] ); ?>>内置图标</option><option value="image" <?php selected( 'image', $settings['decoration_type'] ); ?>>自定义透明图片</option></select></td></tr>
+						<tr><th>内置图标</th><td><select name="<?php echo esc_attr( $opt ); ?>[decoration_builtin]" id="wpaias-decoration-builtin"><?php foreach ( array( 'sparkles'=>'✨ 星光', 'robot'=>'🤖 机器人', 'brain'=>'🧠 大脑', 'quill'=>'🪶 羽毛笔', 'lightbulb'=>'💡 灵感', 'stars'=>'🌟 星星' ) as $k=>$v ) : ?><option value="<?php echo esc_attr($k); ?>" <?php selected($k,$settings['decoration_builtin']); ?>><?php echo esc_html($v); ?></option><?php endforeach; ?></select></td></tr>
+						<tr><th>自定义图片</th><td><input type="hidden" id="wpaias-decoration-image-id" name="<?php echo esc_attr( $opt ); ?>[decoration_image_id]" value="<?php echo esc_attr( $settings['decoration_image_id'] ); ?>"><input type="url" class="regular-text" id="wpaias-decoration-image-url" name="<?php echo esc_attr( $opt ); ?>[decoration_image_url]" value="<?php echo esc_attr( $settings['decoration_image_url'] ); ?>" placeholder="https://.../icon.png"> <button type="button" class="button" id="wpaias-decoration-upload">从媒体库选择</button> <button type="button" class="button" id="wpaias-decoration-remove">移除</button><div id="wpaias-decoration-preview"><?php if ( ! empty( $settings['decoration_image_url'] ) ) : ?><img src="<?php echo esc_url( $settings['decoration_image_url'] ); ?>" alt=""><?php endif; ?></div></td></tr>
+						<tr><th>位置</th><td><select name="<?php echo esc_attr( $opt ); ?>[decoration_position]" id="wpaias-decoration-position"><?php foreach ( array( 'top-left'=>'左上角', 'top-right'=>'右上角', 'left-center'=>'左侧居中', 'right-center'=>'右侧居中', 'background'=>'背景水印' ) as $k=>$v ) : ?><option value="<?php echo esc_attr($k); ?>" <?php selected($k,$settings['decoration_position']); ?>><?php echo esc_html($v); ?></option><?php endforeach; ?></select></td></tr>
+						<tr><th>尺寸与透明度</th><td><input type="number" min="20" max="240" name="<?php echo esc_attr( $opt ); ?>[decoration_size]" value="<?php echo esc_attr( $settings['decoration_size'] ); ?>"> px　<input type="number" min="0.05" max="1" step="0.05" name="<?php echo esc_attr( $opt ); ?>[decoration_opacity]" value="<?php echo esc_attr( $settings['decoration_opacity'] ); ?>"> 透明度</td></tr>
+						<tr><th>偏移</th><td>X <input type="number" min="-200" max="200" name="<?php echo esc_attr( $opt ); ?>[decoration_offset_x]" value="<?php echo esc_attr( $settings['decoration_offset_x'] ); ?>"> px　Y <input type="number" min="-200" max="200" name="<?php echo esc_attr( $opt ); ?>[decoration_offset_y]" value="<?php echo esc_attr( $settings['decoration_offset_y'] ); ?>"> px</td></tr>
+					</table>
+
 					<h3 class="wpaias-section-title"><?php esc_html_e( '实时预览', 'wp-ai-article-summary' ); ?></h3>
 					<div class="wpaias-live-preview-wrap">
 						<aside id="wpaias-live-preview"
@@ -795,7 +849,7 @@ class WPAIAS_Admin {
 			wp_send_json_success(
 				array(
 					'message' => __( '连通成功！', 'wp-ai-article-summary' ),
-					'sample'  => mb_substr( (string) $result['data'], 0, 80 ),
+					'sample'  => function_exists( 'mb_substr' ) ? mb_substr( (string) $result['data'], 0, 80 ) : substr( (string) $result['data'], 0, 80 ),
 				)
 			);
 		}
@@ -839,7 +893,9 @@ class WPAIAS_Admin {
 		}
 
 		$settings = JLWA_AI_Summary_Feature::get_settings();
-		$content  = wp_strip_all_tags( (string) $post->post_content );
+		$content   = wp_strip_all_tags( (string) $post->post_content );
+		$max_chars = max( 2000, min( 100000, (int) $settings['max_source_chars'] ) );
+		$content   = function_exists( 'mb_substr' ) ? mb_substr( $content, 0, $max_chars ) : substr( $content, 0, $max_chars );
 
 		$result = WPAIAS_API::generate_summary( $content, $settings );
 		if ( ! empty( $result['success'] ) ) {

@@ -55,7 +55,7 @@ class JRMU_Diagnostics {
 		if ( ! self::is_url_host_allowed_for_check( $url ) ) {
 			return new WP_Error( 'host_not_allowed', '为安全起见，只允许检测当前站点、额外源站域名或多域名白名单中的 URL。' );
 		}
-		$response = wp_remote_get(
+		$response = wp_safe_remote_get(
 			$url,
 			array(
 				'timeout'     => 10,
@@ -101,13 +101,14 @@ class JRMU_Diagnostics {
 
 	/** 生成 Nginx 反代缓存配置建议。 */
 	public static function generate_nginx_config() {
-		$origin = site_url();
-		$host   = wp_parse_url( $origin, PHP_URL_HOST );
-		$origin_display = $host ? 'https://' . $host : 'https://origin.example.com';
+		$options = JRMU_Settings::get_options();
+		$origin  = ! empty( $options['origin_url'] ) ? $options['origin_url'] : self::get_raw_siteurl();
+		$origin  = JRMU_Settings::sanitize_origin_url( $origin );
+		$origin_display = $origin ? $origin : 'https://origin.example.com';
 		return "# 九流媒体相对地址：Nginx 反代缓存示例\n" .
 		"# 先在 http {} 内添加缓存区：\n" .
 		"proxy_cache_path /www/wwwcache/jrmu levels=1:2 keys_zone=jrmu_cache:100m inactive=7d max_size=10g use_temp_path=off;\n\n" .
-		"# 在 server {} 内添加或合并以下规则。请把 proxy_pass 改成你的美国源站：\n" .
+		"# 在 server {} 内添加或合并以下规则。源站来自插件设置中的“反向代理源站 URL”：\n" .
 		"set \$skip_cache 0;\n" .
 		"if (\$request_method = POST) { set \$skip_cache 1; }\n" .
 		"if (\$query_string != \"\") { set \$skip_cache 1; }\n" .
@@ -115,7 +116,7 @@ class JRMU_Diagnostics {
 		"if (\$http_cookie ~* \"wordpress_logged_in|comment_author|wp-postpass|woocommerce_items_in_cart\") { set \$skip_cache 1; }\n\n" .
 		"location ~* \\.(jpg|jpeg|png|gif|webp|avif|svg|ico|css|js|woff|woff2|ttf|eot)$ {\n" .
 		"    proxy_pass {$origin_display};\n" .
-		"    proxy_set_header Host \$host;\n" .
+		"    proxy_set_header Host \$proxy_host;\n" .
 		"    proxy_set_header X-Real-IP \$remote_addr;\n" .
 		"    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n" .
 		"    proxy_set_header X-Forwarded-Proto \$scheme;\n" .
@@ -130,7 +131,7 @@ class JRMU_Diagnostics {
 		"}\n\n" .
 		"location / {\n" .
 		"    proxy_pass {$origin_display};\n" .
-		"    proxy_set_header Host \$host;\n" .
+		"    proxy_set_header Host \$proxy_host;\n" .
 		"    proxy_set_header X-Real-IP \$remote_addr;\n" .
 		"    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n" .
 		"    proxy_set_header X-Forwarded-Proto \$scheme;\n" .
@@ -141,4 +142,11 @@ class JRMU_Diagnostics {
 		"    add_header X-Cache-Status \$upstream_cache_status always;\n" .
 		"}\n";
 	}
+	/** 读取未经过动态多域名过滤的数据库 siteurl。 */
+	private static function get_raw_siteurl() {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", 'siteurl' ) );
+		return is_string( $value ) ? $value : '';
+	}
+
 }

@@ -105,6 +105,7 @@ class JIP_Frontend {
 	data-effect="<?php echo esc_attr( $effect ); ?>"
 	data-min="<?php echo esc_attr( $opts['min_duration'] ); ?>"
 	data-max="<?php echo esc_attr( $opts['max_duration'] ); ?>"
+	data-completion="<?php echo esc_attr( $opts['completion'] ); ?>"
 	data-skip="<?php echo (int) $opts['allow_skip']; ?>"
 	data-show-title="<?php echo (int) $opts['show_site_title']; ?>"
 	data-logo-size="<?php echo (int) $opts['logo_size']; ?>">
@@ -153,14 +154,17 @@ class JIP_Frontend {
 		</div>
 	<?php elseif ( 'glass' === $effect ) : ?>
 		<div class="jip-stage">
-			<div class="jip-glass-box" aria-hidden="true">
-				<div class="jip-glass-inner"></div>
-			</div>
-			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?>
-				<div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div>
-			<?php endif; ?>
+			<div class="jip-glass-box" aria-hidden="true"><div class="jip-glass-inner"></div></div>
+			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?>
 		</div>
+	<?php elseif ( 'orbit' === $effect ) : ?>
+		<div class="jip-stage"><div class="jip-orbit" aria-hidden="true"><i></i><i></i><i></i><span><img src="<?php echo esc_url( $logo_url ); ?>" alt=""></span></div><?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?></div>
+	<?php elseif ( 'shutters' === $effect ) : ?>
+		<div class="jip-shutter jip-shutter-top" aria-hidden="true"></div><div class="jip-shutter jip-shutter-bottom" aria-hidden="true"></div><div class="jip-stage"><img class="jip-simple-logo" src="<?php echo esc_url( $logo_url ); ?>" alt=""><?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?></div>
+	<?php elseif ( 'ink' === $effect ) : ?>
+		<div class="jip-ink-cloud" aria-hidden="true"><i></i><i></i><i></i></div><div class="jip-stage"><img class="jip-simple-logo" src="<?php echo esc_url( $logo_url ); ?>" alt=""><?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?></div>
 	<?php endif; ?>
+	<?php if ( ! empty( $opts['show_progress'] ) ) : ?><div class="jip-progress" role="progressbar" aria-label="页面准备进度"><span></span><em><?php echo esc_html( $opts['status_text'] ); ?></em></div><?php endif; ?>
 	<div class="jip-skip-tip"><?php echo ! empty( $opts['allow_skip'] ) ? '点击任意位置跳过' : '&nbsp;'; ?></div>
 </div>
 		<?php
@@ -186,6 +190,9 @@ class JIP_Frontend {
 		$html        = $this->get_preloader_html();
 		$once        = ! empty( $this->options['once_per_session'] ) ? 'true' : 'false';
 		$home_only   = ! empty( $this->options['home_only'] ) ? 'true' : 'false';
+		$mobile      = ! empty( $this->options['mobile_enable'] ) ? 'true' : 'false';
+		$reduce      = ! empty( $this->options['reduce_motion'] ) ? 'true' : 'false';
+		$save_data   = ! empty( $this->options['skip_save_data'] ) ? 'true' : 'false';
 		// 将 HTML 编码为 JSON 字符串，安全注入到 JS 字符串字面量中。
 		$html_json = wp_json_encode( $html );
 		if ( false === $html_json ) {
@@ -199,6 +206,12 @@ class JIP_Frontend {
 	try {
 		var ONCE = <?php echo $once; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var HOME_ONLY = <?php echo $home_only; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var MOBILE = <?php echo $mobile; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var REDUCE = <?php echo $reduce; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var SAVE_DATA = <?php echo $save_data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var isMobile = (window.matchMedia && window.matchMedia('(max-width:782px)').matches) || /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+		var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+		if ((!MOBILE && isMobile) || (REDUCE && reduceMotion) || (SAVE_DATA && navigator.connection && navigator.connection.saveData)) { window.__JIP_SKIP__ = 1; return; }
 		// 标签会话级跳过：sessionStorage 中已有标记则不再显示
 		if (ONCE && window.sessionStorage) {
 			var key = 'jip_shown_' + (HOME_ONLY ? 'home' : 'all');
@@ -217,11 +230,10 @@ class JIP_Frontend {
 <style id="jip-critical-css">
 /* 锁定 html/body 背景色，彻底消除白屏：从浏览器渲染第一帧就是预加载背景色 */
 html.jip-loading { background: <?php echo esc_attr( $bg ); ?> !important; overflow: hidden !important; }
-html.jip-loading body { background: <?php echo esc_attr( $bg ); ?> !important; overflow: hidden !important; height: 100vh !important; }
-html.jip-loading body > *:not(#jip-preloader) { opacity: 0 !important; visibility: hidden !important; transition: opacity .6s ease, visibility .6s ease; }
-html.jip-fade-in body > *:not(#jip-preloader) { opacity: 1 !important; visibility: visible !important; }
-html.jip-fade-in, html.jip-fade-in body { overflow: auto !important; height: auto !important; }
-#jip-preloader{position:fixed;inset:0;width:100%;height:100%;background:<?php echo esc_attr( $bg ); ?>;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity,transform;transition:opacity 1s ease, transform 1s ease;}
+html.jip-loading body { overflow: hidden !important; }
+html.jip-fade-in, html.jip-fade-in body { overflow: auto !important; }
+/* 正文始终在遮罩后正常解析和绘制，不再通过 visibility:hidden 制造虚假等待。 */
+#jip-preloader{position:fixed;inset:0;width:100%;height:100%;background:<?php echo esc_attr( $bg ); ?>;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity,transform;transition:opacity .55s ease, transform .55s ease;}
 #jip-preloader.jip-hide{opacity:0;transform:scale(1.1);pointer-events:none;}
 /* 会话级跳过时，html 不会带 jip-loading 类，立即隐藏 PHP 已输出的预加载层，避免一闪而过 */
 html:not(.jip-loading) #jip-preloader{display:none !important;}
@@ -312,7 +324,7 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 			JIP_PLUGIN_URL . 'assets/js/preloader.js',
 			array(),
 			JIP_VERSION,
-			false // 放 head，越早执行越好。
+			true // 页脚加载，避免外部 JS 阻塞 HTML 解析；关键遮罩由内联代码负责。
 		);
 
 		wp_localize_script(
@@ -322,6 +334,7 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 				'minDuration' => floatval( $this->options['min_duration'] ),
 				'maxDuration' => floatval( $this->options['max_duration'] ),
 				'effect'      => $this->options['effect'],
+				'completion'  => $this->options['completion'],
 				'allowSkip'   => (int) $this->options['allow_skip'],
 				'logoUrl'     => ! empty( $this->options['logo_url'] ) ? $this->options['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' ),
 			)

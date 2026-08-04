@@ -1,272 +1,184 @@
-/**
- * 九流沉浸式预加载 - 前台脚本
- * 版本：1.0.6
- * 作者：九流（https://www.jiuliu.org）
- * 许可证：GPLv2+
- *
- * 设计思路：
- *  1. 关键内联样式已让 #jip-preloader 在 DOM 出现前后立即全屏覆盖。
- *  2. 本脚本统一管理生命周期：等待 window.load + minDuration → 触发淡出。
- *  3. 超时保护：maxDuration 到达时强制结束。
- *  4. 允许点击跳过：满足 minDuration 后任何点击直接结束。
- *  5. 各效果的额外动画（粒子、字幕入场等）在此扩展。
- *
- * 与传统"固定时长开屏"区别：
- *  - 我们不是固定 N 秒消失，而是"等到资源 ready + 不低于最小展示时长"才消失。
- */
+/** 九流沉浸式预加载 1.1.0 — performance-first lifecycle. */
 (function () {
 	'use strict';
 
-	// 配置（由 wp_localize_script 注入），未注入时使用默认值，避免脚本错误。
-	var CFG = (typeof window !== 'undefined' && window.JIP_CFG) ? window.JIP_CFG : {};
-	var MIN = Math.max(0, parseFloat(CFG.minDuration || 1)) * 1000;
-	var MAX = Math.max(1, parseFloat(CFG.maxDuration || 8)) * 1000;
+	var CFG = window.JIP_CFG || {};
+	var MIN = Math.max(0, parseFloat(CFG.minDuration || 0.45)) * 1000;
+	var MAX = Math.max(500, parseFloat(CFG.maxDuration || 3) * 1000);
 	var EFFECT = CFG.effect || 'logo3d';
+	var COMPLETION = CFG.completion || 'dom';
 	var ALLOW_SKIP = !!parseInt(CFG.allowSkip, 10);
-	var LOGO_URL = CFG.logoUrl || '';
-
 	var startTime = Date.now();
 	var ended = false;
+	var cleanupCallbacks = [];
+	var progressTimer = 0;
+	var maxTimer = 0;
 
-	/**
-	 * 获取预加载元素（在 DOM 出现后可用）。
-	 */
-	function getEl() {
-		return document.getElementById('jip-preloader');
+	function getEl() { return document.getElementById('jip-preloader'); }
+	function onCleanup(fn) { cleanupCallbacks.push(fn); }
+	function cleanupEffects() {
+		cleanupCallbacks.splice(0).forEach(function (fn) { try { fn(); } catch (e) {} });
+		if (progressTimer) { clearInterval(progressTimer); progressTimer = 0; }
+		if (maxTimer) { clearTimeout(maxTimer); maxTimer = 0; }
 	}
 
-	/**
-	 * 结束预加载：执行淡出动画，淡出完成后从 DOM 移除并恢复主内容。
-	 */
+	function updateProgress(value, label) {
+		var el = getEl(); if (!el) return;
+		var bar = el.querySelector('.jip-progress span');
+		var text = el.querySelector('.jip-progress em');
+		if (bar) bar.style.width = Math.max(0, Math.min(100, value)) + '%';
+		if (text && label) text.textContent = label;
+		var progress = el.querySelector('.jip-progress');
+		if (progress) progress.setAttribute('aria-valuenow', String(Math.round(value)));
+	}
+
+	function startProgress() {
+		var value = 10;
+		updateProgress(value);
+		progressTimer = setInterval(function () {
+			if (ended) return;
+			value = Math.min(88, value + Math.max(1, (88 - value) * 0.08));
+			updateProgress(value);
+		}, 120);
+	}
+
 	function endPreloader() {
 		if (ended) return;
 		ended = true;
-
+		cleanupEffects();
+		updateProgress(100, '页面已准备完成');
 		var el = getEl();
 		var html = document.documentElement;
-
-		// 触发主内容淡入。
 		html.classList.add('jip-fade-in');
-
-		if (!el) {
-			// 没有 DOM 节点（极少数情况下），直接收尾。
-			html.classList.remove('jip-loading');
-			return;
-		}
-
+		if (!el) { html.classList.remove('jip-loading'); return; }
 		el.classList.add('jip-hide');
-
-		// 监听淡出过渡结束。
 		var removed = false;
 		function cleanup() {
-			if (removed) return;
-			removed = true;
+			if (removed) return; removed = true;
 			html.classList.remove('jip-loading');
-			if (el && el.parentNode) {
-				el.parentNode.removeChild(el);
-			}
-			// 触发自定义事件，方便主题/其他脚本响应。
-			try {
-				window.dispatchEvent(new CustomEvent('jip:ended'));
-			} catch (e) { /* IE11 兜底，可忽略 */ }
+			if (el.parentNode) el.parentNode.removeChild(el);
+			try { window.dispatchEvent(new CustomEvent('jip:ended')); } catch (e) {}
 		}
 		el.addEventListener('transitionend', cleanup, { once: true });
-		// 兜底定时器，避免某些浏览器不触发 transitionend。
-		setTimeout(cleanup, 1300);
+		setTimeout(cleanup, 750);
 	}
 
-	/**
-	 * 满足 minDuration 后尝试结束。
-	 * @param {number} delayBase 额外延迟（毫秒）。
-	 */
-	function endWithMinDuration(delayBase) {
-		var elapsed = Date.now() - startTime;
-		var remain = Math.max(0, MIN - elapsed);
-		setTimeout(endPreloader, remain + (delayBase || 0));
+	function endWithMinDuration(extra) {
+		var remain = Math.max(0, MIN - (Date.now() - startTime));
+		setTimeout(endPreloader, remain + (extra || 0));
 	}
 
-	/**
-	 * 绑定点击跳过。
-	 */
 	function bindSkip() {
 		if (!ALLOW_SKIP) return;
-		var handler = function () {
-			var elapsed = Date.now() - startTime;
-			// 即使在 minDuration 之内也允许跳过（用户体验优先）。
-			// 但留一个极小的最小展示（200ms），避免一闪而过。
-			if (elapsed < 200) {
-				setTimeout(endPreloader, 200 - elapsed);
-			} else {
-				endPreloader();
-			}
-		};
-		document.addEventListener('click', handler, { once: true, capture: true });
-		document.addEventListener('touchstart', handler, { once: true, capture: true });
-		document.addEventListener('keydown', function (e) {
-			if (e.key === 'Escape') endPreloader();
-		}, { once: true });
+		function remove() {
+			document.removeEventListener('click', handler, true);
+			document.removeEventListener('touchstart', handler, true);
+			document.removeEventListener('keydown', handler);
+		}
+		function handler(ev) {
+			if (ev && ev.type === 'keydown' && ev.key !== 'Escape' && ev.key !== 'Enter' && ev.key !== ' ') return;
+			remove();
+			endWithMinDuration(0);
+		}
+		document.addEventListener('click', handler, { capture: true });
+		document.addEventListener('touchstart', handler, { capture: true, passive: true });
+		document.addEventListener('keydown', handler);
+		onCleanup(remove);
 	}
 
-	/**
-	 * 粒子效果（Canvas 2D）。在 window.load 后启动一次汇聚动画。
-	 */
 	function initParticlesEffect() {
-		var el = getEl();
-		if (!el) return;
+		var el = getEl(); if (!el) return;
 		var canvas = el.querySelector('.jip-particles-canvas');
 		var sourceImg = el.querySelector('.jip-particles-target');
 		if (!canvas || !sourceImg) return;
-
-		var ctx = canvas.getContext('2d');
-		if (!ctx) return;
+		var ctx = canvas.getContext('2d'); if (!ctx) return;
+		var particles = [];
+		var rafId = 0;
+		var cssWidth = 1, cssHeight = 1, dpr = 1;
 
 		function resize() {
-			canvas.width = el.clientWidth * (window.devicePixelRatio || 1);
-			canvas.height = el.clientHeight * (window.devicePixelRatio || 1);
+			cssWidth = Math.max(1, el.clientWidth); cssHeight = Math.max(1, el.clientHeight);
+			dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+			canvas.width = Math.round(cssWidth * dpr); canvas.height = Math.round(cssHeight * dpr);
+			canvas.style.width = cssWidth + 'px'; canvas.style.height = cssHeight + 'px';
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		}
-		resize();
-		window.addEventListener('resize', resize);
+		resize(); window.addEventListener('resize', resize, { passive: true });
+		onCleanup(function () { window.removeEventListener('resize', resize); if (rafId) cancelAnimationFrame(rafId); rafId = 0; particles = []; });
 
-		var particles = [];
-		var targetReady = false;
+		function fallback() {
+			particles = [];
+			var n = Math.min(320, Math.round(cssWidth / 3));
+			var r = Math.min(cssWidth, cssHeight) * 0.13;
+			for (var k = 0; k < n; k++) {
+				var ang = (k / n) * Math.PI * 2;
+				particles.push({ x: cssWidth / 2 + (Math.random() - .5) * cssWidth, y: cssHeight / 2 + (Math.random() - .5) * cssHeight, tx: cssWidth / 2 + Math.cos(ang) * r, ty: cssHeight / 2 + Math.sin(ang) * r, vx: 0, vy: 0, c: 'rgba(120,180,255,.9)' });
+			}
+		}
 
 		function buildFromImage() {
 			try {
-				var size = Math.min(canvas.width, canvas.height) * 0.4;
-				var tmp = document.createElement('canvas');
-				tmp.width = 120; tmp.height = 120;
-				var tctx = tmp.getContext('2d');
-				tctx.drawImage(sourceImg, 0, 0, 120, 120);
-				var data = tctx.getImageData(0, 0, 120, 120).data;
-
-				var cx = canvas.width / 2;
-				var cy = canvas.height / 2;
+				var tmp = document.createElement('canvas'); tmp.width = 90; tmp.height = 90;
+				var tctx = tmp.getContext('2d'); tctx.drawImage(sourceImg, 0, 0, 90, 90);
+				var data = tctx.getImageData(0, 0, 90, 90).data;
+				var scale = Math.min(cssWidth, cssHeight) * .0032;
 				particles = [];
-				for (var y = 0; y < 120; y += 3) {
-					for (var x = 0; x < 120; x += 3) {
-						var i = (y * 120 + x) * 4;
-						var a = data[i + 3];
-						if (a > 128) {
-							var tx = cx + (x - 60) * size / 60;
-							var ty = cy + (y - 60) * size / 60;
-							particles.push({
-								x: cx + (Math.random() - 0.5) * canvas.width * 1.2,
-								y: cy + (Math.random() - 0.5) * canvas.height * 1.2,
-								tx: tx,
-								ty: ty,
-								vx: 0, vy: 0,
-								c: 'rgba(' + data[i] + ',' + data[i + 1] + ',' + data[i + 2] + ',1)'
-							});
-						}
-					}
+				for (var y = 0; y < 90; y += 4) for (var x = 0; x < 90; x += 4) {
+					var i = (y * 90 + x) * 4; if (data[i + 3] < 130) continue;
+					particles.push({ x: Math.random() * cssWidth, y: Math.random() * cssHeight, tx: cssWidth / 2 + (x - 45) * scale, ty: cssHeight / 2 + (y - 45) * scale, vx: 0, vy: 0, c: 'rgba(' + data[i] + ',' + data[i+1] + ',' + data[i+2] + ',.95)' });
 				}
-				targetReady = true;
-				el.classList.add('jip-particles-ready');
-			} catch (err) {
-				// 跨域或其他错误，回退到圆形粒子。
-				var n = 600;
-				particles = [];
-				var R = Math.min(canvas.width, canvas.height) * 0.2;
-				for (var k = 0; k < n; k++) {
-					var ang = (k / n) * Math.PI * 2;
-					particles.push({
-						x: canvas.width / 2 + (Math.random() - 0.5) * canvas.width,
-						y: canvas.height / 2 + (Math.random() - 0.5) * canvas.height,
-						tx: canvas.width / 2 + Math.cos(ang) * R,
-						ty: canvas.height / 2 + Math.sin(ang) * R,
-						vx: 0, vy: 0,
-						c: 'rgba(120,180,255,0.9)'
-					});
-				}
-				targetReady = true;
-			}
+				if (!particles.length) fallback();
+			} catch (e) { fallback(); }
 		}
 
 		function loop() {
-			if (ended && particles.length === 0) return;
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			if (ended) return;
+			ctx.clearRect(0, 0, cssWidth, cssHeight);
 			for (var i = 0; i < particles.length; i++) {
-				var p = particles[i];
-				var dx = p.tx - p.x;
-				var dy = p.ty - p.y;
-				p.vx = (p.vx + dx * 0.002) * 0.92;
-				p.vy = (p.vy + dy * 0.002) * 0.92;
-				p.x += p.vx;
-				p.y += p.vy;
-				ctx.fillStyle = p.c;
-				ctx.fillRect(p.x, p.y, 2, 2);
+				var p = particles[i]; var dx = p.tx - p.x, dy = p.ty - p.y;
+				p.vx = (p.vx + dx * .004) * .9; p.vy = (p.vy + dy * .004) * .9; p.x += p.vx; p.y += p.vy;
+				ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 2, 2);
 			}
-			requestAnimationFrame(loop);
+			rafId = requestAnimationFrame(loop);
 		}
-
-		if (sourceImg.complete) {
-			buildFromImage();
-		} else {
-			sourceImg.addEventListener('load', buildFromImage);
-			sourceImg.addEventListener('error', buildFromImage);
-		}
-		requestAnimationFrame(loop);
+		if (sourceImg.complete) buildFromImage(); else { sourceImg.addEventListener('load', buildFromImage, { once: true }); sourceImg.addEventListener('error', fallback, { once: true }); }
+		rafId = requestAnimationFrame(loop);
 	}
 
-	/**
-	 * 站点名称入场（统一处理）。
-	 */
 	function animateTitle() {
-		var el = getEl();
-		if (!el) return;
+		var el = getEl(); if (!el) return;
 		var title = el.querySelector('.jip-site-title');
-		if (title) {
-			// CSS 已有延迟过渡，这里仅添加 class 以便外部覆盖。
-			setTimeout(function () { title.classList.add('jip-in'); }, 50);
-		}
-		setTimeout(function () { el.classList.add('jip-ready'); }, 200);
+		if (title) setTimeout(function () { if (!ended) title.classList.add('jip-in'); }, 40);
+		setTimeout(function () { if (!ended) el.classList.add('jip-ready'); }, 100);
 	}
 
-	/**
-	 * 主入口：DOM 就绪即绑定，window.load 触发结束。
-	 */
+	function finishByStrategy() {
+		if (COMPLETION === 'load') {
+			if (document.readyState === 'complete') endWithMinDuration(80);
+			else window.addEventListener('load', function () { endWithMinDuration(80); }, { once: true });
+			return;
+		}
+		function afterDom() {
+			if (COMPLETION === 'paint' && window.requestAnimationFrame) {
+				requestAnimationFrame(function () { requestAnimationFrame(function () { endWithMinDuration(40); }); });
+			} else endWithMinDuration(40);
+		}
+		if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', afterDom, { once: true });
+		else afterDom();
+	}
+
 	function init() {
-		// 会话级跳过：critical-pre 决定不显示时（__JIP_SKIP__ 被设置 或 html 没有 jip-loading 类）
-		// 立即清理，跳过所有预加载逻辑。
 		if (window.__JIP_SKIP__ || !document.documentElement.classList.contains('jip-loading')) {
-			var skipEl = getEl();
-			if (skipEl && skipEl.parentNode) skipEl.parentNode.removeChild(skipEl);
-			document.documentElement.classList.remove('jip-loading');
-			return;
+			var skipEl = getEl(); if (skipEl && skipEl.parentNode) skipEl.parentNode.removeChild(skipEl);
+			document.documentElement.classList.remove('jip-loading'); return;
 		}
-
-		// 兜底：若由于主题未触发 wp_body_open 导致预加载元素缺失，则不强加遮罩。
-		if (!getEl()) {
-			document.documentElement.classList.remove('jip-loading');
-			return;
-		}
-
-		bindSkip();
-		animateTitle();
-
-		if (EFFECT === 'particles') {
-			initParticlesEffect();
-		}
-
-		// 超时保护：无论是否加载完成。
-		setTimeout(function () {
-			if (!ended) endPreloader();
-		}, MAX);
-
-		// window.load 表示页面所有关键资源加载完成。
-		if (document.readyState === 'complete') {
-			endWithMinDuration(150);
-		} else {
-			window.addEventListener('load', function () {
-				endWithMinDuration(150);
-			});
-		}
+		if (!getEl()) { document.documentElement.classList.remove('jip-loading'); return; }
+		bindSkip(); animateTitle(); startProgress();
+		if (EFFECT === 'particles') initParticlesEffect();
+		maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, MAX);
+		finishByStrategy();
 	}
 
-	// 在 DOMContentLoaded 后初始化（DOM 必须存在）。
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', init);
-	} else {
-		init();
-	}
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+	else init();
 })();

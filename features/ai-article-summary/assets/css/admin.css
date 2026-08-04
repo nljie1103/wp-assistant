@@ -260,3 +260,6 @@
 	font-size: 12px; line-height: 1.65;
 	white-space: pre-wrap; word-break: break-word;
 }
+
+.wpaias-decoration-table #wpaias-decoration-preview { margin-top: 10px; min-height: 30px; }
+.wpaias-decoration-table #wpaias-decoration-preview img { display: block; max-width: 120px; max-height: 120px; object-fit: contain; padding: 8px; border: 1px dashed #cbd5e1; border-radius: 12px; background: repeating-conic-gradient(#f8fafc 0 25%, #fff 0 50%) 50% / 16px 16px; }

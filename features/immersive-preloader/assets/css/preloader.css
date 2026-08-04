@@ -392,3 +392,38 @@
 		background: linear-gradient(135deg, rgba(80,80,100,0.6), rgba(30,30,50,0.6));
 	}
 }
+
+/* 1.1.0 — performance-first effects and stage progress. */
+.jip-simple-logo { width: min(32vw, 150px); height: min(32vw, 150px); object-fit: contain; filter: drop-shadow(0 14px 35px rgba(0,0,0,.35)); animation: jip-simple-pop .75s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes jip-simple-pop { from { transform: scale(.72) translateY(12px); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.jip-orbit { position: relative; width: min(56vw, 270px); aspect-ratio: 1; display: grid; place-items: center; }
+.jip-orbit > i { position: absolute; inset: 4%; border: 1px solid rgba(130,190,255,.42); border-radius: 50%; animation: jip-orbit-spin 3.4s linear infinite; }
+.jip-orbit > i:nth-child(2) { inset: 15%; border-color: rgba(190,120,255,.52); animation-duration: 2.4s; animation-direction: reverse; transform: rotateX(64deg); }
+.jip-orbit > i:nth-child(3) { inset: 27%; border-style: dashed; border-color: rgba(255,255,255,.7); animation-duration: 1.8s; }
+.jip-orbit > i::before { content: ''; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; border-radius: 50%; background: #9fd5ff; box-shadow: 0 0 14px currentColor; }
+.jip-orbit > span { width: 35%; height: 35%; display: grid; place-items: center; border-radius: 28%; background: rgba(255,255,255,.08); backdrop-filter: blur(12px); box-shadow: 0 0 55px rgba(90,160,255,.22); }
+.jip-orbit img { max-width: 76%; max-height: 76%; object-fit: contain; }
+@keyframes jip-orbit-spin { to { transform: rotate(360deg); } }
+
+.jip-shutter { position: absolute; left: 0; right: 0; height: 51%; z-index: 1; background: linear-gradient(135deg, rgba(20,28,48,.96), rgba(58,44,95,.96)); transition: transform .95s cubic-bezier(.76,0,.24,1); }
+.jip-shutter-top { top: 0; transform-origin: top; }
+.jip-shutter-bottom { bottom: 0; transform-origin: bottom; }
+#jip-preloader.jip-ready .jip-shutter-top { transform: translateY(-42%); }
+#jip-preloader.jip-ready .jip-shutter-bottom { transform: translateY(42%); }
+.jip-effect-shutters .jip-stage { z-index: 2; }
+
+.jip-ink-cloud { position: absolute; inset: 0; overflow: hidden; filter: blur(18px); opacity: .65; }
+.jip-ink-cloud i { position: absolute; width: 42vw; height: 42vw; min-width: 260px; min-height: 260px; border-radius: 47% 53% 39% 61%; background: radial-gradient(circle at 35% 35%, rgba(92,120,175,.78), rgba(15,20,38,.12) 62%, transparent 70%); animation: jip-ink 4.2s ease-in-out infinite alternate; }
+.jip-ink-cloud i:nth-child(1) { left: 6%; top: 12%; }
+.jip-ink-cloud i:nth-child(2) { right: 0; bottom: 4%; animation-delay: -1.7s; transform: scale(.82); }
+.jip-ink-cloud i:nth-child(3) { left: 35%; bottom: -20%; animation-delay: -3s; transform: scale(.68); }
+@keyframes jip-ink { from { transform: scale(.72) rotate(-8deg); opacity: .35; } to { transform: scale(1.08) rotate(10deg); opacity: .8; } }
+
+.jip-progress { position: absolute; left: 50%; bottom: 9%; width: min(72vw, 360px); height: 4px; transform: translateX(-50%); border-radius: 999px; background: rgba(255,255,255,.14); z-index: 20; }
+.jip-progress > span { display: block; width: 10%; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#73c7ff,#a779ff,#ff78bc); box-shadow: 0 0 14px rgba(115,199,255,.5); transition: width .18s ease; }
+.jip-progress > em { display: block; margin-top: 10px; color: rgba(255,255,255,.65); font-size: 12px; font-style: normal; text-align: center; letter-spacing: .08em; }
+
+@media (prefers-reduced-motion: reduce) {
+  #jip-preloader *, #jip-preloader *::before, #jip-preloader *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .15s !important; }
+}

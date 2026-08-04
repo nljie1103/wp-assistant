@@ -42,6 +42,7 @@ class JRMU_Settings {
 			'domain_mode'                   => 'whitelist',
 			'domain_scheme'                 => 'https',
 			'domain_allowed_hosts'          => '',
+			'origin_url'                    => '',
 
 			// SEO / canonical。
 			'canonical_enabled'             => 0,
@@ -97,7 +98,14 @@ class JRMU_Settings {
 			$options = array();
 		}
 
-		return wp_parse_args( $options, self::get_defaults() );
+		$options = wp_parse_args( $options, self::get_defaults() );
+
+		// 4.2.0 起不再信任任意 Host 请求头；旧的 any 设置自动降级为白名单。
+		if ( 'whitelist' !== $options['domain_mode'] ) {
+			$options['domain_mode'] = 'whitelist';
+		}
+
+		return $options;
 	}
 
 	/**
@@ -126,8 +134,8 @@ class JRMU_Settings {
 			$output['future_media_enabled_at'] = 0;
 		}
 
-		$domain_mode = isset( $input['domain_mode'] ) ? sanitize_key( wp_unslash( $input['domain_mode'] ) ) : $defaults['domain_mode'];
-		$output['domain_mode'] = in_array( $domain_mode, array( 'whitelist', 'any' ), true ) ? $domain_mode : $defaults['domain_mode'];
+		// 任意 Host 模式容易把未校验的 Host 请求头带入站点 URL，4.2.0 起固定使用白名单。
+		$output['domain_mode'] = 'whitelist';
 
 		$domain_scheme = isset( $input['domain_scheme'] ) ? sanitize_key( wp_unslash( $input['domain_scheme'] ) ) : $defaults['domain_scheme'];
 		$output['domain_scheme'] = in_array( $domain_scheme, array( 'https', 'http', 'auto' ), true ) ? $domain_scheme : $defaults['domain_scheme'];
@@ -139,6 +147,7 @@ class JRMU_Settings {
 		$output['canonical_scheme'] = in_array( $canonical_scheme, array( 'https', 'http' ), true ) ? $canonical_scheme : $defaults['canonical_scheme'];
 
 		$output['domain_allowed_hosts']   = isset( $input['domain_allowed_hosts'] ) ? self::sanitize_host_lines( wp_unslash( $input['domain_allowed_hosts'] ) ) : '';
+		$output['origin_url']              = isset( $input['origin_url'] ) ? self::sanitize_origin_url( wp_unslash( $input['origin_url'] ) ) : '';
 		$output['extra_hosts']            = isset( $input['extra_hosts'] ) ? self::sanitize_host_lines( wp_unslash( $input['extra_hosts'] ) ) : '';
 		$output['canonical_primary_host'] = isset( $input['canonical_primary_host'] ) ? self::sanitize_single_host( wp_unslash( $input['canonical_primary_host'] ) ) : '';
 		$output['scan_limit']             = isset( $input['scan_limit'] ) ? max( 10, min( 1000, absint( $input['scan_limit'] ) ) ) : $defaults['scan_limit'];
@@ -195,6 +204,36 @@ class JRMU_Settings {
 		$host = preg_replace( '/[^a-z0-9\-\.]/i', '', $host );
 
 		return $host ? $host : '';
+	}
+
+
+	/**
+	 * 清洗反向代理源站 URL，仅保留 scheme、host、port 和可选子目录路径。
+	 *
+	 * @param string $raw 原始 URL。
+	 * @return string
+	 */
+	public static function sanitize_origin_url( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw ) {
+			return '';
+		}
+		if ( false === strpos( $raw, '://' ) ) {
+			$raw = 'https://' . $raw;
+		}
+		$parts = wp_parse_url( $raw );
+		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) || ! in_array( strtolower( $parts['scheme'] ), array( 'http', 'https' ), true ) ) {
+			return '';
+		}
+		$scheme = strtolower( $parts['scheme'] );
+		$host   = self::sanitize_single_host( $parts['host'] );
+		if ( ! $host ) {
+			return '';
+		}
+		$port = isset( $parts['port'] ) ? ':' . absint( $parts['port'] ) : '';
+		$path = isset( $parts['path'] ) ? '/' . ltrim( preg_replace( '#/+#', '/', (string) $parts['path'] ), '/' ) : '';
+		$path = '/' === $path ? '' : untrailingslashit( $path );
+		return $scheme . '://' . $host . $port . $path;
 	}
 
 	/**

@@ -16,6 +16,12 @@ class JRMU_Converter {
 	/** @var JRMU_Converter|null */
 	private static $instance = null;
 
+	/** @var array<int,string>|null */
+	private $allowed_hosts_cache = null;
+
+	/** @var array<int,string>|null */
+	private $allowed_paths_cache = null;
+
 	/**
 	 * 获取单例。
 	 *
@@ -280,6 +286,9 @@ class JRMU_Converter {
 	 * @return array
 	 */
 	public function get_allowed_hosts() {
+		if ( null !== $this->allowed_hosts_cache ) {
+			return $this->allowed_hosts_cache;
+		}
 		$options = JRMU_Settings::get_options();
 		$hosts   = array();
 
@@ -313,7 +322,8 @@ class JRMU_Converter {
 			}
 		}
 
-		return apply_filters( 'jrmu_allowed_hosts', array_values( array_filter( array_unique( $hosts ) ) ) );
+		$this->allowed_hosts_cache = apply_filters( 'jrmu_allowed_hosts', array_values( array_filter( array_unique( $hosts ) ) ) );
+		return $this->allowed_hosts_cache;
 	}
 
 	/**
@@ -329,6 +339,9 @@ class JRMU_Converter {
 	 * @return array
 	 */
 	public function get_allowed_paths() {
+		if ( null !== $this->allowed_paths_cache ) {
+			return $this->allowed_paths_cache;
+		}
 		$options = JRMU_Settings::get_options();
 		$paths   = array();
 
@@ -349,7 +362,8 @@ class JRMU_Converter {
 		}
 
 		$paths = array_filter( array_map( array( $this, 'normalize_path_prefix' ), $paths ) );
-		return apply_filters( 'jrmu_allowed_paths', array_values( array_unique( $paths ) ) );
+		$this->allowed_paths_cache = apply_filters( 'jrmu_allowed_paths', array_values( array_unique( $paths ) ) );
+		return $this->allowed_paths_cache;
 	}
 
 	/**

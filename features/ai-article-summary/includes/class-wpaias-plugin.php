@@ -177,6 +177,9 @@ class JLWA_AI_Summary_Feature {
 			'post_types'         => array( 'post' ),
 			'exclude_categories' => array(),
 			'exclude_post_ids'   => '',
+			'public_generation'          => 0,
+			'public_generation_hourly_limit' => 30,
+			'max_source_chars'           => 20000,
 
 			// 注入模式（兼容各种主题）。
 			'insert_method'      => 'auto',
@@ -209,6 +212,15 @@ class JLWA_AI_Summary_Feature {
 			'color_title'        => '#ffffff',
 			'color_text'         => '#cccccc',
 			'color_accent'       => '#ffd95a',
+			'decoration_type'      => 'builtin',
+			'decoration_builtin'   => 'sparkles',
+			'decoration_image_id'  => 0,
+			'decoration_image_url' => '',
+			'decoration_position'  => 'top-right',
+			'decoration_size'      => 58,
+			'decoration_opacity'   => 0.22,
+			'decoration_offset_x'  => 0,
+			'decoration_offset_y'  => 0,
 
 			// Tab4.
 			'cache_ttl'          => 'forever',
