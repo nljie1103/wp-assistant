@@ -1,0 +1,70 @@
+name: Apply final unified plugin fixes
+
+on:
+  push:
+    branches:
+      - refactor/unified-plugin-2.0
+    paths:
+      - '.github/workflows/final-fixes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix AI feature singleton and translations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('features/ai-article-summary/includes/class-wpaias-plugin.php')
+          text = path.read_text(encoding='utf-8')
+          old = """\tpublic static function instance() {\n\t\tif ( null === self::$instance ) {\n\t\t\tself::$instance = new self();\n\t\t\tself::$instance->boot();\n\t\t}\n\t\treturn self::$instance;\n\t}\n"""
+          # Accept the legacy placement where boot() is outside the if block.
+          legacy = """\tpublic static function instance() {\n\t\tif ( null === self::$instance ) {\n\t\t\tself::$instance = new self();\n\t\t\tself::$instance->boot();\n\t\t}\n\t\treturn self::$instance;\n\t}\n"""
+          current = """\tpublic static function instance() {\n\t\tif ( null === self::$instance ) {\n\t\t\tself::$instance = new self();\n\t\t\tself::$instance->boot();\n\t\t}\n\t\treturn self::$instance;\n\t}\n"""
+          # The source currently calls boot after creating the singleton; normalize
+          # structurally instead of relying on visual indentation.
+          import re
+          rx = re.compile(r"\tpublic static function instance\(\) \{\n\t\tif \( null === self::\$instance \) \{\n\t\t\tself::\$instance = new self\(\);\n\t\t\}\n\t\tself::\$instance->boot\(\);\n\t\treturn self::\$instance;\n\t\}")
+          replacement = """\tpublic static function instance() {\n\t\tif ( null === self::$instance ) {\n\t\t\tself::$instance = new self();\n\t\t\tself::$instance->boot();\n\t\t}\n\t\treturn self::$instance;\n\t}"""
+          text, count = rx.subn(replacement, text, count=1)
+          if count != 1 and 'self::$instance->boot();' not in text:
+              raise RuntimeError('AI singleton block not found')
+          text = text.replace(
+              "dirname( WPAIAS_PLUGIN_BASENAME ) . '/languages'",
+              "dirname( JLWA_PLUGIN_BASENAME ) . '/features/ai-article-summary/languages'",
+          )
+          path.write_text(text, encoding='utf-8')
+          workflow = Path('.github/workflows/final-fixes.yml')
+          if workflow.exists(): workflow.unlink()
+          for directory in (Path('.github/workflows'), Path('.github')):
+              if directory.exists() and not any(directory.iterdir()): directory.rmdir()
+          PY
+      - name: Verify final source
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do php -l "$file"; done < <(find . -path './.git' -prune -o -name '*.php' -print0)
+          while IFS= read -r -d '' file; do node --check "$file"; done < <(find . -path './.git' -prune -o -name '*.js' -print0)
+          count=$(grep -c 'self::\$instance->boot();' features/ai-article-summary/includes/class-wpaias-plugin.php)
+          test "$count" = "1"
+          grep -q "features/ai-article-summary/languages" features/ai-article-summary/includes/class-wpaias-plugin.php
+          test ! -e modules
+          plugin_headers=$(grep -R --include='*.php' -l '^[[:space:]]*\*[[:space:]]*Plugin Name:' . --exclude-dir=.git | wc -l | tr -d ' ')
+          test "$plugin_headers" = "1"
+      - name: Commit fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: prevent duplicate AI hooks in unified plugin'
+          git push origin HEAD:refactor/unified-plugin-2.0
