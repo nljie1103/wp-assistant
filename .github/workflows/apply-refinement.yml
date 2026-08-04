@@ -1,0 +1,57 @@
+name: Apply verified unified refinements
+
+on:
+  push:
+    branches:
+      - refactor/unified-plugin-2.0
+    paths:
+      - '.github/workflows/apply-refinement.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply verified refinement
+        run: python3 .refactor/refine.py
+      - name: Remove temporary development files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/apply-refinement.yml
+          rm -f .github/workflows/refine-unified-v2.yml
+          rm -f .github/workflows/refine-pr.yml
+          rm -f .refactor/refine.py
+          rmdir .refactor 2>/dev/null || true
+          rmdir .github/workflows .github 2>/dev/null || true
+      - name: Verify final source
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do php -l "$file"; done < <(find . -path './.git' -prune -o -name '*.php' -print0)
+          while IFS= read -r -d '' file; do node --check "$file"; done < <(find . -path './.git' -prune -o -name '*.js' -print0)
+          test ! -e modules
+          test ! -e .refactor
+          test ! -e includes/class-jlwa-module-loader.php
+          plugin_headers=$(grep -R --include='*.php' -l '^[[:space:]]*\*[[:space:]]*Plugin Name:' . --exclude-dir=.git | wc -l | tr -d ' ')
+          test "$plugin_headers" = "1"
+          activation_hooks=$(grep -R --include='*.php' -h 'register_activation_hook[[:space:]]*(' . --exclude-dir=.git | wc -l | tr -d ' ')
+          test "$activation_hooks" = "1"
+          if grep -R --include='*.php' -n "add_action( 'admin_menu'" features; then exit 1; fi
+          if grep -R --include='*.php' -nE 'add_(menu|submenu)_page[[:space:]]*\(' features; then exit 1; fi
+          if grep -R --include='*.php' -n 'plugin_action_links_' features; then exit 1; fi
+          if grep -R --include='*.php' -nE '\b(XJPE_Plugin|WPAIAS_Plugin|Jiuliu_Immersive_Preloader|Jiuliu_Relative_Media_Urls)\b' . --exclude-dir=.git; then exit 1; fi
+      - name: Commit final refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor: finalize unified plugin 2.0 architecture'
+          git push origin HEAD:refactor/unified-plugin-2.0
