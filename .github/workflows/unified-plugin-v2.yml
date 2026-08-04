@@ -1,0 +1,96 @@
+name: Build unified plugin 2.0
+
+on:
+  push:
+    branches:
+      - refactor/unified-plugin-2.0
+    paths:
+      - '.github/workflows/unified-plugin-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply source migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .refactor/refactor.py
+
+      - name: PHP syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(find . -path './.git' -prune -o -name '*.php' -print0)
+
+      - name: JavaScript syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -path './.git' -prune -o -name '*.js' -print0)
+
+      - name: Verify unified architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d features
+          test ! -e modules
+          test -f features/page-effects/bootstrap.php
+          test -f features/ai-article-summary/bootstrap.php
+          test -f features/immersive-preloader/bootstrap.php
+          test -f features/relative-media-urls/bootstrap.php
+          test ! -e includes/class-jlwa-module-loader.php
+
+          plugin_headers=$(grep -R --include='*.php' -l '^[[:space:]]*\*[[:space:]]*Plugin Name:' . --exclude-dir=.git | wc -l | tr -d ' ')
+          test "$plugin_headers" = "1"
+
+          activation_hooks=$(grep -R --include='*.php' -h 'register_activation_hook[[:space:]]*(' . --exclude-dir=.git | wc -l | tr -d ' ')
+          test "$activation_hooks" = "1"
+
+          if grep -R --include='*.php' -nE '\b(XJPE_Plugin|WPAIAS_Plugin|Jiuliu_Immersive_Preloader|Jiuliu_Relative_Media_Urls)\b' . --exclude-dir=.git; then
+            echo 'Legacy entry class remains.' >&2
+            exit 1
+          fi
+
+          if grep -R --include='*.php' -nE 'add_(menu|submenu)_page[[:space:]]*\(' features; then
+            echo 'Feature-owned menu registration remains.' >&2
+            exit 1
+          fi
+
+          if grep -R --include='*.php' -n 'plugin_action_links_' features; then
+            echo 'Feature-owned plugin action link remains.' >&2
+            exit 1
+          fi
+
+          if grep -R -nE '^(<<<<<<<|=======|>>>>>>>)' . --exclude-dir=.git; then
+            echo 'Merge conflict marker remains.' >&2
+            exit 1
+          fi
+
+          grep -q "Version: 2.0.0" jiuliu-wp-assistant.php
+          grep -q "class JLWA_Feature_Registry" includes/class-jlwa-feature-registry.php
+          grep -q "class JLWA_Page_Effects_Feature" features/page-effects/bootstrap.php
+          grep -q "class JLWA_AI_Summary_Feature" features/ai-article-summary/includes/class-wpaias-plugin.php
+          grep -q "class JLWA_Immersive_Preloader_Feature" features/immersive-preloader/bootstrap.php
+          grep -q "class JLWA_Media_Urls_Feature" features/relative-media-urls/bootstrap.php
+
+      - name: Commit verified refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor: release real unified plugin architecture'
+          git push origin HEAD:refactor/unified-plugin-2.0
