@@ -1,0 +1,37 @@
+name: Generate suite module diffs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/generate-suite-diffs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Clone repositories and build diffs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/jiuliu-suite-diff .suite-audit/diffs
+          mkdir -p /tmp/jiuliu-suite-diff .suite-audit/diffs
+          for repo in wp-page-effects wp-immersive-preloader wp-relative-media-urls WP-AI-Article-Summary; do
+            git clone --depth=1 "https://github.com/nljie1103/${repo}.git" "/tmp/jiuliu-suite-diff/${repo}"
+          done
+          diff -ruN --exclude=.git --exclude=.github --exclude=.gitignore --exclude=LICENSE --exclude=README.md --exclude=readme.txt modules/page-effects /tmp/jiuliu-suite-diff/wp-page-effects > .suite-audit/diffs/page-effects.patch || true
+          diff -ruN --exclude=.git --exclude=.github --exclude=.gitignore --exclude=LICENSE --exclude=README.md --exclude=readme.txt modules/immersive-preloader /tmp/jiuliu-suite-diff/wp-immersive-preloader > .suite-audit/diffs/immersive-preloader.patch || true
+          diff -ruN --exclude=.git --exclude=.github --exclude=.gitignore --exclude=LICENSE --exclude=README.md --exclude=readme.txt modules/relative-media-urls /tmp/jiuliu-suite-diff/wp-relative-media-urls > .suite-audit/diffs/relative-media-urls.patch || true
+          diff -ruN --exclude=.git --exclude=.github --exclude=.gitignore --exclude=LICENSE --exclude=README.md --exclude=readme.txt modules/ai-article-summary /tmp/jiuliu-suite-diff/WP-AI-Article-Summary > .suite-audit/diffs/ai-article-summary.patch || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .suite-audit/diffs
+          git commit -m 'chore: generate standalone module diffs'
+          git push origin HEAD:main
