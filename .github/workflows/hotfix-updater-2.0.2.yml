@@ -1,0 +1,81 @@
+name: Hotfix updater 2.0.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hotfix-updater-2.0.2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch version and updater
+        shell: python
+        run: |
+          from pathlib import Path
+
+          main = Path('jiuliu-wp-assistant.php')
+          text = main.read_text(encoding='utf-8')
+          text = text.replace('Version: 2.0.1', 'Version: 2.0.2')
+          text = text.replace("define( 'JLWA_VERSION', '2.0.1' );", "define( 'JLWA_VERSION', '2.0.2' );")
+          main.write_text(text, encoding='utf-8')
+
+          updater = Path('includes/class-jlwa-updater.php')
+          text = updater.read_text(encoding='utf-8')
+          old = """\t\t$required = array(\n\t\t\t'assets/css/admin.css',\n\t\t\t'assets/js/admin.js',\n\t\t\t'includes/class-jlwa-admin.php',\n\t\t\t'includes/class-jlwa-module-loader.php',\n\t\t\t'includes/class-jlwa-updater.php',\n\t\t\t'modules/page-effects/wp-page-effects.php',\n\t\t\t'modules/page-effects/assets/js/frontend.js',\n\t\t\t'modules/relative-media-urls/jiuliu-relative-media-urls.php',\n\t\t\t'modules/ai-article-summary/wp-ai-article-summary.php',\n\t\t\t'modules/immersive-preloader/jiuliu-immersive-preloader.php',\n\t\t\t'readme.txt',\n\t\t\t'uninstall.php',\n\t\t);"""
+          new = """\t\t$required = array(\n\t\t\t'assets/css/admin.css',\n\t\t\t'assets/css/admin-content.css',\n\t\t\t'assets/js/admin.js',\n\t\t\t'assets/js/admin-content.js',\n\t\t\t'includes/class-jlwa-admin.php',\n\t\t\t'includes/class-jlwa-feature-registry.php',\n\t\t\t'includes/class-jlwa-updater.php',\n\t\t\t'features/page-effects/bootstrap.php',\n\t\t\t'features/page-effects/assets/js/frontend.js',\n\t\t\t'features/relative-media-urls/bootstrap.php',\n\t\t\t'features/ai-article-summary/bootstrap.php',\n\t\t\t'features/immersive-preloader/bootstrap.php',\n\t\t\t'readme.txt',\n\t\t\t'uninstall.php',\n\t\t);"""
+          if old not in text:
+              raise SystemExit('legacy required-file block not found')
+          updater.write_text(text.replace(old, new), encoding='utf-8')
+
+          readme = Path('readme.txt')
+          text = readme.read_text(encoding='utf-8')
+          text = text.replace('Stable tag: 2.0.1', 'Stable tag: 2.0.2')
+          marker = '== Changelog ==\n\n'
+          entry = """= 2.0.2 =\n* 修复 2.0.0/2.0.1 后台更新仍按旧 modules 架构校验，导致无法在线升级的问题。\n* 更新包改为校验 2.x 的 features 架构、统一内容样式和中央注册表。\n* 增加仅用于跨架构升级的空兼容占位文件；不会注册插件、不会执行旧模块。\n\n"""
+          if '= 2.0.2 =' not in text:
+              text = text.replace(marker, marker + entry, 1)
+          readme.write_text(text, encoding='utf-8')
+
+          readme_md = Path('README.md')
+          text = readme_md.read_text(encoding='utf-8')
+          text = text.replace('当前版本：**2.0.1**', '当前版本：**2.0.2**')
+          if '## 2.0.2 热修复' not in text:
+              text += '\n\n## 2.0.2 热修复\n\n- 修复 2.0.0 在线更新仍要求旧 modules 文件的问题。\n- 增加不执行的兼容占位文件，让旧版本可以跨架构升级。\n'
+          readme_md.write_text(text, encoding='utf-8')
+      - name: Validate PHP and package bridges
+        run: |
+          set -eux
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+          node --check assets/js/admin.js
+          node --check assets/js/admin-content.js
+          test "$(grep -R --include='*.php' -c 'Plugin Name:' . | awk -F: '{s+=$2} END {print s+0}')" = "1"
+          test -f includes/class-jlwa-module-loader.php
+          test -f modules/page-effects/wp-page-effects.php
+          test -f modules/page-effects/assets/js/frontend.js
+          test -f modules/relative-media-urls/jiuliu-relative-media-urls.php
+          test -f modules/ai-article-summary/wp-ai-article-summary.php
+          test -f modules/immersive-preloader/jiuliu-immersive-preloader.php
+          test -f includes/class-jlwa-feature-registry.php
+          test -f features/page-effects/bootstrap.php
+          test -f features/ai-article-summary/bootstrap.php
+          test -f features/immersive-preloader/bootstrap.php
+          test -f features/relative-media-urls/bootstrap.php
+          grep -q 'Version: 2.0.2' jiuliu-wp-assistant.php
+          grep -q 'Stable tag: 2.0.2' readme.txt
+      - name: Commit hotfix and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add jiuliu-wp-assistant.php includes/class-jlwa-updater.php readme.txt README.md
+          git commit -m 'fix: repair in-dashboard updates for 2.x architecture'
+          git rm .github/workflows/hotfix-updater-2.0.2.yml
+          git commit -m 'chore: remove one-time updater hotfix workflow'
+          git push origin main
