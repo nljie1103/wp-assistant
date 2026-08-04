@@ -1,0 +1,103 @@
+name: Publish wp-assistant v2.0.0
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-v2.0.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -R --include='*.php' -l '^[[:space:]]*\* Plugin Name:' . | wc -l)" -eq 1
+          test "$(grep -R --include='*.php' -h 'register_activation_hook' . | wc -l)" -eq 1
+          test ! -d modules
+          while IFS= read -r -d '' file; do php -l "$file" >/dev/null; done < <(find . -path './.git' -prune -o -name '*.php' -print0)
+          while IFS= read -r -d '' file; do node --check "$file" >/dev/null; done < <(find . -path './.git' -prune -o -name '*.js' -print0)
+
+      - name: Build WordPress install package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=2.0.0
+          PKG_ROOT="$RUNNER_TEMP/package"
+          PLUGIN_DIR="$PKG_ROOT/wp-assistant"
+          ZIP="jiuliu-wp-assistant-${VERSION}.zip"
+          rm -rf "$PKG_ROOT" "$ZIP" "${ZIP}.sha256.txt"
+          mkdir -p "$PLUGIN_DIR"
+          rsync -a ./ "$PLUGIN_DIR/" \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.refactor/' \
+            --exclude='refactor-inventory.txt'
+          (cd "$PKG_ROOT" && zip -qr "$GITHUB_WORKSPACE/$ZIP" wp-assistant)
+          sha256sum "$ZIP" | tee "${ZIP}.sha256.txt"
+          unzip -t "$ZIP" >/dev/null
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## 九流WP助手 2.0.0
+
+          这是从“四个独立插件的集合”重构而来的真正单插件版本。
+
+          ### 主要变化
+          - 仅保留一个 WordPress 插件头、一个激活入口和一个更新器。
+          - 页面美化、AI 文章摘要、沉浸式预加载、媒体与链接管理改为四个内部功能域。
+          - 删除旧 `modules/` 插件拼装结构，统一为 `features/` 内部架构。
+          - 重做统一后台控制台、吸顶导航、功能卡片、表单、选项卡和响应式排版。
+          - 保留原有设置键，升级后无需重新填写 API、Logo、域名和特效参数。
+          - 页面美化已同步 1.6.0 修复；AI 摘要包含限流和并发锁。
+          - 更新器支持版本与 SHA-256 校验、完整备份和失败回滚。
+
+          ### 安装
+          1. 停用四个历史独立插件。
+          2. 上传 `jiuliu-wp-assistant-2.0.0.zip`。
+          3. 启用“九流WP助手”。
+
+          发布附件同时提供 SHA-256 校验文件。
+          EOF
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP='jiuliu-wp-assistant-2.0.0.zip'
+          HASH_FILE="${ZIP}.sha256.txt"
+          if gh release view v2.0.0 >/dev/null 2>&1; then
+            gh release upload v2.0.0 "$ZIP" "$HASH_FILE" --clobber
+            gh release edit v2.0.0 --title '九流WP助手 2.0.0' --notes-file RELEASE_NOTES.md --latest
+          else
+            gh release create v2.0.0 "$ZIP#九流WP助手 2.0.0 安装包" "$HASH_FILE#SHA-256 校验文件" \
+              --target "$GITHUB_SHA" \
+              --title '九流WP助手 2.0.0' \
+              --notes-file RELEASE_NOTES.md \
+              --latest
+          fi
+
+      - name: Remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/publish-v2.0.0.yml
+          git commit -m 'chore: remove one-time v2.0.0 release workflow'
+          git push origin HEAD:main
