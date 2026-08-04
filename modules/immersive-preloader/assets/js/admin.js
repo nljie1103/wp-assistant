@@ -27,7 +27,11 @@
 				$c.toggleClass('is-active', $c.data('effect') === current);
 			});
 			if ($logoCard.length) {
-				$logoCard.show();
+				if (current === $logoCard.data('show-when-effect')) {
+					$logoCard.slideDown(180);
+				} else {
+					$logoCard.slideUp(180);
+				}
 			}
 		}
 

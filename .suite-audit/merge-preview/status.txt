@@ -1,5 +1,0 @@
-assets/css/admin.css: 0
-assets/js/admin.js: 2
-assets/js/frontend.js: 0
-uninstall.php: 0
-wp-page-effects.php: 4

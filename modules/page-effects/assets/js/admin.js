@@ -27,9 +27,9 @@
     var enableAll = document.querySelector('[data-xjpe-enable-all]');
     var disableAll = document.querySelector('[data-xjpe-disable-all]');
 
-    function setAll(v) {
+    function setAll(value) {
       document.querySelectorAll('.xjpe-toggle').forEach(function (cb) {
-        cb.checked = v;
+        cb.checked = value;
         cb.dispatchEvent(new Event('change', { bubbles: true }));
       });
     }
@@ -37,12 +37,25 @@
     if (enableAll) enableAll.addEventListener('click', function () { setAll(true); });
     if (disableAll) disableAll.addEventListener('click', function () { setAll(false); });
 
+    var contextToggle = document.querySelector('input[name="xjpe_options[effects][contextmenu][enabled]"]');
+    var noSourceToggle = document.querySelector('input[name="xjpe_options[effects][nosource][enabled]"]');
+    var conflictNotice = document.getElementById('xjpe-context-conflict');
+
+    function syncConflictNotice() {
+      if (!conflictNotice || !contextToggle || !noSourceToggle) return;
+      conflictNotice.hidden = !(contextToggle.checked && noSourceToggle.checked);
+    }
+
+    if (contextToggle) contextToggle.addEventListener('change', syncConflictNotice);
+    if (noSourceToggle) noSourceToggle.addEventListener('change', syncConflictNotice);
+    syncConflictNotice();
+
     var form = document.getElementById('xjpe-settings-form');
     if (form) {
       form.addEventListener('submit', function () {
-        form.querySelectorAll('button[type="submit"]').forEach(function (b) {
-          b.disabled = true;
-          b.textContent = '正在保存...';
+        form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+          button.disabled = true;
+          button.textContent = '正在保存...';
         });
       });
     }

@@ -352,47 +352,87 @@ class WPAIAS_Frontend {
 
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 		if ( ! $post_id ) {
-			wp_send_json_error( array( 'message' => __( '无效文章。', 'wp-ai-article-summary' ) ) );
+			wp_send_json_error( array( 'message' => __( '无效文章。', 'wp-ai-article-summary' ) ), 400 );
 		}
 
 		$post = get_post( $post_id );
 		if ( ! $post || 'publish' !== $post->post_status ) {
-			wp_send_json_error( array( 'message' => __( '文章不存在或未发布。', 'wp-ai-article-summary' ) ) );
+			wp_send_json_error( array( 'message' => __( '文章不存在或未发布。', 'wp-ai-article-summary' ) ), 404 );
 		}
 
-		// 命中缓存直接返回。
 		$cached = WPAIAS_Cache::get( $post_id );
 		if ( false !== $cached ) {
-			wp_send_json_success(
-				array(
-					'summary' => $cached,
-					'cached'  => true,
-				)
-			);
+			wp_send_json_success( array( 'summary' => $cached, 'cached' => true ) );
 		}
 
 		$settings = WPAIAS_Plugin::get_settings();
-
 		if ( empty( $settings['enabled'] ) ) {
-			wp_send_json_error( array( 'message' => __( '插件未开启。', 'wp-ai-article-summary' ) ) );
+			wp_send_json_error( array( 'message' => __( '插件未开启。', 'wp-ai-article-summary' ) ), 403 );
+		}
+		if ( ! in_array( $post->post_type, (array) $settings['post_types'], true ) ) {
+			wp_send_json_error( array( 'message' => __( '该文章类型未启用摘要。', 'wp-ai-article-summary' ) ), 403 );
 		}
 
-		$content = wp_strip_all_tags( (string) $post->post_content );
-		$result  = WPAIAS_API::generate_summary( $content, $settings );
+		$exclude_ids = array_map( 'intval', array_filter( array_map( 'trim', explode( ',', (string) $settings['exclude_post_ids'] ) ) ) );
+		if ( in_array( $post_id, $exclude_ids, true ) ) {
+			wp_send_json_error( array( 'message' => __( '该文章已被排除。', 'wp-ai-article-summary' ) ), 403 );
+		}
+		if ( ! empty( $settings['exclude_categories'] ) ) {
+			$categories = wp_get_post_categories( $post_id );
+			if ( array_intersect( array_map( 'intval', $categories ), array_map( 'intval', (array) $settings['exclude_categories'] ) ) ) {
+				wp_send_json_error( array( 'message' => __( '该文章分类已被排除。', 'wp-ai-article-summary' ) ), 403 );
+			}
+		}
+
+		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		$rate_key    = 'wpaias_rate_' . md5( $remote_addr . '|' . wp_salt( 'nonce' ) );
+		$rate        = get_transient( $rate_key );
+		$rate        = is_array( $rate ) ? $rate : array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
+		if ( time() >= (int) $rate['reset'] ) {
+			$rate = array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
+		}
+		$limit = max( 1, (int) apply_filters( 'wpaias_public_generation_rate_limit', 6 ) );
+		if ( (int) $rate['count'] >= $limit ) {
+			wp_send_json_error( array( 'message' => __( '请求过于频繁，请稍后再试。', 'wp-ai-article-summary' ) ), 429 );
+		}
+		$rate['count'] = (int) $rate['count'] + 1;
+		set_transient( $rate_key, $rate, max( 60, (int) $rate['reset'] - time() ) );
+
+		$lock_key = 'wpaias_generate_lock_' . $post_id;
+		if ( get_transient( $lock_key ) ) {
+			wp_send_json_error( array( 'message' => __( '该文章的摘要正在生成，请稍后刷新。', 'wp-ai-article-summary' ) ), 429 );
+		}
+		set_transient( $lock_key, 1, 2 * MINUTE_IN_SECONDS );
+
+		try {
+			$cached_after_lock = WPAIAS_Cache::get( $post_id );
+			if ( false !== $cached_after_lock ) {
+				$result = array( 'success' => true, 'data' => $cached_after_lock, 'cached' => true );
+			} else {
+				$content = wp_strip_all_tags( (string) $post->post_content );
+				if ( function_exists( 'mb_substr' ) ) {
+					$content = mb_substr( $content, 0, 50000 );
+				} else {
+					$content = substr( $content, 0, 50000 );
+				}
+				$result = WPAIAS_API::generate_summary( $content, $settings );
+				if ( ! empty( $result['success'] ) ) {
+					$ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
+					WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+					$result['cached'] = false;
+				}
+			}
+		} catch ( Throwable $exception ) {
+			error_log( 'WPAIAS frontend generation error: ' . $exception->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			$result = array( 'success' => false, 'message' => __( '摘要生成发生异常，请稍后重试。', 'wp-ai-article-summary' ) );
+		} finally {
+			delete_transient( $lock_key );
+		}
 
 		if ( ! empty( $result['success'] ) ) {
-			$ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
-			WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
-			wp_send_json_success(
-				array(
-					'summary' => $result['data'],
-					'cached'  => false,
-				)
-			);
+			wp_send_json_success( array( 'summary' => $result['data'], 'cached' => ! empty( $result['cached'] ) ) );
 		}
-
-		// 失败不缓存。
-		wp_send_json_error( array( 'message' => $result['message'] ) );
+		wp_send_json_error( array( 'message' => isset( $result['message'] ) ? $result['message'] : __( '摘要生成失败。', 'wp-ai-article-summary' ) ), 502 );
 	}
 }
 

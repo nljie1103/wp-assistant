@@ -1,8 +1,0 @@
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/relative-media-urls/assets/js/admin.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/ai-article-summary/assets/js/admin.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/ai-article-summary/assets/js/frontend.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/page-effects/assets/js/admin.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/page-effects/assets/js/frontend.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/immersive-preloader/assets/js/preloader.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/modules/immersive-preloader/assets/js/admin.js
-OK /tmp/jiuliu-suite-audit/wp-assistant/assets/js/admin.js

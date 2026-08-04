@@ -3,7 +3,7 @@
  * Plugin Name: 九流页面美化特效
  * Plugin URI: https://github.com/nljie1103/wp-page-effects
  * Description: 独立后台页面一键勾选樱花、雪花、灯笼、粒子、鼠标跟随、彩带、灰色模式、右键菜单、基础防查看、背景音乐和节日欢迎弹窗，支持兼容注入模式。
- * Version: 1.5.1
+ * Version: 1.6.0
  * Author: 九流
  * Author URI: https://www.jiuliu.org
  * License: GPLv2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'XJPE_Plugin' ) ) {
     final class XJPE_Plugin {
-        const VERSION     = '1.5.1';
+        const VERSION     = '1.6.0';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';
 
@@ -212,7 +212,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                         'show_refresh' => 1,
                         'show_top'     => 1,
                         'show_back'    => 1,
-                        'custom_items' => "首页|/\n刷新页面|#refresh\n返回顶部|#top",
+                        'custom_items' => "首页|/",
                     ),
                     'nosource' => array(
                         'enabled' => 0,
@@ -417,7 +417,8 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
         private function sanitize_custom_js( $js ) {
             $js = is_string( $js ) ? $js : '';
-            $js = str_replace( array( '<script', '</script' ), array( '&lt;script', '&lt;/script' ), $js );
+            // 防止自定义代码提前闭合插件生成的 script 标签，同时不破坏普通 JavaScript 语法。
+            $js = preg_replace( '#</script#i', '<\/script', $js );
             return trim( $js );
         }
 
@@ -473,17 +474,13 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
             }
 
             $config = $this->frontend_config( $options );
-
             wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), self::VERSION );
-            if ( ! empty( $options['global']['custom_css'] ) ) {
-                wp_add_inline_style( 'xjpe-frontend', $options['global']['custom_css'] );
-            }
 
             $in_footer = isset( $options['compat']['load_location'] ) && 'footer' === $options['compat']['load_location'];
             wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, $in_footer );
-            wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config ) . ';', 'before' );
+            wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
             if ( ! empty( $options['global']['custom_js'] ) ) {
-                wp_add_inline_script( 'xjpe-frontend', "\ntry {\n" . $options['global']['custom_js'] . "\n} catch(e) { console.warn('XJPE custom JS error:', e); }\n", 'after' );
+                wp_add_inline_script( 'xjpe-frontend', $this->custom_js_wrapper( $options['global']['custom_js'] ), 'after' );
             }
         }
 
@@ -498,9 +495,6 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                 return true;
             }
             if ( empty( $options['global']['enabled'] ) ) {
-                return false;
-            }
-            if ( empty( $options['global']['mobile_enabled'] ) && wp_is_mobile() ) {
                 return false;
             }
             return $this->has_enabled_effect_or_code( $options );
@@ -535,8 +529,14 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
             if ( false === stripos( $html, '<html' ) && false === stripos( $html, '<!doctype' ) ) {
                 return $html;
             }
-            $options = $this->get_options();
-            $assets  = $this->direct_assets_html( $options );
+
+            $options  = $this->get_options();
+            $assets   = $this->direct_assets_html( $options );
+            $location = isset( $options['compat']['load_location'] ) ? $options['compat']['load_location'] : 'head';
+
+            if ( 'footer' === $location && false !== stripos( $html, '</body>' ) ) {
+                return preg_replace( '/<\/body>/i', $assets . "\n</body>", $html, 1 );
+            }
             if ( false !== stripos( $html, '</head>' ) ) {
                 return preg_replace( '/<\/head>/i', $assets . "\n</head>", $html, 1 );
             }
@@ -547,20 +547,21 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         }
 
         private function direct_assets_html( $options ) {
-            $config   = $this->frontend_config( $options );
-            $css_url  = plugins_url( 'assets/css/frontend.css', __FILE__ );
-            $js_url   = plugins_url( 'assets/js/frontend.js', __FILE__ );
-            $html     = "\n<!-- 九流页面美化特效 v" . esc_html( self::VERSION ) . " -->\n";
-            $html    .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
-            if ( ! empty( $options['global']['custom_css'] ) ) {
-                $html .= '<style id="xjpe-custom-css">' . "\n" . $options['global']['custom_css'] . "\n</style>\n";
-            }
-            $html .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . wp_json_encode( $config ) . ';</script>' . "\n";
-            $html .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
+            $config_json = wp_json_encode( $this->frontend_config( $options ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+            $css_url     = plugins_url( 'assets/css/frontend.css', __FILE__ );
+            $js_url      = plugins_url( 'assets/js/frontend.js', __FILE__ );
+            $html        = "\n<!-- 九流页面美化特效 v" . esc_html( self::VERSION ) . " -->\n";
+            $html       .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
+            $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
+            $html       .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
             if ( ! empty( $options['global']['custom_js'] ) ) {
-                $html .= '<script id="xjpe-custom-js">try {' . "\n" . $options['global']['custom_js'] . "\n" . '} catch(e) { console.warn("XJPE custom JS error:", e); }</script>' . "\n";
+                $html .= '<script id="xjpe-custom-js">' . $this->custom_js_wrapper( $options['global']['custom_js'] ) . '</script>' . "\n";
             }
             return $html;
+        }
+
+        private function custom_js_wrapper( $js ) {
+            return "(function(run){var execute=function(){if(window.XJPE_DISABLED){return;}run();};if(window.XJPE_READY){execute();}else{document.addEventListener('xjpe:ready',execute,{once:true});}})(function(){try{\n" . $js . "\n}catch(e){console.warn('XJPE custom JS error:',e);}});";
         }
 
         private function has_enabled_effect_or_code( $options ) {
@@ -575,6 +576,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         private function frontend_config( $options ) {
             if ( $this->is_preview_request() ) {
                 $options['global']['enabled'] = 1;
+                $options['global']['mobile_enabled'] = 1;
                 $options['global']['respect_reduce_motion'] = 0;
                 foreach ( array( 'sakura', 'snow', 'lantern', 'cursor', 'ribbon', 'welcome' ) as $preview_effect ) {
                     if ( isset( $options['effects'][ $preview_effect ] ) ) {
@@ -591,6 +593,8 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                 'global'  => array(
                     'zIndex'              => (int) $options['global']['z_index'],
                     'respectReduceMotion' => ! empty( $options['global']['respect_reduce_motion'] ),
+                    'mobileEnabled'       => ! empty( $options['global']['mobile_enabled'] ),
+                    'customCss'           => (string) $options['global']['custom_css'],
                     'homeUrl'             => home_url( '/' ),
                     'preview'             => $this->is_preview_request(),
                 ),
@@ -612,8 +616,25 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         }
 
         private function is_preview_request() {
-            return isset( $_GET['xjpe_preview'] ) && '1' === (string) $_GET['xjpe_preview']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            if ( ! isset( $_GET['xjpe_preview'], $_GET['_xjpe_nonce'] ) || '1' !== (string) $_GET['xjpe_preview'] ) {
+                return false;
+            }
+            if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+                return false;
+            }
+            return (bool) wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_xjpe_nonce'] ) ), 'xjpe_preview' );
         }
+
+        private function preview_url() {
+            return add_query_arg(
+                array(
+                    'xjpe_preview' => '1',
+                    '_xjpe_nonce'  => wp_create_nonce( 'xjpe_preview' ),
+                ),
+                home_url( '/' )
+            );
+        }
+
         public function render_admin_page() {
             if ( ! current_user_can( 'manage_options' ) ) {
                 return;
@@ -621,6 +642,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
             $options = $this->get_options();
             $defs    = self::effect_definitions();
+            $preview_url = $this->preview_url();
             $tab     = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'basic'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             $tabs    = array(
                 'basic'       => '基础设置',
@@ -643,6 +665,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                 <?php if ( isset( $_GET['xjpe_saved'] ) && '1' === $_GET['xjpe_saved'] ) : ?>
                     <div class="notice notice-success inline"><p><strong>配置已保存。</strong> 请刷新前台页面，或点击“打开前台预览”测试特效。</p></div>
                 <?php endif; ?>
+                <div id="xjpe-context-conflict" class="notice notice-warning inline" <?php echo ( ! empty( $options['effects']['contextmenu']['enabled'] ) && ! empty( $options['effects']['nosource']['enabled'] ) ) ? '' : 'hidden'; ?>><p><strong>功能冲突：</strong>“基础防查看”会接管右键事件，因此同时启用时“右键美化”不会显示。</p></div>
 
                 <h2 class="nav-tab-wrapper xjpe-tabs">
                     <?php foreach ( $tabs as $key => $label ) : ?>
@@ -657,7 +680,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
                     <div class="xjpe-savebar">
                         <button type="submit" class="button button-primary button-hero">保存美化配置</button>
-                        <a class="button button-hero" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">不保存，直接测试前台特效</a>
+                        <a class="button button-hero" href="<?php echo esc_url( $preview_url ); ?>" target="_blank" rel="noopener">不保存，直接测试前台特效</a>
                         <span class="xjpe-savebar-note">保存后页面会返回并显示“配置已保存”，不会悄悄无反应。</span>
                     </div>
 
@@ -708,7 +731,7 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
                         <div class="xjpe-toolbar">
                             <button type="button" class="button" data-xjpe-enable-all>全部启用</button>
                             <button type="button" class="button" data-xjpe-disable-all>全部关闭</button>
-                            <a class="button" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">打开前台预览</a>
+                            <a class="button" href="<?php echo esc_url( $preview_url ); ?>" target="_blank" rel="noopener">打开前台预览</a>
                         </div>
 
                         <section class="xjpe-effects-grid">
