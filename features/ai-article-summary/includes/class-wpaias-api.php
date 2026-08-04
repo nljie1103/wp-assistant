@@ -161,7 +161,7 @@ class WPAIAS_API {
 		$token_key          = self::openai_token_limit_key( $provider_key, $model );
 		$body[ $token_key ] = max( 16, (int) $max_tokens );
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			esc_url_raw( $endpoint ),
 			array(
 				'timeout' => 45,
@@ -273,7 +273,7 @@ class WPAIAS_API {
 			),
 		);
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			esc_url_raw( $url ),
 			array(
 				'timeout' => 45,
@@ -347,7 +347,7 @@ class WPAIAS_API {
 			),
 		);
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			esc_url_raw( $endpoint ),
 			array(
 				'timeout' => 45,

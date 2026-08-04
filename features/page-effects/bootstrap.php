@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
     final class JLWA_Page_Effects_Feature {
-        const VERSION     = '1.6.0';
+        const VERSION     = '1.7.0';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';
 
@@ -126,24 +126,46 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 ),
                 'compat' => array(
                     'load_location' => 'head',
-                    'injection_mode' => 'buffer',
+                    'injection_mode' => 'enqueue',
                     'body_wait'     => 1,
                     'safe_mode'     => 1,
                 ),
                 'effects' => array(
                     'sakura' => array(
                         'enabled' => 0,
-                        'count'   => 28,
+                        'count'   => 56,
                         'size'    => 18,
                         'speed'   => 1.0,
                         'opacity' => 0.85,
+                        'wind'    => 0.45,
+                        'sway'    => 1.25,
                     ),
                     'snow' => array(
                         'enabled' => 0,
-                        'count'   => 48,
+                        'count'   => 72,
                         'size'    => 13,
                         'speed'   => 1.0,
                         'opacity' => 0.9,
+                        'wind'    => 0.35,
+                        'sway'    => 1.0,
+                    ),
+                    'leaves' => array(
+                        'enabled' => 0,
+                        'count'   => 44,
+                        'size'    => 18,
+                        'speed'   => 0.85,
+                        'opacity' => 0.88,
+                        'wind'    => 0.65,
+                        'sway'    => 1.4,
+                    ),
+                    'bubbles' => array(
+                        'enabled' => 0,
+                        'count'   => 30,
+                        'size'    => 18,
+                        'speed'   => 0.65,
+                        'opacity' => 0.5,
+                        'wind'    => 0.18,
+                        'sway'    => 0.8,
                     ),
                     'lantern' => array(
                         'enabled'  => 0,
@@ -159,10 +181,22 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         'line_distance' => 130,
                     ),
                     'cursor' => array(
+                        'enabled'    => 0,
+                        'size'       => 13,
+                        'density'    => 1,
+                        'preset'     => 'star',
+                        'symbol'     => '✦',
+                        'color_mode' => 'rainbow',
+                        'color'      => '#ff5ba7',
+                        'duration'   => 760,
+                    ),
+                    'waves' => array(
                         'enabled' => 0,
-                        'size'    => 13,
-                        'density' => 1,
-                        'symbol'  => '✦',
+                        'height'  => 72,
+                        'opacity' => 0.48,
+                        'speed'   => 12,
+                        'color_1' => '#5b8cff',
+                        'color_2' => '#9b5cff',
                     ),
                     'ribbon' => array(
                         'enabled' => 0,
@@ -183,8 +217,24 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         'custom_items' => "首页|/",
                     ),
                     'nosource' => array(
-                        'enabled' => 0,
-                        'message' => '本站已开启基础防复制保护。',
+                        'enabled'            => 0,
+                        'message'            => '本站已开启内容保护，请尊重原创。',
+                        'admin_bypass'       => 1,
+                        'block_contextmenu'  => 1,
+                        'block_shortcuts'    => 1,
+                        'block_copy'         => 0,
+                        'block_selection'    => 0,
+                        'block_drag'         => 1,
+                        'block_print'        => 0,
+                        'copy_mode'          => 'append',
+                        'copy_prefix'        => '',
+                        'copy_suffix'        => "
+
+以上内容转载自九流网络，请保留版权：https://blog.jiuliu.org/",
+                        'copy_min_chars'     => 12,
+                        'copy_include_link'  => 1,
+                        'copy_success_toast' => 1,
+                        'copy_toast_message' => '复制成功，请保留文章版权与来源链接。',
                     ),
                     'bgmusic' => array(
                         'enabled'  => 0,
@@ -207,15 +257,18 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 
         public static function effect_definitions() {
             return array(
-                'sakura' => array( 'icon' => '🌸', 'title' => '全屏樱花', 'desc' => '飘落的樱花瓣特效', 'group' => '氛围特效' ),
-                'snow' => array( 'icon' => '❄️', 'title' => '全屏雪花', 'desc' => '飘落的雪花特效', 'group' => '氛围特效' ),
+                'sakura' => array( 'icon' => '🌸', 'title' => '全屏樱花', 'desc' => '高密度樱花瓣，可调风向与摆动', 'group' => '氛围特效' ),
+                'snow' => array( 'icon' => '❄️', 'title' => '全屏雪花', 'desc' => '多层雪花飘屏，可调风向与摆动', 'group' => '氛围特效' ),
+                'leaves' => array( 'icon' => '🍂', 'title' => '秋叶飘落', 'desc' => '多形态秋叶旋转飘落', 'group' => '氛围特效' ),
+                'bubbles' => array( 'icon' => '🫧', 'title' => '梦幻气泡', 'desc' => '透明气泡从底部缓慢上升', 'group' => '氛围特效' ),
                 'lantern' => array( 'icon' => '🏮', 'title' => '节日灯笼', 'desc' => '页面顶部悬挂灯笼', 'group' => '氛围特效' ),
                 'particles' => array( 'icon' => '✨', 'title' => '粒子背景', 'desc' => '动态粒子连线效果', 'group' => '氛围特效' ),
-                'cursor' => array( 'icon' => '🌟', 'title' => '鼠标跟随', 'desc' => '鼠标移动时星星拖尾', 'group' => '交互增强' ),
+                'cursor' => array( 'icon' => '🌟', 'title' => '鼠标跟随', 'desc' => '星星、爱心、萤火、花瓣、气泡或自定义拖尾', 'group' => '交互增强' ),
+                'waves' => array( 'icon' => '🌊', 'title' => '底部波浪', 'desc' => '页面底部流动的双层渐变波浪', 'group' => '氛围特效' ),
                 'ribbon' => array( 'icon' => '🎀', 'title' => '彩带背景', 'desc' => '点击刷新彩带背景', 'group' => '氛围特效' ),
                 'grayscale' => array( 'icon' => '🕯️', 'title' => '全站灰色', 'desc' => '纪念/悼念模式', 'group' => '特殊模式' ),
                 'contextmenu' => array( 'icon' => '🖱️', 'title' => '右键美化', 'desc' => '自定义右键菜单', 'group' => '交互增强' ),
-                'nosource' => array( 'icon' => '🔒', 'title' => '基础防查看', 'desc' => '禁用右键查看源码/F12等常见操作', 'group' => '基础防护' ),
+                'nosource' => array( 'icon' => '🔒', 'title' => '内容保护与复制版权', 'desc' => '快捷键拦截、禁复制或复制时自动附加版权', 'group' => '内容保护' ),
                 'bgmusic' => array( 'icon' => '🎵', 'title' => '背景音乐', 'desc' => '网站背景音乐播放', 'group' => '节日与音乐' ),
                 'welcome' => array( 'icon' => '🎉', 'title' => '节日欢迎弹窗', 'desc' => '节日自动弹窗祝福', 'group' => '节日与音乐' ),
             );
@@ -283,15 +336,15 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 $output['effects'][ $key ]['enabled'] = empty( $effect_input['enabled'] ) ? 0 : 1;
             }
 
-            $output['effects']['sakura']['count']   = $this->sanitize_int( $effects['sakura']['count'] ?? 28, 1, 120, 28 );
-            $output['effects']['sakura']['size']    = $this->sanitize_int( $effects['sakura']['size'] ?? 18, 6, 60, 18 );
-            $output['effects']['sakura']['speed']   = $this->sanitize_float( $effects['sakura']['speed'] ?? 1, 0.2, 5, 1 );
-            $output['effects']['sakura']['opacity'] = $this->sanitize_float( $effects['sakura']['opacity'] ?? 0.85, 0.05, 1, 0.85 );
-
-            $output['effects']['snow']['count']   = $this->sanitize_int( $effects['snow']['count'] ?? 48, 1, 180, 48 );
-            $output['effects']['snow']['size']    = $this->sanitize_int( $effects['snow']['size'] ?? 13, 4, 55, 13 );
-            $output['effects']['snow']['speed']   = $this->sanitize_float( $effects['snow']['speed'] ?? 1, 0.2, 5, 1 );
-            $output['effects']['snow']['opacity'] = $this->sanitize_float( $effects['snow']['opacity'] ?? 0.9, 0.05, 1, 0.9 );
+            foreach ( array( 'sakura', 'snow', 'leaves', 'bubbles' ) as $falling_key ) {
+                $falling_defaults = $defaults['effects'][ $falling_key ];
+                $output['effects'][ $falling_key ]['count']   = $this->sanitize_int( $effects[ $falling_key ]['count'] ?? $falling_defaults['count'], 1, 360, $falling_defaults['count'] );
+                $output['effects'][ $falling_key ]['size']    = $this->sanitize_int( $effects[ $falling_key ]['size'] ?? $falling_defaults['size'], 4, 72, $falling_defaults['size'] );
+                $output['effects'][ $falling_key ]['speed']   = $this->sanitize_float( $effects[ $falling_key ]['speed'] ?? $falling_defaults['speed'], 0.1, 5, $falling_defaults['speed'] );
+                $output['effects'][ $falling_key ]['opacity'] = $this->sanitize_float( $effects[ $falling_key ]['opacity'] ?? $falling_defaults['opacity'], 0.05, 1, $falling_defaults['opacity'] );
+                $output['effects'][ $falling_key ]['wind']    = $this->sanitize_float( $effects[ $falling_key ]['wind'] ?? $falling_defaults['wind'], -3, 3, $falling_defaults['wind'] );
+                $output['effects'][ $falling_key ]['sway']    = $this->sanitize_float( $effects[ $falling_key ]['sway'] ?? $falling_defaults['sway'], 0, 4, $falling_defaults['sway'] );
+            }
 
             $output['effects']['lantern']['size']     = $this->sanitize_int( $effects['lantern']['size'] ?? 82, 36, 180, 82 );
             $output['effects']['lantern']['text']     = sanitize_text_field( $effects['lantern']['text'] ?? '福' );
@@ -302,9 +355,22 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $output['effects']['particles']['opacity']       = $this->sanitize_float( $effects['particles']['opacity'] ?? 0.55, 0.05, 1, 0.55 );
             $output['effects']['particles']['line_distance'] = $this->sanitize_int( $effects['particles']['line_distance'] ?? 130, 40, 300, 130 );
 
-            $output['effects']['cursor']['size']    = $this->sanitize_int( $effects['cursor']['size'] ?? 13, 4, 40, 13 );
-            $output['effects']['cursor']['density'] = $this->sanitize_int( $effects['cursor']['density'] ?? 1, 1, 5, 1 );
-            $output['effects']['cursor']['symbol']  = sanitize_text_field( $effects['cursor']['symbol'] ?? '✦' );
+            $output['effects']['cursor']['size']       = $this->sanitize_int( $effects['cursor']['size'] ?? 13, 4, 48, 13 );
+            $output['effects']['cursor']['density']    = $this->sanitize_int( $effects['cursor']['density'] ?? 1, 1, 6, 1 );
+            $cursor_presets = array( 'star', 'heart', 'firefly', 'petal', 'bubble', 'custom' );
+            $cursor_preset = isset( $effects['cursor']['preset'] ) ? sanitize_key( $effects['cursor']['preset'] ) : 'star';
+            $output['effects']['cursor']['preset']     = in_array( $cursor_preset, $cursor_presets, true ) ? $cursor_preset : 'star';
+            $cursor_symbol = sanitize_text_field( $effects['cursor']['symbol'] ?? '✦' );
+            $output['effects']['cursor']['symbol']     = function_exists( 'mb_substr' ) ? mb_substr( $cursor_symbol, 0, 4 ) : substr( $cursor_symbol, 0, 12 );
+            $output['effects']['cursor']['color_mode'] = in_array( $effects['cursor']['color_mode'] ?? 'rainbow', array( 'rainbow', 'fixed' ), true ) ? $effects['cursor']['color_mode'] : 'rainbow';
+            $output['effects']['cursor']['color']      = sanitize_hex_color( $effects['cursor']['color'] ?? '#ff5ba7' ) ?: '#ff5ba7';
+            $output['effects']['cursor']['duration']   = $this->sanitize_int( $effects['cursor']['duration'] ?? 760, 240, 2400, 760 );
+
+            $output['effects']['waves']['height']  = $this->sanitize_int( $effects['waves']['height'] ?? 72, 24, 220, 72 );
+            $output['effects']['waves']['opacity'] = $this->sanitize_float( $effects['waves']['opacity'] ?? 0.48, 0.05, 1, 0.48 );
+            $output['effects']['waves']['speed']   = $this->sanitize_int( $effects['waves']['speed'] ?? 12, 4, 40, 12 );
+            $output['effects']['waves']['color_1'] = sanitize_hex_color( $effects['waves']['color_1'] ?? '#5b8cff' ) ?: '#5b8cff';
+            $output['effects']['waves']['color_2'] = sanitize_hex_color( $effects['waves']['color_2'] ?? '#9b5cff' ) ?: '#9b5cff';
 
             $output['effects']['ribbon']['opacity'] = $this->sanitize_float( $effects['ribbon']['opacity'] ?? 0.42, 0.05, 1, 0.42 );
             $output['effects']['ribbon']['click']   = empty( $effects['ribbon']['click'] ) ? 0 : 1;
@@ -318,7 +384,17 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $output['effects']['contextmenu']['show_back']    = empty( $effects['contextmenu']['show_back'] ) ? 0 : 1;
             $output['effects']['contextmenu']['custom_items'] = $this->sanitize_custom_items( $effects['contextmenu']['custom_items'] ?? '' );
 
-            $output['effects']['nosource']['message'] = sanitize_text_field( $effects['nosource']['message'] ?? '本站已开启基础防复制保护。' );
+            $protection = isset( $effects['nosource'] ) && is_array( $effects['nosource'] ) ? $effects['nosource'] : array();
+            $output['effects']['nosource']['message']            = sanitize_text_field( $protection['message'] ?? $defaults['effects']['nosource']['message'] );
+            foreach ( array( 'admin_bypass', 'block_contextmenu', 'block_shortcuts', 'block_copy', 'block_selection', 'block_drag', 'block_print', 'copy_include_link', 'copy_success_toast' ) as $toggle ) {
+                $output['effects']['nosource'][ $toggle ] = empty( $protection[ $toggle ] ) ? 0 : 1;
+            }
+            $copy_mode = isset( $protection['copy_mode'] ) ? sanitize_key( $protection['copy_mode'] ) : 'append';
+            $output['effects']['nosource']['copy_mode']          = in_array( $copy_mode, array( 'none', 'prepend', 'append', 'both' ), true ) ? $copy_mode : 'append';
+            $output['effects']['nosource']['copy_prefix']        = sanitize_textarea_field( $protection['copy_prefix'] ?? '' );
+            $output['effects']['nosource']['copy_suffix']        = sanitize_textarea_field( $protection['copy_suffix'] ?? $defaults['effects']['nosource']['copy_suffix'] );
+            $output['effects']['nosource']['copy_min_chars']     = $this->sanitize_int( $protection['copy_min_chars'] ?? 12, 0, 1000, 12 );
+            $output['effects']['nosource']['copy_toast_message'] = sanitize_text_field( $protection['copy_toast_message'] ?? $defaults['effects']['nosource']['copy_toast_message'] );
 
             $output['effects']['bgmusic']['url']      = esc_url_raw( $effects['bgmusic']['url'] ?? '' );
             $output['effects']['bgmusic']['title']    = sanitize_text_field( $effects['bgmusic']['title'] ?? '背景音乐' );
@@ -513,7 +589,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 $options['global']['enabled'] = 1;
                 $options['global']['mobile_enabled'] = 1;
                 $options['global']['respect_reduce_motion'] = 0;
-                foreach ( array( 'sakura', 'snow', 'lantern', 'cursor', 'ribbon', 'welcome' ) as $preview_effect ) {
+                foreach ( array( 'sakura', 'snow', 'leaves', 'bubbles', 'lantern', 'cursor', 'waves', 'welcome' ) as $preview_effect ) {
                     if ( isset( $options['effects'][ $preview_effect ] ) ) {
                         $options['effects'][ $preview_effect ]['enabled'] = 1;
                     }
@@ -532,6 +608,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     'customCss'           => (string) $options['global']['custom_css'],
                     'homeUrl'             => home_url( '/' ),
                     'preview'             => $this->is_preview_request(),
+                    'isAdmin'             => is_user_logged_in() && current_user_can( 'manage_options' ),
+                    'siteName'            => get_bloginfo( 'name' ),
                 ),
                 'compat'  => $options['compat'],
                 'effects' => $options['effects'],
@@ -600,7 +678,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 <?php if ( isset( $_GET['xjpe_saved'] ) && '1' === $_GET['xjpe_saved'] ) : ?>
                     <div class="notice notice-success inline"><p><strong>配置已保存。</strong> 请刷新前台页面，或点击“打开前台预览”测试特效。</p></div>
                 <?php endif; ?>
-                <div id="xjpe-context-conflict" class="notice notice-warning inline" <?php echo ( ! empty( $options['effects']['contextmenu']['enabled'] ) && ! empty( $options['effects']['nosource']['enabled'] ) ) ? '' : 'hidden'; ?>><p><strong>功能冲突：</strong>“基础防查看”会接管右键事件，因此同时启用时“右键美化”不会显示。</p></div>
+                <div id="xjpe-context-conflict" class="notice notice-info inline" <?php echo ( ! empty( $options['effects']['contextmenu']['enabled'] ) && ! empty( $options['effects']['nosource']['enabled'] ) ) ? '' : 'hidden'; ?>><p><strong>协同模式：</strong>同时启用时保留美化右键菜单；内容保护仍会处理快捷键、复制、拖拽和打印规则。</p></div>
 
                 <h2 class="nav-tab-wrapper xjpe-tabs">
                     <?php foreach ( $tabs as $key => $label ) : ?>
@@ -735,10 +813,15 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             switch ( $key ) {
                 case 'sakura':
                 case 'snow':
-                    $this->number_field( $base, 'count', '数量', $effect['count'], 1, 180, 1 );
-                    $this->number_field( $base, 'size', '大小', $effect['size'], 4, 60, 1 );
-                    $this->number_field( $base, 'speed', '速度', $effect['speed'], 0.2, 5, 0.1 );
+                case 'leaves':
+                case 'bubbles':
+                    $this->number_field( $base, 'count', '数量（电脑端最多 360）', $effect['count'], 1, 360, 1 );
+                    $this->number_field( $base, 'size', '大小', $effect['size'], 4, 72, 1 );
+                    $this->number_field( $base, 'speed', '下落/上升速度', $effect['speed'], 0.1, 5, 0.1 );
                     $this->number_field( $base, 'opacity', '透明度', $effect['opacity'], 0.05, 1, 0.05 );
+                    $this->number_field( $base, 'wind', '横向风力（可为负数）', $effect['wind'], -3, 3, 0.05 );
+                    $this->number_field( $base, 'sway', '摆动幅度', $effect['sway'], 0, 4, 0.1 );
+                    echo '<p class="xjpe-tip">移动端、减少动态效果或省流量模式会自动降低数量，避免动画拖慢页面。</p>';
                     break;
                 case 'lantern':
                     $this->number_field( $base, 'size', '灯笼大小', $effect['size'], 36, 180, 1 );
@@ -752,9 +835,20 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->number_field( $base, 'line_distance', '连线距离', $effect['line_distance'], 40, 300, 1 );
                     break;
                 case 'cursor':
-                    $this->number_field( $base, 'size', '星星大小', $effect['size'], 4, 40, 1 );
-                    $this->number_field( $base, 'density', '拖尾密度', $effect['density'], 1, 5, 1 );
-                    $this->text_field( $base, 'symbol', '拖尾符号', $effect['symbol'], '✦' );
+                    $this->select_field( $base, 'preset', '拖尾样式', $effect['preset'], array( 'star' => '星星', 'heart' => '爱心', 'firefly' => '萤火虫', 'petal' => '花瓣', 'bubble' => '气泡', 'custom' => '自定义符号' ) );
+                    $this->text_field( $base, 'symbol', '自定义符号', $effect['symbol'], '✦' );
+                    $this->select_field( $base, 'color_mode', '颜色模式', $effect['color_mode'], array( 'rainbow' => '随机彩虹', 'fixed' => '固定颜色' ) );
+                    $this->color_field( $base, 'color', '固定颜色', $effect['color'] );
+                    $this->number_field( $base, 'size', '拖尾大小', $effect['size'], 4, 48, 1 );
+                    $this->number_field( $base, 'density', '拖尾密度', $effect['density'], 1, 6, 1 );
+                    $this->number_field( $base, 'duration', '消散时间（毫秒）', $effect['duration'], 240, 2400, 20 );
+                    break;
+                case 'waves':
+                    $this->number_field( $base, 'height', '波浪高度', $effect['height'], 24, 220, 1 );
+                    $this->number_field( $base, 'opacity', '透明度', $effect['opacity'], 0.05, 1, 0.05 );
+                    $this->number_field( $base, 'speed', '流动周期（秒）', $effect['speed'], 4, 40, 1 );
+                    $this->color_field( $base, 'color_1', '前层颜色', $effect['color_1'] );
+                    $this->color_field( $base, 'color_2', '后层颜色', $effect['color_2'] );
                     break;
                 case 'ribbon':
                     $this->number_field( $base, 'opacity', '透明度', $effect['opacity'], 0.05, 1, 0.05 );
@@ -772,8 +866,22 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->textarea_field( $base, 'custom_items', '自定义菜单项，一行一个：名称|链接。特殊链接支持 #top、#refresh、#back、#copy', $effect['custom_items'], 4 );
                     break;
                 case 'nosource':
-                    $this->text_field( $base, 'message', '提示文字', $effect['message'], '本站已开启基础防复制保护。' );
-                    echo '<p class="xjpe-tip">注意：这个功能只能降低普通用户复制/查看成本，不能作为真正源码保护。</p>';
+                    $this->text_field( $base, 'message', '拦截提示文字', $effect['message'], '本站已开启内容保护，请尊重原创。' );
+                    $this->inline_checkbox( $base, 'admin_bypass', '管理员登录时自动绕过保护', $effect['admin_bypass'] );
+                    $this->inline_checkbox( $base, 'block_contextmenu', '禁用浏览器原生右键菜单（启用右键美化时自动保留美化菜单）', $effect['block_contextmenu'] );
+                    $this->inline_checkbox( $base, 'block_shortcuts', '拦截 F12、Ctrl+U、Ctrl+S、开发者工具等常见快捷键', $effect['block_shortcuts'] );
+                    $this->inline_checkbox( $base, 'block_copy', '完全禁止 Ctrl+C 与复制事件', $effect['block_copy'] );
+                    $this->inline_checkbox( $base, 'block_selection', '禁止正文文字选择（表单、代码块除外）', $effect['block_selection'] );
+                    $this->inline_checkbox( $base, 'block_drag', '禁止拖拽图片和文本', $effect['block_drag'] );
+                    $this->inline_checkbox( $base, 'block_print', '拦截 Ctrl+P 打印快捷键', $effect['block_print'] );
+                    $this->select_field( $base, 'copy_mode', '允许复制时版权插入位置', $effect['copy_mode'], array( 'none' => '不附加内容', 'prepend' => '复制内容前方', 'append' => '复制内容后方', 'both' => '前后都附加' ) );
+                    $this->textarea_field( $base, 'copy_prefix', '复制内容前缀', $effect['copy_prefix'], 3 );
+                    $this->textarea_field( $base, 'copy_suffix', '复制内容后缀', $effect['copy_suffix'], 4 );
+                    $this->number_field( $base, 'copy_min_chars', '至少选择多少字符才附加版权', $effect['copy_min_chars'], 0, 1000, 1 );
+                    $this->inline_checkbox( $base, 'copy_include_link', '自动加入当前文章链接，并为 HTML 剪贴板创建可点击链接', $effect['copy_include_link'] );
+                    $this->inline_checkbox( $base, 'copy_success_toast', '复制后显示版权提醒弹窗', $effect['copy_success_toast'] );
+                    $this->text_field( $base, 'copy_toast_message', '复制成功提示', $effect['copy_toast_message'], '复制成功，请保留文章版权与来源链接。' );
+                    echo '<p class="xjpe-tip"><strong>重要：</strong>浏览器端无法真正阻止开发者工具、查看源代码或专业采集；本功能用于提高普通转载成本、附加来源并提醒版权。手机浏览器对 HTML 剪贴板支持不一致，会自动退化为纯文本。</p>';
                     break;
                 case 'bgmusic':
                     $this->url_field( $base, 'url', '音乐文件 URL', $effect['url'], 'https://example.com/music.mp3' );
@@ -823,6 +931,29 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             <label class="xjpe-field xjpe-wide-field">
                 <span><?php echo esc_html( $label ); ?></span>
                 <textarea name="<?php echo esc_attr( $base . '[' . $key . ']' ); ?>" rows="<?php echo esc_attr( $rows ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
+            </label>
+            <?php
+        }
+
+
+        private function select_field( $base, $key, $label, $value, $options ) {
+            ?>
+            <label class="xjpe-field">
+                <span><?php echo esc_html( $label ); ?></span>
+                <select name="<?php echo esc_attr( $base . '[' . $key . ']' ); ?>">
+                    <?php foreach ( $options as $option_value => $option_label ) : ?>
+                        <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <?php
+        }
+
+        private function color_field( $base, $key, $label, $value ) {
+            ?>
+            <label class="xjpe-field">
+                <span><?php echo esc_html( $label ); ?></span>
+                <input type="color" name="<?php echo esc_attr( $base . '[' . $key . ']' ); ?>" value="<?php echo esc_attr( $value ); ?>">
             </label>
             <?php
         }

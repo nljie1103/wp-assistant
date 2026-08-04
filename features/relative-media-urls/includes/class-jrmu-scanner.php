@@ -198,73 +198,77 @@ class JRMU_Scanner {
 		$skipped = 0;
 		$errors  = array();
 
-		foreach ( $post_ids as $post_id ) {
-			if ( ! current_user_can( 'edit_post', $post_id ) ) {
-				++$skipped;
-				$errors[] = '无权限编辑文章 ID ' . $post_id;
-				continue;
+		try {
+			foreach ( $post_ids as $post_id ) {
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					++$skipped;
+					$errors[] = '无权限编辑文章 ID ' . $post_id;
+					continue;
+				}
+
+				$post = get_post( $post_id );
+				if ( ! $post ) {
+					++$skipped;
+					continue;
+				}
+
+				$old_content = (string) $post->post_content;
+				$old_excerpt = (string) $post->post_excerpt;
+				$new_content = $old_content;
+				$new_excerpt = $old_excerpt;
+
+				switch ( $action ) {
+					case self::ACTION_CONVERT_MEDIA_RELATIVE:
+						$new_content = JRMU_Converter::instance()->convert_content( $old_content );
+						$new_excerpt = JRMU_Converter::instance()->convert_content( $old_excerpt );
+						break;
+					case self::ACTION_RESTORE_MEDIA_FULL:
+						$new_content = JRMU_Converter::instance()->restore_content_to_domain( $old_content, $target_base );
+						$new_excerpt = JRMU_Converter::instance()->restore_content_to_domain( $old_excerpt, $target_base );
+						break;
+					case self::ACTION_INTERNAL_TO_TARGET:
+						$new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_content, $target_base );
+						$new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_excerpt, $target_base );
+						break;
+					case self::ACTION_INTERNAL_TO_RELATIVE:
+						$new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_content );
+						$new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_excerpt );
+						break;
+					case self::ACTION_FIX_MIXED_HTTPS:
+						$new_content = $this->fix_mixed_content( $old_content );
+						$new_excerpt = $this->fix_mixed_content( $old_excerpt );
+						break;
+				}
+
+				if ( $new_content === $old_content && $new_excerpt === $old_excerpt ) {
+					++$skipped;
+					continue;
+				}
+
+				if ( function_exists( 'wp_save_post_revision' ) && post_type_supports( $post->post_type, 'revisions' ) ) {
+					wp_save_post_revision( $post_id );
+				}
+
+				$result = wp_update_post(
+					array(
+						'ID'           => $post_id,
+						'post_content' => $new_content,
+						'post_excerpt' => $new_excerpt,
+					),
+					true
+				);
+				if ( is_wp_error( $result ) ) {
+					++$skipped;
+					$errors[] = '文章 ID ' . $post_id . ' 更新失败：' . $result->get_error_message();
+					continue;
+				}
+				++$updated;
 			}
 
-			$post = get_post( $post_id );
-			if ( ! $post ) {
-				++$skipped;
-				continue;
-			}
-
-			$old_content = (string) $post->post_content;
-			$old_excerpt = (string) $post->post_excerpt;
-			$new_content = $old_content;
-			$new_excerpt = $old_excerpt;
-
-			switch ( $action ) {
-				case self::ACTION_CONVERT_MEDIA_RELATIVE:
-					$new_content = JRMU_Converter::instance()->convert_content( $old_content );
-					$new_excerpt = JRMU_Converter::instance()->convert_content( $old_excerpt );
-					break;
-				case self::ACTION_RESTORE_MEDIA_FULL:
-					$new_content = JRMU_Converter::instance()->restore_content_to_domain( $old_content, $target_base );
-					$new_excerpt = JRMU_Converter::instance()->restore_content_to_domain( $old_excerpt, $target_base );
-					break;
-				case self::ACTION_INTERNAL_TO_TARGET:
-					$new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_content, $target_base );
-					$new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_excerpt, $target_base );
-					break;
-				case self::ACTION_INTERNAL_TO_RELATIVE:
-					$new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_content );
-					$new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_excerpt );
-					break;
-				case self::ACTION_FIX_MIXED_HTTPS:
-					$new_content = $this->fix_mixed_content( $old_content );
-					$new_excerpt = $this->fix_mixed_content( $old_excerpt );
-					break;
-			}
-
-			if ( $new_content === $old_content && $new_excerpt === $old_excerpt ) {
-				++$skipped;
-				continue;
-			}
-
-			if ( function_exists( 'wp_save_post_revision' ) && post_type_supports( $post->post_type, 'revisions' ) ) {
-				wp_save_post_revision( $post_id );
-			}
-
-			$result = wp_update_post(
-				array(
-					'ID'           => $post_id,
-					'post_content' => $new_content,
-					'post_excerpt' => $new_excerpt,
-				),
-				true
-			);
-			if ( is_wp_error( $result ) ) {
-				++$skipped;
-				$errors[] = '文章 ID ' . $post_id . ' 更新失败：' . $result->get_error_message();
-				continue;
-			}
-			++$updated;
+		} finally {
+			delete_transient( $lock_key );
 		}
 
-		delete_transient( $lock_key );
 		$this->add_log( $action, count( $post_ids ), $updated, $target_base, $skipped, $errors );
 		return array( 'requested' => count( $post_ids ), 'updated' => $updated, 'skipped' => $skipped, 'errors' => $errors );
 	}

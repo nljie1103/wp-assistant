@@ -65,11 +65,6 @@ class WPAIAS_Frontend {
 			return false;
 		}
 
-		// 移动端开关。
-		if ( wp_is_mobile() && empty( $settings['mobile_enable'] ) ) {
-			return false;
-		}
-
 		$post = get_post();
 		if ( ! $post ) {
 			return false;
@@ -130,6 +125,9 @@ class WPAIAS_Frontend {
 
 		$cached = WPAIAS_Cache::get( $post->ID );
 		$html   = $this->build_card_html( $post, false === $cached ? '' : (string) $cached, $settings );
+		if ( '' === $html ) {
+			return $content;
+		}
 
 		$this->rendered[ $post->ID ] = true;
 
@@ -203,6 +201,9 @@ class WPAIAS_Frontend {
 
 		$cached    = WPAIAS_Cache::get( $post->ID );
 		$html      = $this->build_card_html( $post, false === $cached ? '' : (string) $cached, $settings );
+		if ( '' === $html ) {
+			return;
+		}
 		$selectors = isset( $settings['js_selector'] ) ? $settings['js_selector'] : '';
 		if ( '' === trim( $selectors ) ) {
 			$selectors = '.entry-content, .post-content, .article-content, .single-content';
@@ -230,6 +231,9 @@ class WPAIAS_Frontend {
 	 * @return string
 	 */
 	protected function build_card_html( $post, $summary, $settings ) {
+		if ( '' === $summary && empty( $settings['public_generation'] ) && ! current_user_can( 'edit_posts' ) ) {
+			return '';
+		}
 		$title    = $settings['title'] !== '' ? $settings['title'] : __( 'AI 智能摘要', 'wp-ai-article-summary' );
 		$anim     = $settings['animation'];
 		$duration = (int) $settings['anim_duration'];
@@ -265,9 +269,27 @@ class WPAIAS_Frontend {
 		}
 		$style_attr = $inline_vars ? ' style="' . esc_attr( $inline_vars ) . '"' : '';
 
+		$decoration_type = isset( $settings['decoration_type'] ) ? $settings['decoration_type'] : 'none';
+		$decoration_position = isset( $settings['decoration_position'] ) ? sanitize_html_class( $settings['decoration_position'] ) : 'top-right';
+		$decoration_style = sprintf(
+			'--wpaias-decoration-size:%dpx;--wpaias-decoration-opacity:%s;--wpaias-decoration-x:%dpx;--wpaias-decoration-y:%dpx;',
+			max( 20, min( 240, (int) $settings['decoration_size'] ) ),
+			esc_attr( (string) max( 0.05, min( 1, (float) $settings['decoration_opacity'] ) ) ),
+			max( -200, min( 200, (int) $settings['decoration_offset_x'] ) ),
+			max( -200, min( 200, (int) $settings['decoration_offset_y'] ) )
+		);
+		$builtin_icons = array( 'sparkles' => '✨', 'robot' => '🤖', 'brain' => '🧠', 'quill' => '🪶', 'lightbulb' => '💡', 'stars' => '🌟' );
+		$builtin_key = isset( $settings['decoration_builtin'] ) ? $settings['decoration_builtin'] : 'sparkles';
+		$builtin_icon = isset( $builtin_icons[ $builtin_key ] ) ? $builtin_icons[ $builtin_key ] : '✨';
+
 		ob_start();
 		?>
 		<aside class="<?php echo esc_attr( $class_attr ); ?>"<?php echo $style_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo $data_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+			<?php if ( 'none' !== $decoration_type ) : ?>
+				<span class="wpaias-summary__decoration is-<?php echo esc_attr( $decoration_position ); ?>" style="<?php echo esc_attr( $decoration_style ); ?>" aria-hidden="true">
+					<?php if ( 'image' === $decoration_type && ! empty( $settings['decoration_image_url'] ) ) : ?><img src="<?php echo esc_url( $settings['decoration_image_url'] ); ?>" alt="" loading="lazy" decoding="async"><?php else : ?><span><?php echo esc_html( $builtin_icon ); ?></span><?php endif; ?>
+				</span>
+			<?php endif; ?>
 			<div class="wpaias-summary__header">
 				<span class="wpaias-summary__icon" aria-hidden="true">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 14.39 8.26 21 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.61-1.01z"/></svg>
@@ -369,6 +391,9 @@ class WPAIAS_Frontend {
 		if ( empty( $settings['enabled'] ) ) {
 			wp_send_json_error( array( 'message' => __( '插件未开启。', 'wp-ai-article-summary' ) ), 403 );
 		}
+		if ( empty( $settings['public_generation'] ) && ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( '本站未开放访客实时生成摘要。', 'wp-ai-article-summary' ) ), 403 );
+		}
 		if ( ! in_array( $post->post_type, (array) $settings['post_types'], true ) ) {
 			wp_send_json_error( array( 'message' => __( '该文章类型未启用摘要。', 'wp-ai-article-summary' ) ), 403 );
 		}
@@ -384,19 +409,35 @@ class WPAIAS_Frontend {
 			}
 		}
 
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
-		$rate_key    = 'wpaias_rate_' . md5( $remote_addr . '|' . wp_salt( 'nonce' ) );
-		$rate        = get_transient( $rate_key );
-		$rate        = is_array( $rate ) ? $rate : array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
-		if ( time() >= (int) $rate['reset'] ) {
-			$rate = array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
+		$is_privileged = current_user_can( 'edit_posts' );
+		if ( ! $is_privileged ) {
+			$global_key  = 'wpaias_public_global_rate';
+			$global_rate = get_transient( $global_key );
+			$global_rate = is_array( $global_rate ) ? $global_rate : array( 'count' => 0, 'reset' => time() + HOUR_IN_SECONDS );
+			if ( time() >= (int) $global_rate['reset'] ) {
+				$global_rate = array( 'count' => 0, 'reset' => time() + HOUR_IN_SECONDS );
+			}
+			$global_limit = max( 1, min( 1000, (int) $settings['public_generation_hourly_limit'] ) );
+			if ( (int) $global_rate['count'] >= $global_limit ) {
+				wp_send_json_error( array( 'message' => __( '本站本小时的访客摘要生成额度已用完，请稍后再试。', 'wp-ai-article-summary' ) ), 429 );
+			}
+
+			$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+			$rate_key    = 'wpaias_rate_' . md5( $remote_addr . '|' . wp_salt( 'nonce' ) );
+			$rate        = get_transient( $rate_key );
+			$rate        = is_array( $rate ) ? $rate : array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
+			if ( time() >= (int) $rate['reset'] ) {
+				$rate = array( 'count' => 0, 'reset' => time() + 10 * MINUTE_IN_SECONDS );
+			}
+			$limit = max( 1, (int) apply_filters( 'wpaias_public_generation_rate_limit', 6 ) );
+			if ( (int) $rate['count'] >= $limit ) {
+				wp_send_json_error( array( 'message' => __( '请求过于频繁，请稍后再试。', 'wp-ai-article-summary' ) ), 429 );
+			}
+			$rate['count'] = (int) $rate['count'] + 1;
+			set_transient( $rate_key, $rate, max( 60, (int) $rate['reset'] - time() ) );
+			$global_rate['count'] = (int) $global_rate['count'] + 1;
+			set_transient( $global_key, $global_rate, max( 60, (int) $global_rate['reset'] - time() ) );
 		}
-		$limit = max( 1, (int) apply_filters( 'wpaias_public_generation_rate_limit', 6 ) );
-		if ( (int) $rate['count'] >= $limit ) {
-			wp_send_json_error( array( 'message' => __( '请求过于频繁，请稍后再试。', 'wp-ai-article-summary' ) ), 429 );
-		}
-		$rate['count'] = (int) $rate['count'] + 1;
-		set_transient( $rate_key, $rate, max( 60, (int) $rate['reset'] - time() ) );
 
 		$lock_key = 'wpaias_generate_lock_' . $post_id;
 		if ( get_transient( $lock_key ) ) {
@@ -409,12 +450,9 @@ class WPAIAS_Frontend {
 			if ( false !== $cached_after_lock ) {
 				$result = array( 'success' => true, 'data' => $cached_after_lock, 'cached' => true );
 			} else {
-				$content = wp_strip_all_tags( (string) $post->post_content );
-				if ( function_exists( 'mb_substr' ) ) {
-					$content = mb_substr( $content, 0, 50000 );
-				} else {
-					$content = substr( $content, 0, 50000 );
-				}
+				$content   = wp_strip_all_tags( (string) $post->post_content );
+				$max_chars = max( 2000, min( 100000, (int) $settings['max_source_chars'] ) );
+				$content   = function_exists( 'mb_substr' ) ? mb_substr( $content, 0, $max_chars ) : substr( $content, 0, $max_chars );
 				$result = WPAIAS_API::generate_summary( $content, $settings );
 				if ( ! empty( $result['success'] ) ) {
 					$ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );

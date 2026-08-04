@@ -21,6 +21,11 @@
 	}
 
 	ready( function () {
+		var isMobile = !!( window.matchMedia && window.matchMedia('(max-width: 782px)').matches ) || /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+		if ( WPAIAS.mobile_enable === false && isMobile ) {
+			document.querySelectorAll('.wpaias-summary, #wpaias-summary-template').forEach(function (node) { node.remove(); });
+			return;
+		}
 		// 0) 若页面已经有摘要节点（来自 the_content），直接初始化。
 		var existing = document.querySelectorAll( '.wpaias-summary' );
 

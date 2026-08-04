@@ -447,3 +447,33 @@
 
 	$( init );
 } )( jQuery );
+
+/* 1.1.0 decoration media selector. */
+(function ($) {
+	'use strict';
+	$(function () {
+		var upload = document.getElementById('wpaias-decoration-upload');
+		var remove = document.getElementById('wpaias-decoration-remove');
+		var idField = document.getElementById('wpaias-decoration-image-id');
+		var urlField = document.getElementById('wpaias-decoration-image-url');
+		var preview = document.getElementById('wpaias-decoration-preview');
+		if (!upload || !urlField || !window.wp || !wp.media) return;
+		var frame;
+		upload.addEventListener('click', function () {
+			if (frame) { frame.open(); return; }
+			frame = wp.media({ title: '选择 AI 摘要装饰图片', button: { text: '使用这张图片' }, multiple: false, library: { type: 'image' } });
+			frame.on('select', function () {
+				var item = frame.state().get('selection').first().toJSON();
+				if (idField) idField.value = item.id || 0;
+				urlField.value = item.url || '';
+				if (preview) preview.innerHTML = item.url ? '<img src="' + item.url.replace(/"/g, '&quot;') + '" alt="">' : '';
+			});
+			frame.open();
+		});
+		if (remove) remove.addEventListener('click', function () {
+			if (idField) idField.value = '0';
+			urlField.value = '';
+			if (preview) preview.innerHTML = '';
+		});
+	});
+})(jQuery);

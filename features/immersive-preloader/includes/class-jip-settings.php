@@ -48,6 +48,21 @@ class JIP_Settings {
 				'description' => '毛玻璃质感方块边框 360° 旋转。',
 				'preview'     => 'assets/previews/preview-glass.svg',
 			),
+			'orbit'     => array(
+				'label'       => '星轨环绕沉浸开场',
+				'description' => '多层轨道环绕 Logo，纯 CSS 动画，性能开销低。',
+				'preview'     => 'assets/previews/preview-orbit.svg',
+			),
+			'shutters'  => array(
+				'label'       => '电影快门揭幕',
+				'description' => '上下双层幕布向外揭开，适合品牌首页。',
+				'preview'     => 'assets/previews/preview-shutters.svg',
+			),
+			'ink'       => array(
+				'label'       => '水墨晕染开屏',
+				'description' => '柔和墨色扩散与 Logo 浮现，减少动态模式会自动简化。',
+				'preview'     => 'assets/previews/preview-ink.svg',
+			),
 		);
 	}
 
@@ -58,9 +73,15 @@ class JIP_Settings {
 	 */
 	public static function get_defaults() {
 		return array(
-			'enabled'          => 1,
-			'min_duration'     => 1,
-			'max_duration'     => 8,
+			'enabled'          => 0,
+			'min_duration'     => 0.45,
+			'max_duration'     => 3,
+			'completion'       => 'dom',
+			'mobile_enable'    => 1,
+			'reduce_motion'    => 1,
+			'skip_save_data'   => 1,
+			'show_progress'    => 1,
+			'status_text'      => '正在准备页面…',
 			'effect'           => 'logo3d',
 			'logo_id'          => 0,
 			'logo_url'         => '',
@@ -99,8 +120,18 @@ class JIP_Settings {
 
 		$output['enabled']         = ! empty( $input['enabled'] ) ? 1 : 0;
 		// 时长不再硬性限制，仅做基本合法性校验：>=0 即可。
-		$output['min_duration']    = isset( $input['min_duration'] ) ? max( 0, floatval( $input['min_duration'] ) ) : $defaults['min_duration'];
-		$output['max_duration']    = isset( $input['max_duration'] ) ? max( 0.1, floatval( $input['max_duration'] ) ) : $defaults['max_duration'];
+		$output['min_duration']    = isset( $input['min_duration'] ) ? max( 0, min( 10, floatval( $input['min_duration'] ) ) ) : $defaults['min_duration'];
+		$output['max_duration']    = isset( $input['max_duration'] ) ? max( 0.5, min( 15, floatval( $input['max_duration'] ) ) ) : $defaults['max_duration'];
+		if ( $output['max_duration'] < $output['min_duration'] ) {
+			$output['max_duration'] = $output['min_duration'] + 0.5;
+		}
+		$completion = isset( $input['completion'] ) ? sanitize_key( $input['completion'] ) : $defaults['completion'];
+		$output['completion']      = in_array( $completion, array( 'dom', 'paint', 'load' ), true ) ? $completion : 'dom';
+		$output['mobile_enable']   = ! empty( $input['mobile_enable'] ) ? 1 : 0;
+		$output['reduce_motion']   = ! empty( $input['reduce_motion'] ) ? 1 : 0;
+		$output['skip_save_data']  = ! empty( $input['skip_save_data'] ) ? 1 : 0;
+		$output['show_progress']   = ! empty( $input['show_progress'] ) ? 1 : 0;
+		$output['status_text']     = sanitize_text_field( $input['status_text'] ?? $defaults['status_text'] );
 		$output['effect']          = ( isset( $input['effect'] ) && in_array( $input['effect'], $effects, true ) ) ? $input['effect'] : $defaults['effect'];
 		$output['logo_id']         = isset( $input['logo_id'] ) ? absint( $input['logo_id'] ) : 0;
 		$output['logo_url']        = '';

@@ -19,6 +19,12 @@ class JRMU_Domain_Adapter {
 	/** @var bool */
 	private $bypass_options = false;
 
+	/** @var array<int,string>|null */
+	private $allowed_domain_hosts_cache = null;
+
+	/** @var array<int,string>|null */
+	private $rewrite_source_hosts_cache = null;
+
 	/** 获取单例。 */
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -265,9 +271,6 @@ class JRMU_Domain_Adapter {
 		if ( ! $host ) {
 			return false;
 		}
-		if ( 'any' === $options['domain_mode'] ) {
-			return true;
-		}
 		return in_array( $host, $this->get_allowed_domain_hosts(), true );
 	}
 
@@ -279,6 +282,9 @@ class JRMU_Domain_Adapter {
 
 	/** 多域名白名单。 */
 	public function get_allowed_domain_hosts() {
+		if ( null !== $this->allowed_domain_hosts_cache ) {
+			return $this->allowed_domain_hosts_cache;
+		}
 		$options = JRMU_Settings::get_options();
 		$hosts   = array();
 		if ( ! empty( $options['domain_allowed_hosts'] ) ) {
@@ -289,11 +295,23 @@ class JRMU_Domain_Adapter {
 				}
 			}
 		}
-		return apply_filters( 'jrmu_domain_allowed_hosts', array_values( array_unique( array_filter( $hosts ) ) ) );
+		// 数据库中的原始 home/siteurl 永远视为可信入口，避免白名单为空时锁死主域名。
+		foreach ( array( 'home', 'siteurl' ) as $option ) {
+			$raw  = $this->get_raw_option_value( $option );
+			$host = wp_parse_url( $raw, PHP_URL_HOST );
+			if ( $host ) {
+				$hosts[] = $this->normalize_host( $host );
+			}
+		}
+		$this->allowed_domain_hosts_cache = apply_filters( 'jrmu_domain_allowed_hosts', array_values( array_unique( array_filter( $hosts ) ) ) );
+		return $this->allowed_domain_hosts_cache;
 	}
 
 	/** 可改写来源域名。 */
 	public function get_rewrite_source_hosts() {
+		if ( null !== $this->rewrite_source_hosts_cache ) {
+			return $this->rewrite_source_hosts_cache;
+		}
 		$hosts   = $this->get_allowed_domain_hosts();
 		$options = JRMU_Settings::get_options();
 		if ( ! empty( $options['extra_hosts'] ) ) {
@@ -311,7 +329,8 @@ class JRMU_Domain_Adapter {
 				$hosts[] = $this->normalize_host( $host );
 			}
 		}
-		return apply_filters( 'jrmu_domain_rewrite_source_hosts', array_values( array_unique( array_filter( $hosts ) ) ) );
+		$this->rewrite_source_hosts_cache = apply_filters( 'jrmu_domain_rewrite_source_hosts', array_values( array_unique( array_filter( $hosts ) ) ) );
+		return $this->rewrite_source_hosts_cache;
 	}
 
 	/** 获取状态。 */

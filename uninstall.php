@@ -10,5 +10,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 delete_option( 'jlwa_last_update_check' );
+delete_option( 'jlwa_schema_version' );
 delete_transient( 'jlwa_remote_update_info' );
 delete_transient( 'jlwa_update_lock' );
+delete_transient( 'wpaias_public_global_rate' );

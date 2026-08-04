@@ -163,15 +163,20 @@ class JIP_Admin {
 							<th scope="row"><label for="jip_min_duration">最小展示时长</label></th>
 							<td>
 								<input type="number" id="jip_min_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[min_duration]" value="<?php echo esc_attr( $options['min_duration'] ); ?>" min="0" step="0.1" class="small-text" /> 秒
-								<p class="description">即使页面加载完成，也至少让动画播放这么长时间。推荐值：1 秒（可填任意正数）。</p>
+								<p class="description">即使页面加载完成，也至少让动画播放这么长时间。推荐值：0.4～0.8 秒。内容会在遮罩后方正常渲染，不再人为隐藏正文。</p>
 							</td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="jip_max_duration">最大等待时长</label></th>
 							<td>
 								<input type="number" id="jip_max_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[max_duration]" value="<?php echo esc_attr( $options['max_duration'] ); ?>" min="0.1" step="0.1" class="small-text" /> 秒
-								<p class="description">超过这个时间页面还没加载完，自动结束预加载。推荐值：8 秒（可填任意正数，0 以下无效）。</p>
+								<p class="description">超过这个时间页面还没加载完，自动结束预加载。推荐值：2～4 秒。超过后强制结束，避免开屏遮挡真实内容。</p>
 							</td>
+						</tr>
+
+						<tr>
+							<th scope="row">结束时机</th>
+							<td><select name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[completion]"><option value="dom" <?php selected( 'dom', $options['completion'] ); ?>>DOM 可用后结束（推荐）</option><option value="paint" <?php selected( 'paint', $options['completion'] ); ?>>首屏完成两帧绘制后结束</option><option value="load" <?php selected( 'load', $options['completion'] ); ?>>等待全部图片和资源（不推荐）</option></select><p class="description">开屏不是下载进度条。推荐按 DOM/首屏绘制结束，不阻塞图片、广告和第三方脚本。</p></td>
 						</tr>
 					</table>
 				</div>
@@ -282,6 +287,10 @@ class JIP_Admin {
 								<p class="description">底层使用 <code>sessionStorage</code> 实现，标签关闭后自动清除。如需"每次访问首页都显示"，请取消勾选。</p>
 							</td>
 						</tr>
+						<tr><th scope="row">移动端显示</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[mobile_enable]" value="1" <?php checked( 1, (int) $options['mobile_enable'] ); ?>> 手机上也显示；关闭后由浏览器端判断，兼容页面缓存</label></td></tr>
+						<tr><th scope="row">无障碍与省流量</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[reduce_motion]" value="1" <?php checked( 1, (int) $options['reduce_motion'] ); ?>> 系统要求减少动态效果时自动简化/跳过</label><br><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[skip_save_data]" value="1" <?php checked( 1, (int) $options['skip_save_data'] ); ?>> 浏览器开启省流量模式时跳过</label></td></tr>
+						<tr><th scope="row">进度提示</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[show_progress]" value="1" <?php checked( 1, (int) $options['show_progress'] ); ?>> 显示阶段式进度条（表示准备阶段，不伪装真实下载百分比）</label><p><input type="text" class="regular-text" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[status_text]" value="<?php echo esc_attr( $options['status_text'] ); ?>" placeholder="正在准备页面…"></p></td></tr>
+
 					</table>
 				</div>
 				</div>
