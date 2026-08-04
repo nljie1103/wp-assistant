@@ -1,0 +1,903 @@
+=== FILE TREE ===
+.gitignore
+LICENSE
+assets/css/admin.css
+assets/css/index.php
+assets/index.php
+assets/js/admin.js
+assets/js/index.php
+includes/class-jlwa-admin.php
+includes/class-jlwa-module-loader.php
+includes/class-jlwa-updater.php
+includes/index.php
+index.php
+jiuliu-wp-assistant.php
+modules/ai-article-summary/.gitignore
+modules/ai-article-summary/LICENSE
+modules/ai-article-summary/assets/css/admin.css
+modules/ai-article-summary/assets/css/frontend.css
+modules/ai-article-summary/assets/css/index.php
+modules/ai-article-summary/assets/index.php
+modules/ai-article-summary/assets/js/admin.js
+modules/ai-article-summary/assets/js/frontend.js
+modules/ai-article-summary/assets/js/index.php
+modules/ai-article-summary/includes/class-wpaias-admin.php
+modules/ai-article-summary/includes/class-wpaias-api.php
+modules/ai-article-summary/includes/class-wpaias-cache.php
+modules/ai-article-summary/includes/class-wpaias-frontend.php
+modules/ai-article-summary/includes/class-wpaias-plugin.php
+modules/ai-article-summary/includes/class-wpaias-providers.php
+modules/ai-article-summary/includes/class-wpaias-styles.php
+modules/ai-article-summary/includes/index.php
+modules/ai-article-summary/index.php
+modules/ai-article-summary/languages/index.php
+modules/ai-article-summary/uninstall.php
+modules/ai-article-summary/wp-ai-article-summary.php
+modules/immersive-preloader/.gitignore
+modules/immersive-preloader/LICENSE
+modules/immersive-preloader/assets/css/admin.css
+modules/immersive-preloader/assets/css/index.php
+modules/immersive-preloader/assets/css/preloader.css
+modules/immersive-preloader/assets/images/default-logo.svg
+modules/immersive-preloader/assets/images/index.php
+modules/immersive-preloader/assets/index.php
+modules/immersive-preloader/assets/js/admin.js
+modules/immersive-preloader/assets/js/index.php
+modules/immersive-preloader/assets/js/preloader.js
+modules/immersive-preloader/assets/previews/index.php
+modules/immersive-preloader/assets/previews/preview-glass.svg
+modules/immersive-preloader/assets/previews/preview-gradient.svg
+modules/immersive-preloader/assets/previews/preview-lines.svg
+modules/immersive-preloader/assets/previews/preview-logo3d.svg
+modules/immersive-preloader/assets/previews/preview-particles.svg
+modules/immersive-preloader/includes/class-jip-admin.php
+modules/immersive-preloader/includes/class-jip-frontend.php
+modules/immersive-preloader/includes/class-jip-settings.php
+modules/immersive-preloader/includes/index.php
+modules/immersive-preloader/index.php
+modules/immersive-preloader/jiuliu-immersive-preloader.php
+modules/immersive-preloader/uninstall.php
+modules/page-effects/LICENSE
+modules/page-effects/assets/css/admin.css
+modules/page-effects/assets/css/frontend.css
+modules/page-effects/assets/js/admin.js
+modules/page-effects/assets/js/frontend.js
+modules/page-effects/uninstall.php
+modules/page-effects/wp-page-effects.php
+modules/relative-media-urls/LICENSE
+modules/relative-media-urls/assets/css/admin.css
+modules/relative-media-urls/assets/index.php
+modules/relative-media-urls/assets/js/admin.js
+modules/relative-media-urls/includes/class-jrmu-admin.php
+modules/relative-media-urls/includes/class-jrmu-converter.php
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php
+modules/relative-media-urls/includes/class-jrmu-scanner.php
+modules/relative-media-urls/includes/class-jrmu-seo.php
+modules/relative-media-urls/includes/class-jrmu-settings.php
+modules/relative-media-urls/includes/index.php
+modules/relative-media-urls/index.php
+modules/relative-media-urls/jiuliu-relative-media-urls.php
+modules/relative-media-urls/languages/index.php
+modules/relative-media-urls/uninstall.php
+readme.txt
+uninstall.php
+
+=== PLUGIN_HEADERS ===
+jiuliu-wp-assistant.php:3: * Plugin Name: 九流WP助手
+modules/ai-article-summary/wp-ai-article-summary.php:3: * Plugin Name: 九流 AI 文章摘要
+modules/immersive-preloader/jiuliu-immersive-preloader.php:3: * Plugin Name: 九流沉浸式预加载
+modules/page-effects/wp-page-effects.php:3: * Plugin Name: 九流页面美化特效
+modules/relative-media-urls/jiuliu-relative-media-urls.php:3: * Plugin Name: 九流媒体相对地址
+
+=== OLD_CLASSES ===
+includes/class-jlwa-module-loader.php:26: 'class'      => 'XJPE_Plugin',
+includes/class-jlwa-module-loader.php:39: 'constant'   => 'JRMU_VERSION',
+includes/class-jlwa-module-loader.php:51: 'class'      => 'WPAIAS_Plugin',
+includes/class-jlwa-module-loader.php:52: 'constant'   => 'WPAIAS_VERSION',
+includes/class-jlwa-module-loader.php:65: 'constant'   => 'JIP_VERSION',
+includes/class-jlwa-module-loader.php:100: if ( 'page-effects' === $key && class_exists( 'XJPE_Plugin', false ) ) {
+includes/class-jlwa-module-loader.php:101: return (string) XJPE_Plugin::VERSION;
+includes/class-jlwa-module-loader.php:111: if ( ! empty( self::$statuses['page-effects']['loaded'] ) && class_exists( 'XJPE_Plugin' ) ) {
+includes/class-jlwa-module-loader.php:112: XJPE_Plugin::activate();
+includes/class-jlwa-module-loader.php:115: if ( ! empty( self::$statuses['ai-article-summary']['loaded'] ) && class_exists( 'WPAIAS_Plugin' ) && defined( 'WPAIAS_OPTION_KEY' ) ) {
+includes/class-jlwa-module-loader.php:116: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+includes/class-jlwa-module-loader.php:118: $defaults = WPAIAS_Plugin::get_default_settings();
+includes/class-jlwa-module-loader.php:119: update_option( WPAIAS_OPTION_KEY, wp_parse_args( $current, $defaults ) );
+includes/class-jlwa-module-loader.php:197: if ( isset( $module['class'] ) && 'XJPE_Plugin' === $module['class'] && class_exists( 'XJPE_Plugin', false ) ) {
+includes/class-jlwa-module-loader.php:198: return (string) XJPE_Plugin::VERSION;
+modules/ai-article-summary/assets/js/admin.js:8: var WPAIAS = window.WPAIAS_ADMIN || {};
+modules/ai-article-summary/assets/js/frontend.js:13: var WPAIAS = window.WPAIAS_FRONT || {};
+modules/ai-article-summary/includes/class-wpaias-admin.php:13: * Class WPAIAS_Admin
+modules/ai-article-summary/includes/class-wpaias-admin.php:15: class WPAIAS_Admin {
+modules/ai-article-summary/includes/class-wpaias-admin.php:51: add_filter( 'plugin_action_links_' . WPAIAS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/ai-article-summary/includes/class-wpaias-admin.php:99: WPAIAS_OPTION_KEY,
+modules/ai-article-summary/includes/class-wpaias-admin.php:103: 'default'           => WPAIAS_Plugin::get_default_settings(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:120: WPAIAS_PLUGIN_URL . 'assets/css/admin.css',
+modules/ai-article-summary/includes/class-wpaias-admin.php:122: WPAIAS_VERSION
+modules/ai-article-summary/includes/class-wpaias-admin.php:127: WPAIAS_PLUGIN_URL . 'assets/js/admin.js',
+modules/ai-article-summary/includes/class-wpaias-admin.php:129: WPAIAS_VERSION,
+modules/ai-article-summary/includes/class-wpaias-admin.php:139: 'WPAIAS_ADMIN',
+modules/ai-article-summary/includes/class-wpaias-admin.php:143: 'providers'  => WPAIAS_Providers::js_map(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:144: 'api_keys'   => $is_settings_page ? WPAIAS_Plugin::get_settings()['api_keys'] : array(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:173: $defaults = WPAIAS_Plugin::get_default_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:174: $saved    = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/includes/class-wpaias-admin.php:251: $providers = WPAIAS_Providers::all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:274: $out['api_keys'] = WPAIAS_Plugin::sanitize_api_keys( $api_keys );
+modules/ai-article-summary/includes/class-wpaias-admin.php:313: $presets = WPAIAS_Styles::presets();
+modules/ai-article-summary/includes/class-wpaias-admin.php:319: $clean = WPAIAS_Styles::sanitize_color( (string) $input[ $ck ] );
+modules/ai-article-summary/includes/class-wpaias-admin.php:346: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:359: $cache_count = WPAIAS_Cache::count();
+modules/ai-article-summary/includes/class-wpaias-admin.php:360: $providers   = WPAIAS_Providers::all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:362: $current_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $settings['provider'], $key_model );
+modules/ai-article-summary/includes/class-wpaias-admin.php:371: <span class="jiuliu-version-badge">v<?php echo esc_html( WPAIAS_VERSION ); ?></span>
+modules/ai-article-summary/includes/class-wpaias-admin.php:385: <?php $opt = WPAIAS_OPTION_KEY; ?>
+modules/ai-article-summary/includes/class-wpaias-admin.php:670: $style_presets = WPAIAS_Styles::presets();
+modules/ai-article-summary/includes/class-wpaias-admin.php:815: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:827: 'current_api_key' => isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : WPAIAS_Plugin::get_api_key_for_model( $settings, $test_provider, $test_model ),
+modules/ai-article-summary/includes/class-wpaias-admin.php:834: $result = WPAIAS_API::generate_summary( '这是一段用于连通性测试的内容。', $settings, $overrides );
+modules/ai-article-summary/includes/class-wpaias-admin.php:864: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:866: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:883: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:886: $result = WPAIAS_API::generate_summary( $content, $settings );
+modules/ai-article-summary/includes/class-wpaias-admin.php:888: $ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
+modules/ai-article-summary/includes/class-wpaias-admin.php:889: WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+modules/ai-article-summary/includes/class-wpaias-admin.php:911: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:923: $n = WPAIAS_Cache::flush_all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:944: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:948: 'count'   => WPAIAS_Cache::count(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:968: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:980: $settings   = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:998: $cached = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-admin.php:1036: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:1043: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-api.php:14: * Class WPAIAS_API
+modules/ai-article-summary/includes/class-wpaias-api.php:16: class WPAIAS_API {
+modules/ai-article-summary/includes/class-wpaias-api.php:39: $provider     = WPAIAS_Providers::get( $provider_key );
+modules/ai-article-summary/includes/class-wpaias-api.php:77: $api_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $provider_key, $model );
+modules/ai-article-summary/includes/class-wpaias-cache.php:13: * Class WPAIAS_Cache
+modules/ai-article-summary/includes/class-wpaias-cache.php:15: class WPAIAS_Cache {
+modules/ai-article-summary/includes/class-wpaias-cache.php:29: return WPAIAS_CACHE_PREFIX . absint( $post_id );
+modules/ai-article-summary/includes/class-wpaias-cache.php:61: update_post_meta( $post_id, WPAIAS_META_KEY, 1 );
+modules/ai-article-summary/includes/class-wpaias-cache.php:81: delete_post_meta( $post_id, WPAIAS_META_KEY );
+modules/ai-article-summary/includes/class-wpaias-cache.php:96: delete_post_meta( $post_id, WPAIAS_META_KEY );
+modules/ai-article-summary/includes/class-wpaias-cache.php:170: $like = $wpdb->esc_like( '_transient_' . WPAIAS_CACHE_PREFIX ) . '%';
+modules/ai-article-summary/includes/class-wpaias-cache.php:173: $like2 = $wpdb->esc_like( '_transient_timeout_' . WPAIAS_CACHE_PREFIX ) . '%';
+modules/ai-article-summary/includes/class-wpaias-frontend.php:17: * Class WPAIAS_Frontend
+modules/ai-article-summary/includes/class-wpaias-frontend.php:19: class WPAIAS_Frontend {
+modules/ai-article-summary/includes/class-wpaias-frontend.php:63: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:123: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:131: $cached = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:170: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:171: $cached   = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:188: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:204: $cached    = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:258: if ( class_exists( 'WPAIAS_Styles' ) ) {
+modules/ai-article-summary/includes/class-wpaias-frontend.php:259: $style_class = WPAIAS_Styles::get_decoration_class( $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:260: $inline_vars = WPAIAS_Styles::build_inline_vars( $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:304: WPAIAS_PLUGIN_URL . 'assets/css/frontend.css',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:306: WPAIAS_VERSION
+modules/ai-article-summary/includes/class-wpaias-frontend.php:311: WPAIAS_PLUGIN_URL . 'assets/js/frontend.js',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:313: WPAIAS_VERSION,
+modules/ai-article-summary/includes/class-wpaias-frontend.php:320: 'WPAIAS_FRONT',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:336: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:363: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:368: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:408: $cached_after_lock = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:418: $result = WPAIAS_API::generate_summary( $content, $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:420: $ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:421: WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:448: if ( class_exists( 'WPAIAS_Plugin' ) ) {
+modules/ai-article-summary/includes/class-wpaias-plugin.php:13: * Class WPAIAS_Plugin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:15: class WPAIAS_Plugin {
+modules/ai-article-summary/includes/class-wpaias-plugin.php:20: * @var WPAIAS_Plugin|null
+modules/ai-article-summary/includes/class-wpaias-plugin.php:27: * @var WPAIAS_Admin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:34: * @var WPAIAS_Frontend
+modules/ai-article-summary/includes/class-wpaias-plugin.php:41: * @return WPAIAS_Plugin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:55: load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( WPAIAS_PLUGIN_BASENAME ) . '/languages' );
+modules/ai-article-summary/includes/class-wpaias-plugin.php:58: $this->admin = new WPAIAS_Admin();
+modules/ai-article-summary/includes/class-wpaias-plugin.php:63: $this->frontend = new WPAIAS_Frontend();
+modules/ai-article-summary/includes/class-wpaias-plugin.php:73: $saved   = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/includes/class-wpaias-providers.php:13: * Class WPAIAS_Providers
+modules/ai-article-summary/includes/class-wpaias-providers.php:15: class WPAIAS_Providers {
+modules/ai-article-summary/includes/class-wpaias-styles.php:16: * Class WPAIAS_Styles
+modules/ai-article-summary/includes/class-wpaias-styles.php:18: class WPAIAS_Styles {
+modules/ai-article-summary/wp-ai-article-summary.php:25: define( 'WPAIAS_VERSION', '1.0.9' );
+modules/ai-article-summary/wp-ai-article-summary.php:26: define( 'WPAIAS_PLUGIN_FILE', __FILE__ );
+modules/ai-article-summary/wp-ai-article-summary.php:27: define( 'WPAIAS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:28: define( 'WPAIAS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:29: define( 'WPAIAS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:30: define( 'WPAIAS_OPTION_KEY', 'wpaias_settings' );
+modules/ai-article-summary/wp-ai-article-summary.php:31: define( 'WPAIAS_CACHE_PREFIX', 'wpaias_summary_' );
+modules/ai-article-summary/wp-ai-article-summary.php:32: define( 'WPAIAS_META_KEY', '_wpaias_has_summary' );
+modules/ai-article-summary/wp-ai-article-summary.php:35: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-providers.php';
+modules/ai-article-summary/wp-ai-article-summary.php:36: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-styles.php';
+modules/ai-article-summary/wp-ai-article-summary.php:37: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-cache.php';
+modules/ai-article-summary/wp-ai-article-summary.php:38: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-api.php';
+modules/ai-article-summary/wp-ai-article-summary.php:39: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-admin.php';
+modules/ai-article-summary/wp-ai-article-summary.php:40: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-frontend.php';
+modules/ai-article-summary/wp-ai-article-summary.php:41: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-plugin.php';
+modules/ai-article-summary/wp-ai-article-summary.php:46: * @return WPAIAS_Plugin
+modules/ai-article-summary/wp-ai-article-summary.php:49: return WPAIAS_Plugin::instance();
+modules/ai-article-summary/wp-ai-article-summary.php:59: $defaults = WPAIAS_Plugin::get_default_settings();
+modules/ai-article-summary/wp-ai-article-summary.php:60: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/wp-ai-article-summary.php:68: update_option( WPAIAS_OPTION_KEY, $merged );
+modules/immersive-preloader/assets/js/admin.js:54: title: (window.JIP_ADMIN && window.JIP_ADMIN.mediaTitle) || '选择 Logo 图片',
+modules/immersive-preloader/assets/js/admin.js:55: button: { text: (window.JIP_ADMIN && window.JIP_ADMIN.mediaButton) || '使用此图片' },
+modules/immersive-preloader/assets/js/admin.js:72: var defaultLogo = (window.JIP_ADMIN && window.JIP_ADMIN.defaultLogo) || '';
+modules/immersive-preloader/assets/js/preloader.js:21: var CFG = (typeof window !== 'undefined' && window.JIP_CFG) ? window.JIP_CFG : {};
+modules/immersive-preloader/includes/class-jip-admin.php:13: * Class JIP_Admin
+modules/immersive-preloader/includes/class-jip-admin.php:15: class JIP_Admin {
+modules/immersive-preloader/includes/class-jip-admin.php:20: * @var JIP_Admin|null
+modules/immersive-preloader/includes/class-jip-admin.php:27: * @return JIP_Admin
+modules/immersive-preloader/includes/class-jip-admin.php:57: JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:67: JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:80: JIP_OPTION_KEY,
+modules/immersive-preloader/includes/class-jip-admin.php:83: 'sanitize_callback' => array( 'JIP_Settings', 'sanitize' ),
+modules/immersive-preloader/includes/class-jip-admin.php:84: 'default'           => JIP_Settings::get_defaults(),
+modules/immersive-preloader/includes/class-jip-admin.php:97: 'toplevel_page_' . JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:98: defined( 'JLWA_MENU_SLUG' ) ? JLWA_MENU_SLUG . '_page_' . JIP_MENU_SLUG : '',
+modules/immersive-preloader/includes/class-jip-admin.php:112: JIP_PLUGIN_URL . 'assets/css/admin.css',
+modules/immersive-preloader/includes/class-jip-admin.php:114: JIP_VERSION
+modules/immersive-preloader/includes/class-jip-admin.php:119: JIP_PLUGIN_URL . 'assets/js/admin.js',
+modules/immersive-preloader/includes/class-jip-admin.php:121: JIP_VERSION,
+modules/immersive-preloader/includes/class-jip-admin.php:127: 'JIP_ADMIN',
+modules/immersive-preloader/includes/class-jip-admin.php:131: 'defaultLogo' => JIP_PLUGIN_URL . 'assets/images/default-logo.svg',
+modules/immersive-preloader/includes/class-jip-admin.php:143: $options = JIP_Settings::get_options();
+modules/immersive-preloader/includes/class-jip-admin.php:144: $effects = JIP_Settings::get_effects();
+modules/immersive-preloader/includes/class-jip-admin.php:162: <span class="jiuliu-version-badge">v<?php echo esc_html( JIP_VERSION ); ?></span>
+modules/immersive-preloader/includes/class-jip-admin.php:167: <a class="nav-tab <?php echo $tab === $key ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . JIP_MENU_SLUG . '&tab=' . $key ) ); ?>"><?php echo esc_html( $label ); ?></a>
+modules/immersive-preloader/includes/class-jip-admin.php:183: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[enabled]" value="1" <?php checked( 1, (int) $options['enabled'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:187: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[enabled]" value="0" <?php checked( 0, (int) $options['enabled'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:195: <input type="number" id="jip_min_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[min_duration]" value="<?php echo esc_attr( $options['min_duration'] ); ?>" min="0" step="0.1" class="small-text" /> 秒
+modules/immersive-preloader/includes/class-jip-admin.php:202: <input type="number" id="jip_max_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[max_duration]" value="<?php echo esc_attr( $options['max_duration'] ); ?>" min="0.1" step="0.1" class="small-text" /> 秒
+modules/immersive-preloader/includes/class-jip-admin.php:218: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[effect]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['effect'], $key ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:220: <img src="<?php echo esc_url( JIP_PLUGIN_URL . $info['preview'] ); ?>" alt="<?php echo esc_attr( $info['label'] ); ?>" width="120" height="80" />
+modules/immersive-preloader/includes/class-jip-admin.php:242: $logo_url = ! empty( $options['logo_url'] ) ? $options['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' );
+modules/immersive-preloader/includes/class-jip-admin.php:247: <input type="hidden" id="jip_logo_id" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_id]" value="<?php echo esc_attr( $options['logo_id'] ); ?>" />
+modules/immersive-preloader/includes/class-jip-admin.php:248: <input type="hidden" id="jip_logo_url" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_url]" value="<?php echo esc_attr( $options['logo_url'] ); ?>" />
+modules/immersive-preloader/includes/class-jip-admin.php:259: <input type="number" id="jip_logo_size" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_size]" value="<?php echo esc_attr( $options['logo_size'] ); ?>" min="30" max="100" step="1" class="small-text" /> %
+modules/immersive-preloader/includes/class-jip-admin.php:275: <input type="text" id="jip_bg_color" class="jip-color-field" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[bg_color]" value="<?php echo esc_attr( $options['bg_color'] ); ?>" data-default-color="#000000" />
+modules/immersive-preloader/includes/class-jip-admin.php:282: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[show_site_title]" value="1" <?php checked( 1, (int) $options['show_site_title'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:291: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[allow_skip]" value="1" <?php checked( 1, (int) $options['allow_skip'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:300: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[home_only]" value="1" <?php checked( 1, (int) $options['home_only'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:309: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[once_per_session]" value="1" <?php checked( 1, (int) $options['once_per_session'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:323: <p>作者：<a href="https://www.jiuliu.org" target="_blank" rel="noopener">九流</a> · 许可证：GPLv2+ · 版本：<?php echo esc_html( JIP_VERSION ); ?></p>
+modules/immersive-preloader/includes/class-jip-frontend.php:20: * Class JIP_Frontend
+modules/immersive-preloader/includes/class-jip-frontend.php:22: class JIP_Frontend {
+modules/immersive-preloader/includes/class-jip-frontend.php:27: * @var JIP_Frontend|null
+modules/immersive-preloader/includes/class-jip-frontend.php:41: * @return JIP_Frontend
+modules/immersive-preloader/includes/class-jip-frontend.php:80: $this->options = JIP_Settings::get_options();
+modules/immersive-preloader/includes/class-jip-frontend.php:100: $logo_url  = ! empty( $opts['logo_url'] ) ? $opts['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' );
+modules/immersive-preloader/includes/class-jip-frontend.php:233: window.JIP_HTML = <?php echo $html_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 已通过 wp_json_encode 编码。 ?>;
+modules/immersive-preloader/includes/class-jip-frontend.php:246: wrap.innerHTML = window.JIP_HTML;
+modules/immersive-preloader/includes/class-jip-frontend.php:305: JIP_PLUGIN_URL . 'assets/css/preloader.css',
+modules/immersive-preloader/includes/class-jip-frontend.php:307: JIP_VERSION
+modules/immersive-preloader/includes/class-jip-frontend.php:312: JIP_PLUGIN_URL . 'assets/js/preloader.js',
+modules/immersive-preloader/includes/class-jip-frontend.php:314: JIP_VERSION,
+modules/immersive-preloader/includes/class-jip-frontend.php:320: 'JIP_CFG',
+modules/immersive-preloader/includes/class-jip-frontend.php:326: 'logoUrl'     => ! empty( $this->options['logo_url'] ) ? $this->options['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' ),
+modules/immersive-preloader/includes/class-jip-settings.php:15: * Class JIP_Settings
+modules/immersive-preloader/includes/class-jip-settings.php:17: class JIP_Settings {
+modules/immersive-preloader/includes/class-jip-settings.php:82: $opts = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:24: define( 'JIP_VERSION', '1.0.6' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:25: define( 'JIP_PLUGIN_FILE', __FILE__ );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:26: define( 'JIP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:27: define( 'JIP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:28: define( 'JIP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:29: define( 'JIP_MENU_SLUG', defined( 'JLWA_MENU_SLUG' ) ? 'jlwa-immersive-preloader' : 'jiuliu-immersive-preloader' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:30: define( 'JIP_OPTION_KEY', 'jiuliu_immersive_preloader_options' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:70: require_once JIP_PLUGIN_DIR . 'includes/class-jip-settings.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:71: require_once JIP_PLUGIN_DIR . 'includes/class-jip-admin.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:72: require_once JIP_PLUGIN_DIR . 'includes/class-jip-frontend.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:80: register_activation_hook( JIP_PLUGIN_FILE, array( $this, 'on_activate' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:81: register_deactivation_hook( JIP_PLUGIN_FILE, array( $this, 'on_deactivate' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:90: add_filter( 'plugin_action_links_' . JIP_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:98: $defaults = JIP_Settings::get_defaults();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:99: $current  = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:104: update_option( JIP_OPTION_KEY, $merged );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:118: load_plugin_textdomain( 'jiuliu-immersive-preloader', false, dirname( JIP_PLUGIN_BASENAME ) . '/languages' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:126: JIP_Admin::instance();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:129: JIP_Frontend::instance();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:141: esc_url( admin_url( 'admin.php?page=' . JIP_MENU_SLUG ) ),
+modules/page-effects/assets/js/frontend.js:4: var cfg = window.XJPE_CONFIG || null;
+modules/page-effects/assets/js/frontend.js:17: window.XJPE_DISABLED = !!disabled;
+modules/page-effects/assets/js/frontend.js:18: window.XJPE_READY = true;
+modules/page-effects/wp-page-effects.php:20: if ( ! class_exists( 'XJPE_Plugin' ) ) {
+modules/page-effects/wp-page-effects.php:21: final class XJPE_Plugin {
+modules/page-effects/wp-page-effects.php:481: wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
+modules/page-effects/wp-page-effects.php:555: $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
+modules/page-effects/wp-page-effects.php:564: return "(function(run){var execute=function(){if(window.XJPE_DISABLED){return;}run();};if(window.XJPE_READY){execute();}else{document.addEventListener('xjpe:ready',execute,{once:true});}})(function(){try{\n" . $js . "\n}catch(e){console.warn('XJPE custom JS error:',e);}});";
+modules/page-effects/wp-page-effects.php:905: XJPE_Plugin::instance();
+modules/relative-media-urls/includes/class-jrmu-admin.php:13: * JRMU_Admin
+modules/relative-media-urls/includes/class-jrmu-admin.php:15: class JRMU_Admin {
+modules/relative-media-urls/includes/class-jrmu-admin.php:16: /** @var JRMU_Admin|null */
+modules/relative-media-urls/includes/class-jrmu-admin.php:49: JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:59: JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:70: JRMU_OPTION_KEY,
+modules/relative-media-urls/includes/class-jrmu-admin.php:73: 'sanitize_callback' => array( 'JRMU_Settings', 'sanitize' ),
+modules/relative-media-urls/includes/class-jrmu-admin.php:74: 'default'           => JRMU_Settings::get_defaults(),
+modules/relative-media-urls/includes/class-jrmu-admin.php:82: 'toplevel_page_' . JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:83: defined( 'JLWA_MENU_SLUG' ) ? JLWA_MENU_SLUG . '_page_' . JRMU_MENU_SLUG : '',
+modules/relative-media-urls/includes/class-jrmu-admin.php:88: wp_enqueue_style( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/css/admin.css', array(), JRMU_VERSION );
+modules/relative-media-urls/includes/class-jrmu-admin.php:89: wp_enqueue_script( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/js/admin.js', array(), JRMU_VERSION, true );
+modules/relative-media-urls/includes/class-jrmu-admin.php:110: <span class="jiuliu-version-badge">v<?php echo esc_html( JRMU_VERSION ); ?></span>
+modules/relative-media-urls/includes/class-jrmu-admin.php:153: $url = admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=' . $key );
+modules/relative-media-urls/includes/class-jrmu-admin.php:180: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-admin.php:188: <tr><th>已上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_existing_media_output]" value="1" <?php checked( $options['convert_existing_media_output'], 1 ); ?>> 转换已经上传媒体的输出地址</label><p class="description">影响媒体库、编辑器、附件 URL API、特色图、srcset 的输出，不移动文件，不改核心。关闭即可恢复输出。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:189: <tr><th>未来上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_future_media_output]" value="1" <?php checked( $options['convert_future_media_output'], 1 ); ?>> 从开启后，新上传媒体默认相对地址输出</label><p class="description">只影响开启之后的新附件。插件会给新附件打标记。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:194: <tr><th>未来保存文章</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_save]" value="1" <?php checked( $options['convert_post_on_save'], 1 ); ?>> 保存文章/页面时自动转换内容中的媒体地址</label><p class="description">会永久保存到文章正文/摘要，只影响开启后保存的内容。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:195: <tr><th>前台临时输出</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_frontend]" value="1" <?php checked( $options['convert_post_on_frontend'], 1 ); ?>> 前台显示文章时临时转换旧内容</label><p class="description">不修改数据库，适合先测试旧文章图片是否走反代。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:200: <tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">解决从香港入口进入首页，点击文章又跳回源站固定域名的问题。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:201: <tr><th>允许域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_allowed_hosts]" rows="5" class="large-text code" placeholder="blog.jiuliu.org&#10;hk-blog.jiuliu.org&#10;origin-blog.jiuliu.org"><?php echo esc_textarea( $options['domain_allowed_hosts'] ); ?></textarea><p class="description">白名单模式下，只有这里列出的域名才会触发动态链接。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:202: <tr><th>适配模式</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="whitelist" <?php checked( $options['domain_mode'], 'whitelist' ); ?>> 白名单域名，推荐</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="any" <?php checked( $options['domain_mode'], 'any' ); ?>> 任意 Host，高级模式</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:203: <tr><th>协议</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="https" <?php checked( $options['domain_scheme'], 'https' ); ?>> 强制 HTTPS</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="auto" <?php checked( $options['domain_scheme'], 'auto' ); ?>> 自动识别 HTTPS / X-Forwarded-Proto</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="http" <?php checked( $options['domain_scheme'], 'http' ); ?>> 强制 HTTP</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:204: <tr><th>前台兜底改写</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_frontend_links]" value="1" <?php checked( $options['domain_rewrite_frontend_links'], 1 ); ?>> 前台 HTML 兜底替换站内绝对链接</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_mode]" value="current_full" <?php checked( $options['domain_rewrite_mode'], 'current_full' ); ?>> 替换为当前域名完整 URL</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_mode]" value="root_relative" <?php checked( $options['domain_rewrite_mode'], 'root_relative' ); ?>> 替换为根相对路径</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:205: <tr><th>排除项</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_dynamic_siteurl]" value="1" <?php checked( $options['domain_dynamic_siteurl'], 1 ); ?>> 同时动态适配 siteurl</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_admin]" value="1" <?php checked( $options['domain_exclude_admin'], 1 ); ?>> 后台 wp-admin 保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_login]" value="1" <?php checked( $options['domain_exclude_login'], 1 ); ?>> 登录页保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_skip_system_endpoints]" value="1" <?php checked( $options['domain_skip_system_endpoints'], 1 ); ?>> REST API、Feed、Sitemap、XML 等保持原始站点地址</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:210: <tr><th>Canonical</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_enabled]" value="1" <?php checked( $options['canonical_enabled'], 1 ); ?>> Canonical 统一使用主域名</label><p class="description">多入口访问时，用户点击可跟随当前域名，但 SEO 规范地址可以统一到主域名。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:211: <tr><th>主域名</th><td><input type="text" class="regular-text" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_primary_host]" value="<?php echo esc_attr( $options['canonical_primary_host'] ); ?>" placeholder="blog.jiuliu.org"> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="https" <?php checked( $options['canonical_scheme'], 'https' ); ?>> https</label> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="http" <?php checked( $options['canonical_scheme'], 'http' ); ?>> http</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:216: <tr><th>路径范围</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_uploads]" value="1" <?php checked( $options['target_uploads'], 1 ); ?>> /wp-content/uploads/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_themes]" value="1" <?php checked( $options['target_themes'], 1 ); ?>> /wp-content/themes/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_plugins]" value="1" <?php checked( $options['target_plugins'], 1 ); ?>> /wp-content/plugins/</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:217: <tr><th>额外源站域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[extra_hosts]" rows="5" class="large-text code" placeholder="origin-blog.jiuliu.org&#10;旧域名.com"><?php echo esc_textarea( $options['extra_hosts'] ); ?></textarea><p class="description">用于识别旧源站链接、源站暴露和可转换媒体地址。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:218: <tr><th>扫描限制</th><td><input type="number" min="10" max="1000" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_limit]" value="<?php echo esc_attr( $options['scan_limit'] ); ?>"> <label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_postmeta]" value="1" <?php checked( $options['scan_postmeta'], 1 ); ?>> 扫描 postmeta，只读提示，不自动修改</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:226: <p><strong>允许媒体域名：</strong></p><?php $this->render_code_list( JRMU_Converter::instance()->get_allowed_hosts() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:227: <p><strong>允许路径：</strong></p><?php $this->render_code_list( JRMU_Converter::instance()->get_allowed_paths() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:228: <p><strong>可改写站内来源域名：</strong></p><?php $this->render_code_list( JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:270: $options      = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-admin.php:276: $preview_action = isset( $_GET['jrmu_preview_action'] ) ? sanitize_key( wp_unslash( $_GET['jrmu_preview_action'] ) ) : JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
+modules/relative-media-urls/includes/class-jrmu-admin.php:277: if ( ! JRMU_Scanner::is_valid_action( $preview_action ) ) {
+modules/relative-media-urls/includes/class-jrmu-admin.php:278: $preview_action = JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
+modules/relative-media-urls/includes/class-jrmu-admin.php:280: $results = $should_scan ? JRMU_Scanner::instance()->scan_posts( array( 'post_type' => $post_type, 'post_status' => $post_status, 'keyword' => $keyword, 'target_base' => $target_base ) ) : array();
+modules/relative-media-urls/includes/class-jrmu-admin.php:281: $actions = JRMU_Scanner::get_actions();
+modules/relative-media-urls/includes/class-jrmu-admin.php:286: <input type="hidden" name="page" value="<?php echo esc_attr( JRMU_MENU_SLUG ); ?>"><input type="hidden" name="tab" value="scanner"><input type="hidden" name="jrmu_scan" value="1">
+modules/relative-media-urls/includes/class-jrmu-admin.php:319: $rows = JRMU_Scanner::instance()->scan_postmeta( 100 );
+modules/relative-media-urls/includes/class-jrmu-admin.php:333: $env = JRMU_Diagnostics::get_environment();
+modules/relative-media-urls/includes/class-jrmu-admin.php:338: $check = JRMU_Diagnostics::check_url_headers( $url );
+modules/relative-media-urls/includes/class-jrmu-admin.php:355: <form method="get"><input type="hidden" name="page" value="<?php echo esc_attr( JRMU_MENU_SLUG ); ?>"><input type="hidden" name="tab" value="diagnostics"><?php wp_nonce_field( 'jrmu_check_headers' ); ?><input type="url" class="large-text" name="jrmu_check_url" placeholder="https://blog.jiuliu.org/wp-content/uploads/example.jpg" value="<?php echo esc_attr( $url ); ?>"><?php submit_button( '检测 URL 响应头', 'secondary', 'submit', false ); ?></form>
+modules/relative-media-urls/includes/class-jrmu-admin.php:368: $config = JRMU_Diagnostics::generate_nginx_config();
+modules/relative-media-urls/includes/class-jrmu-admin.php:379: $logs = JRMU_Scanner::instance()->get_logs();
+modules/relative-media-urls/includes/class-jrmu-admin.php:403: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=security_failed' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:408: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=no_posts' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:412: if ( ! JRMU_Scanner::is_valid_action( $action ) ) {
+modules/relative-media-urls/includes/class-jrmu-admin.php:413: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=invalid_action' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:417: $result      = JRMU_Scanner::instance()->apply_post_action( $post_ids, $action, $target_base );
+modules/relative-media-urls/includes/class-jrmu-admin.php:418: $url         = add_query_arg( array( 'page' => JRMU_MENU_SLUG, 'tab' => 'scanner', 'jrmu_notice' => 'done', 'requested' => $result['requested'], 'updated' => $result['updated'], 'skipped' => isset( $result['skipped'] ) ? $result['skipped'] : 0 ), admin_url( 'admin.php' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:426: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=logs&jrmu_notice=security_failed' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:429: delete_option( JRMU_LOG_OPTION_KEY );
+modules/relative-media-urls/includes/class-jrmu-admin.php:430: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=logs&jrmu_notice=logs_cleared' ) );
+modules/relative-media-urls/includes/class-jrmu-converter.php:13: * JRMU_Converter
+modules/relative-media-urls/includes/class-jrmu-converter.php:15: class JRMU_Converter {
+modules/relative-media-urls/includes/class-jrmu-converter.php:16: /** @var JRMU_Converter|null */
+modules/relative-media-urls/includes/class-jrmu-converter.php:22: * @return JRMU_Converter
+modules/relative-media-urls/includes/class-jrmu-converter.php:38: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:74: update_post_meta( $attachment_id, JRMU_ATTACHMENT_META_KEY, time() );
+modules/relative-media-urls/includes/class-jrmu-converter.php:85: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:100: $marked_at = absint( get_post_meta( $attachment_id, JRMU_ATTACHMENT_META_KEY, true ) );
+modules/relative-media-urls/includes/class-jrmu-converter.php:283: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:332: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:13: * JRMU_Diagnostics
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:15: class JRMU_Diagnostics {
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:44: 'domain_debug'      => JRMU_Domain_Adapter::instance()->get_debug_info(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:90: JRMU_Converter::instance()->get_allowed_hosts(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:91: JRMU_Domain_Adapter::instance()->get_allowed_domain_hosts(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:92: JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts()
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:13: * JRMU_Domain_Adapter
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:15: class JRMU_Domain_Adapter {
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:16: /** @var JRMU_Domain_Adapter|null */
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:37: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:63: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:90: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:121: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:242: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:263: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:282: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:298: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:13: * JRMU_Scanner
+modules/relative-media-urls/includes/class-jrmu-scanner.php:15: class JRMU_Scanner {
+modules/relative-media-urls/includes/class-jrmu-scanner.php:16: /** @var JRMU_Scanner|null */
+modules/relative-media-urls/includes/class-jrmu-scanner.php:52: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:116: $conv    = JRMU_Converter::instance();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:117: $domain  = JRMU_Domain_Adapter::instance();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:155: $hosts  = array_merge( JRMU_Converter::instance()->get_allowed_hosts(), JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:164: foreach ( JRMU_Converter::instance()->get_allowed_paths() as $path ) {
+modules/relative-media-urls/includes/class-jrmu-scanner.php:221: $new_content = JRMU_Converter::instance()->convert_content( $old_content );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:222: $new_excerpt = JRMU_Converter::instance()->convert_content( $old_excerpt );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:225: $new_content = JRMU_Converter::instance()->restore_content_to_domain( $old_content, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:226: $new_excerpt = JRMU_Converter::instance()->restore_content_to_domain( $old_excerpt, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:229: $new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_content, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:230: $new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_excerpt, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:233: $new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_content );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:234: $new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_excerpt );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:278: $hosts = array_merge( JRMU_Converter::instance()->get_allowed_hosts(), JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:314: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:346: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:361: update_option( JRMU_LOG_OPTION_KEY, $logs, false );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:366: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-seo.php:13: * JRMU_SEO
+modules/relative-media-urls/includes/class-jrmu-seo.php:15: class JRMU_SEO {
+modules/relative-media-urls/includes/class-jrmu-seo.php:16: /** @var JRMU_SEO|null */
+modules/relative-media-urls/includes/class-jrmu-seo.php:34: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-seo.php:56: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-settings.php:13: * JRMU_Settings
+modules/relative-media-urls/includes/class-jrmu-settings.php:15: class JRMU_Settings {
+modules/relative-media-urls/includes/class-jrmu-settings.php:23: 'settings_version'              => JRMU_VERSION,
+modules/relative-media-urls/includes/class-jrmu-settings.php:94: $options = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-settings.php:145: $output['settings_version']       = JRMU_VERSION;
+modules/relative-media-urls/includes/class-jrmu-settings.php:210: return $host ? $scheme . '://' . $host . $uri : admin_url( 'admin.php?page=' . JRMU_MENU_SLUG );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:23: define( 'JRMU_VERSION', '4.1.1' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:24: define( 'JRMU_PLUGIN_FILE', __FILE__ );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:25: define( 'JRMU_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:26: define( 'JRMU_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:27: define( 'JRMU_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:28: define( 'JRMU_MENU_SLUG', defined( 'JLWA_MENU_SLUG' ) ? 'jlwa-relative-media-urls' : 'jiuliu-relative-media-urls' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:29: define( 'JRMU_OPTION_KEY', 'jiuliu_relative_media_urls_options' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:30: define( 'JRMU_ATTACHMENT_META_KEY', '_jrmu_future_relative_media' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:31: define( 'JRMU_LOG_OPTION_KEY', 'jiuliu_relative_media_urls_logs' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:69: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-settings.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:70: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-converter.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:71: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-domain-adapter.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:72: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-seo.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:73: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-scanner.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:74: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-diagnostics.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:75: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-admin.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:82: register_activation_hook( JRMU_PLUGIN_FILE, array( $this, 'on_activate' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:83: register_deactivation_hook( JRMU_PLUGIN_FILE, array( $this, 'on_deactivate' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:87: add_filter( 'plugin_action_links_' . JRMU_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:94: $current  = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:96: $defaults = JRMU_Settings::get_defaults();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:115: foreach ( JRMU_Settings::get_boolean_keys() as $key ) {
+modules/relative-media-urls/jiuliu-relative-media-urls.php:120: $merged['settings_version'] = JRMU_VERSION;
+modules/relative-media-urls/jiuliu-relative-media-urls.php:122: update_option( JRMU_OPTION_KEY, $merged );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:134: load_plugin_textdomain( 'jiuliu-relative-media-urls', false, dirname( JRMU_PLUGIN_BASENAME ) . '/languages' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:141: JRMU_Domain_Adapter::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:142: JRMU_Converter::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:143: JRMU_SEO::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:146: JRMU_Admin::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:159: esc_url( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG ) ),
+
+=== OLD_CONSTANTS ===
+includes/class-jlwa-module-loader.php:26: 'class'      => 'XJPE_Plugin',
+includes/class-jlwa-module-loader.php:39: 'constant'   => 'JRMU_VERSION',
+includes/class-jlwa-module-loader.php:51: 'class'      => 'WPAIAS_Plugin',
+includes/class-jlwa-module-loader.php:52: 'constant'   => 'WPAIAS_VERSION',
+includes/class-jlwa-module-loader.php:65: 'constant'   => 'JIP_VERSION',
+includes/class-jlwa-module-loader.php:100: if ( 'page-effects' === $key && class_exists( 'XJPE_Plugin', false ) ) {
+includes/class-jlwa-module-loader.php:101: return (string) XJPE_Plugin::VERSION;
+includes/class-jlwa-module-loader.php:111: if ( ! empty( self::$statuses['page-effects']['loaded'] ) && class_exists( 'XJPE_Plugin' ) ) {
+includes/class-jlwa-module-loader.php:112: XJPE_Plugin::activate();
+includes/class-jlwa-module-loader.php:115: if ( ! empty( self::$statuses['ai-article-summary']['loaded'] ) && class_exists( 'WPAIAS_Plugin' ) && defined( 'WPAIAS_OPTION_KEY' ) ) {
+includes/class-jlwa-module-loader.php:116: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+includes/class-jlwa-module-loader.php:118: $defaults = WPAIAS_Plugin::get_default_settings();
+includes/class-jlwa-module-loader.php:119: update_option( WPAIAS_OPTION_KEY, wp_parse_args( $current, $defaults ) );
+includes/class-jlwa-module-loader.php:197: if ( isset( $module['class'] ) && 'XJPE_Plugin' === $module['class'] && class_exists( 'XJPE_Plugin', false ) ) {
+includes/class-jlwa-module-loader.php:198: return (string) XJPE_Plugin::VERSION;
+modules/ai-article-summary/assets/js/admin.js:8: var WPAIAS = window.WPAIAS_ADMIN || {};
+modules/ai-article-summary/assets/js/frontend.js:13: var WPAIAS = window.WPAIAS_FRONT || {};
+modules/ai-article-summary/includes/class-wpaias-admin.php:13: * Class WPAIAS_Admin
+modules/ai-article-summary/includes/class-wpaias-admin.php:15: class WPAIAS_Admin {
+modules/ai-article-summary/includes/class-wpaias-admin.php:51: add_filter( 'plugin_action_links_' . WPAIAS_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/ai-article-summary/includes/class-wpaias-admin.php:99: WPAIAS_OPTION_KEY,
+modules/ai-article-summary/includes/class-wpaias-admin.php:103: 'default'           => WPAIAS_Plugin::get_default_settings(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:120: WPAIAS_PLUGIN_URL . 'assets/css/admin.css',
+modules/ai-article-summary/includes/class-wpaias-admin.php:122: WPAIAS_VERSION
+modules/ai-article-summary/includes/class-wpaias-admin.php:127: WPAIAS_PLUGIN_URL . 'assets/js/admin.js',
+modules/ai-article-summary/includes/class-wpaias-admin.php:129: WPAIAS_VERSION,
+modules/ai-article-summary/includes/class-wpaias-admin.php:139: 'WPAIAS_ADMIN',
+modules/ai-article-summary/includes/class-wpaias-admin.php:143: 'providers'  => WPAIAS_Providers::js_map(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:144: 'api_keys'   => $is_settings_page ? WPAIAS_Plugin::get_settings()['api_keys'] : array(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:173: $defaults = WPAIAS_Plugin::get_default_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:174: $saved    = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/includes/class-wpaias-admin.php:251: $providers = WPAIAS_Providers::all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:274: $out['api_keys'] = WPAIAS_Plugin::sanitize_api_keys( $api_keys );
+modules/ai-article-summary/includes/class-wpaias-admin.php:313: $presets = WPAIAS_Styles::presets();
+modules/ai-article-summary/includes/class-wpaias-admin.php:319: $clean = WPAIAS_Styles::sanitize_color( (string) $input[ $ck ] );
+modules/ai-article-summary/includes/class-wpaias-admin.php:346: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:359: $cache_count = WPAIAS_Cache::count();
+modules/ai-article-summary/includes/class-wpaias-admin.php:360: $providers   = WPAIAS_Providers::all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:362: $current_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $settings['provider'], $key_model );
+modules/ai-article-summary/includes/class-wpaias-admin.php:371: <span class="jiuliu-version-badge">v<?php echo esc_html( WPAIAS_VERSION ); ?></span>
+modules/ai-article-summary/includes/class-wpaias-admin.php:385: <?php $opt = WPAIAS_OPTION_KEY; ?>
+modules/ai-article-summary/includes/class-wpaias-admin.php:670: $style_presets = WPAIAS_Styles::presets();
+modules/ai-article-summary/includes/class-wpaias-admin.php:815: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:827: 'current_api_key' => isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : WPAIAS_Plugin::get_api_key_for_model( $settings, $test_provider, $test_model ),
+modules/ai-article-summary/includes/class-wpaias-admin.php:834: $result = WPAIAS_API::generate_summary( '这是一段用于连通性测试的内容。', $settings, $overrides );
+modules/ai-article-summary/includes/class-wpaias-admin.php:864: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:866: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:883: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:886: $result = WPAIAS_API::generate_summary( $content, $settings );
+modules/ai-article-summary/includes/class-wpaias-admin.php:888: $ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
+modules/ai-article-summary/includes/class-wpaias-admin.php:889: WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+modules/ai-article-summary/includes/class-wpaias-admin.php:911: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:923: $n = WPAIAS_Cache::flush_all();
+modules/ai-article-summary/includes/class-wpaias-admin.php:944: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:948: 'count'   => WPAIAS_Cache::count(),
+modules/ai-article-summary/includes/class-wpaias-admin.php:968: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:980: $settings   = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-admin.php:998: $cached = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-admin.php:1036: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-admin.php:1043: WPAIAS_Cache::delete( $post_id );
+modules/ai-article-summary/includes/class-wpaias-api.php:14: * Class WPAIAS_API
+modules/ai-article-summary/includes/class-wpaias-api.php:16: class WPAIAS_API {
+modules/ai-article-summary/includes/class-wpaias-api.php:39: $provider     = WPAIAS_Providers::get( $provider_key );
+modules/ai-article-summary/includes/class-wpaias-api.php:77: $api_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $provider_key, $model );
+modules/ai-article-summary/includes/class-wpaias-cache.php:13: * Class WPAIAS_Cache
+modules/ai-article-summary/includes/class-wpaias-cache.php:15: class WPAIAS_Cache {
+modules/ai-article-summary/includes/class-wpaias-cache.php:29: return WPAIAS_CACHE_PREFIX . absint( $post_id );
+modules/ai-article-summary/includes/class-wpaias-cache.php:61: update_post_meta( $post_id, WPAIAS_META_KEY, 1 );
+modules/ai-article-summary/includes/class-wpaias-cache.php:81: delete_post_meta( $post_id, WPAIAS_META_KEY );
+modules/ai-article-summary/includes/class-wpaias-cache.php:96: delete_post_meta( $post_id, WPAIAS_META_KEY );
+modules/ai-article-summary/includes/class-wpaias-cache.php:170: $like = $wpdb->esc_like( '_transient_' . WPAIAS_CACHE_PREFIX ) . '%';
+modules/ai-article-summary/includes/class-wpaias-cache.php:173: $like2 = $wpdb->esc_like( '_transient_timeout_' . WPAIAS_CACHE_PREFIX ) . '%';
+modules/ai-article-summary/includes/class-wpaias-frontend.php:17: * Class WPAIAS_Frontend
+modules/ai-article-summary/includes/class-wpaias-frontend.php:19: class WPAIAS_Frontend {
+modules/ai-article-summary/includes/class-wpaias-frontend.php:63: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:123: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:131: $cached = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:170: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:171: $cached   = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:188: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:204: $cached    = WPAIAS_Cache::get( $post->ID );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:258: if ( class_exists( 'WPAIAS_Styles' ) ) {
+modules/ai-article-summary/includes/class-wpaias-frontend.php:259: $style_class = WPAIAS_Styles::get_decoration_class( $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:260: $inline_vars = WPAIAS_Styles::build_inline_vars( $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:304: WPAIAS_PLUGIN_URL . 'assets/css/frontend.css',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:306: WPAIAS_VERSION
+modules/ai-article-summary/includes/class-wpaias-frontend.php:311: WPAIAS_PLUGIN_URL . 'assets/js/frontend.js',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:313: WPAIAS_VERSION,
+modules/ai-article-summary/includes/class-wpaias-frontend.php:320: 'WPAIAS_FRONT',
+modules/ai-article-summary/includes/class-wpaias-frontend.php:336: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:363: $cached = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:368: $settings = WPAIAS_Plugin::get_settings();
+modules/ai-article-summary/includes/class-wpaias-frontend.php:408: $cached_after_lock = WPAIAS_Cache::get( $post_id );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:418: $result = WPAIAS_API::generate_summary( $content, $settings );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:420: $ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:421: WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:448: if ( class_exists( 'WPAIAS_Plugin' ) ) {
+modules/ai-article-summary/includes/class-wpaias-plugin.php:13: * Class WPAIAS_Plugin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:15: class WPAIAS_Plugin {
+modules/ai-article-summary/includes/class-wpaias-plugin.php:20: * @var WPAIAS_Plugin|null
+modules/ai-article-summary/includes/class-wpaias-plugin.php:27: * @var WPAIAS_Admin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:34: * @var WPAIAS_Frontend
+modules/ai-article-summary/includes/class-wpaias-plugin.php:41: * @return WPAIAS_Plugin
+modules/ai-article-summary/includes/class-wpaias-plugin.php:55: load_plugin_textdomain( 'wp-ai-article-summary', false, dirname( WPAIAS_PLUGIN_BASENAME ) . '/languages' );
+modules/ai-article-summary/includes/class-wpaias-plugin.php:58: $this->admin = new WPAIAS_Admin();
+modules/ai-article-summary/includes/class-wpaias-plugin.php:63: $this->frontend = new WPAIAS_Frontend();
+modules/ai-article-summary/includes/class-wpaias-plugin.php:73: $saved   = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/includes/class-wpaias-providers.php:13: * Class WPAIAS_Providers
+modules/ai-article-summary/includes/class-wpaias-providers.php:15: class WPAIAS_Providers {
+modules/ai-article-summary/includes/class-wpaias-styles.php:16: * Class WPAIAS_Styles
+modules/ai-article-summary/includes/class-wpaias-styles.php:18: class WPAIAS_Styles {
+modules/ai-article-summary/wp-ai-article-summary.php:25: define( 'WPAIAS_VERSION', '1.0.9' );
+modules/ai-article-summary/wp-ai-article-summary.php:26: define( 'WPAIAS_PLUGIN_FILE', __FILE__ );
+modules/ai-article-summary/wp-ai-article-summary.php:27: define( 'WPAIAS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:28: define( 'WPAIAS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:29: define( 'WPAIAS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/ai-article-summary/wp-ai-article-summary.php:30: define( 'WPAIAS_OPTION_KEY', 'wpaias_settings' );
+modules/ai-article-summary/wp-ai-article-summary.php:31: define( 'WPAIAS_CACHE_PREFIX', 'wpaias_summary_' );
+modules/ai-article-summary/wp-ai-article-summary.php:32: define( 'WPAIAS_META_KEY', '_wpaias_has_summary' );
+modules/ai-article-summary/wp-ai-article-summary.php:35: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-providers.php';
+modules/ai-article-summary/wp-ai-article-summary.php:36: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-styles.php';
+modules/ai-article-summary/wp-ai-article-summary.php:37: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-cache.php';
+modules/ai-article-summary/wp-ai-article-summary.php:38: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-api.php';
+modules/ai-article-summary/wp-ai-article-summary.php:39: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-admin.php';
+modules/ai-article-summary/wp-ai-article-summary.php:40: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-frontend.php';
+modules/ai-article-summary/wp-ai-article-summary.php:41: require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-plugin.php';
+modules/ai-article-summary/wp-ai-article-summary.php:46: * @return WPAIAS_Plugin
+modules/ai-article-summary/wp-ai-article-summary.php:49: return WPAIAS_Plugin::instance();
+modules/ai-article-summary/wp-ai-article-summary.php:59: $defaults = WPAIAS_Plugin::get_default_settings();
+modules/ai-article-summary/wp-ai-article-summary.php:60: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/wp-ai-article-summary.php:68: update_option( WPAIAS_OPTION_KEY, $merged );
+modules/immersive-preloader/assets/js/admin.js:54: title: (window.JIP_ADMIN && window.JIP_ADMIN.mediaTitle) || '选择 Logo 图片',
+modules/immersive-preloader/assets/js/admin.js:55: button: { text: (window.JIP_ADMIN && window.JIP_ADMIN.mediaButton) || '使用此图片' },
+modules/immersive-preloader/assets/js/admin.js:72: var defaultLogo = (window.JIP_ADMIN && window.JIP_ADMIN.defaultLogo) || '';
+modules/immersive-preloader/assets/js/preloader.js:21: var CFG = (typeof window !== 'undefined' && window.JIP_CFG) ? window.JIP_CFG : {};
+modules/immersive-preloader/includes/class-jip-admin.php:13: * Class JIP_Admin
+modules/immersive-preloader/includes/class-jip-admin.php:15: class JIP_Admin {
+modules/immersive-preloader/includes/class-jip-admin.php:20: * @var JIP_Admin|null
+modules/immersive-preloader/includes/class-jip-admin.php:27: * @return JIP_Admin
+modules/immersive-preloader/includes/class-jip-admin.php:57: JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:67: JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:80: JIP_OPTION_KEY,
+modules/immersive-preloader/includes/class-jip-admin.php:83: 'sanitize_callback' => array( 'JIP_Settings', 'sanitize' ),
+modules/immersive-preloader/includes/class-jip-admin.php:84: 'default'           => JIP_Settings::get_defaults(),
+modules/immersive-preloader/includes/class-jip-admin.php:97: 'toplevel_page_' . JIP_MENU_SLUG,
+modules/immersive-preloader/includes/class-jip-admin.php:98: defined( 'JLWA_MENU_SLUG' ) ? JLWA_MENU_SLUG . '_page_' . JIP_MENU_SLUG : '',
+modules/immersive-preloader/includes/class-jip-admin.php:112: JIP_PLUGIN_URL . 'assets/css/admin.css',
+modules/immersive-preloader/includes/class-jip-admin.php:114: JIP_VERSION
+modules/immersive-preloader/includes/class-jip-admin.php:119: JIP_PLUGIN_URL . 'assets/js/admin.js',
+modules/immersive-preloader/includes/class-jip-admin.php:121: JIP_VERSION,
+modules/immersive-preloader/includes/class-jip-admin.php:127: 'JIP_ADMIN',
+modules/immersive-preloader/includes/class-jip-admin.php:131: 'defaultLogo' => JIP_PLUGIN_URL . 'assets/images/default-logo.svg',
+modules/immersive-preloader/includes/class-jip-admin.php:143: $options = JIP_Settings::get_options();
+modules/immersive-preloader/includes/class-jip-admin.php:144: $effects = JIP_Settings::get_effects();
+modules/immersive-preloader/includes/class-jip-admin.php:162: <span class="jiuliu-version-badge">v<?php echo esc_html( JIP_VERSION ); ?></span>
+modules/immersive-preloader/includes/class-jip-admin.php:167: <a class="nav-tab <?php echo $tab === $key ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . JIP_MENU_SLUG . '&tab=' . $key ) ); ?>"><?php echo esc_html( $label ); ?></a>
+modules/immersive-preloader/includes/class-jip-admin.php:183: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[enabled]" value="1" <?php checked( 1, (int) $options['enabled'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:187: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[enabled]" value="0" <?php checked( 0, (int) $options['enabled'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:195: <input type="number" id="jip_min_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[min_duration]" value="<?php echo esc_attr( $options['min_duration'] ); ?>" min="0" step="0.1" class="small-text" /> 秒
+modules/immersive-preloader/includes/class-jip-admin.php:202: <input type="number" id="jip_max_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[max_duration]" value="<?php echo esc_attr( $options['max_duration'] ); ?>" min="0.1" step="0.1" class="small-text" /> 秒
+modules/immersive-preloader/includes/class-jip-admin.php:218: <input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[effect]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['effect'], $key ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:220: <img src="<?php echo esc_url( JIP_PLUGIN_URL . $info['preview'] ); ?>" alt="<?php echo esc_attr( $info['label'] ); ?>" width="120" height="80" />
+modules/immersive-preloader/includes/class-jip-admin.php:242: $logo_url = ! empty( $options['logo_url'] ) ? $options['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' );
+modules/immersive-preloader/includes/class-jip-admin.php:247: <input type="hidden" id="jip_logo_id" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_id]" value="<?php echo esc_attr( $options['logo_id'] ); ?>" />
+modules/immersive-preloader/includes/class-jip-admin.php:248: <input type="hidden" id="jip_logo_url" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_url]" value="<?php echo esc_attr( $options['logo_url'] ); ?>" />
+modules/immersive-preloader/includes/class-jip-admin.php:259: <input type="number" id="jip_logo_size" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[logo_size]" value="<?php echo esc_attr( $options['logo_size'] ); ?>" min="30" max="100" step="1" class="small-text" /> %
+modules/immersive-preloader/includes/class-jip-admin.php:275: <input type="text" id="jip_bg_color" class="jip-color-field" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[bg_color]" value="<?php echo esc_attr( $options['bg_color'] ); ?>" data-default-color="#000000" />
+modules/immersive-preloader/includes/class-jip-admin.php:282: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[show_site_title]" value="1" <?php checked( 1, (int) $options['show_site_title'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:291: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[allow_skip]" value="1" <?php checked( 1, (int) $options['allow_skip'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:300: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[home_only]" value="1" <?php checked( 1, (int) $options['home_only'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:309: <input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[once_per_session]" value="1" <?php checked( 1, (int) $options['once_per_session'] ); ?> />
+modules/immersive-preloader/includes/class-jip-admin.php:323: <p>作者：<a href="https://www.jiuliu.org" target="_blank" rel="noopener">九流</a> · 许可证：GPLv2+ · 版本：<?php echo esc_html( JIP_VERSION ); ?></p>
+modules/immersive-preloader/includes/class-jip-frontend.php:20: * Class JIP_Frontend
+modules/immersive-preloader/includes/class-jip-frontend.php:22: class JIP_Frontend {
+modules/immersive-preloader/includes/class-jip-frontend.php:27: * @var JIP_Frontend|null
+modules/immersive-preloader/includes/class-jip-frontend.php:41: * @return JIP_Frontend
+modules/immersive-preloader/includes/class-jip-frontend.php:80: $this->options = JIP_Settings::get_options();
+modules/immersive-preloader/includes/class-jip-frontend.php:100: $logo_url  = ! empty( $opts['logo_url'] ) ? $opts['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' );
+modules/immersive-preloader/includes/class-jip-frontend.php:233: window.JIP_HTML = <?php echo $html_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 已通过 wp_json_encode 编码。 ?>;
+modules/immersive-preloader/includes/class-jip-frontend.php:246: wrap.innerHTML = window.JIP_HTML;
+modules/immersive-preloader/includes/class-jip-frontend.php:305: JIP_PLUGIN_URL . 'assets/css/preloader.css',
+modules/immersive-preloader/includes/class-jip-frontend.php:307: JIP_VERSION
+modules/immersive-preloader/includes/class-jip-frontend.php:312: JIP_PLUGIN_URL . 'assets/js/preloader.js',
+modules/immersive-preloader/includes/class-jip-frontend.php:314: JIP_VERSION,
+modules/immersive-preloader/includes/class-jip-frontend.php:320: 'JIP_CFG',
+modules/immersive-preloader/includes/class-jip-frontend.php:326: 'logoUrl'     => ! empty( $this->options['logo_url'] ) ? $this->options['logo_url'] : ( JIP_PLUGIN_URL . 'assets/images/default-logo.svg' ),
+modules/immersive-preloader/includes/class-jip-settings.php:15: * Class JIP_Settings
+modules/immersive-preloader/includes/class-jip-settings.php:17: class JIP_Settings {
+modules/immersive-preloader/includes/class-jip-settings.php:82: $opts = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:24: define( 'JIP_VERSION', '1.0.6' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:25: define( 'JIP_PLUGIN_FILE', __FILE__ );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:26: define( 'JIP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:27: define( 'JIP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:28: define( 'JIP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:29: define( 'JIP_MENU_SLUG', defined( 'JLWA_MENU_SLUG' ) ? 'jlwa-immersive-preloader' : 'jiuliu-immersive-preloader' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:30: define( 'JIP_OPTION_KEY', 'jiuliu_immersive_preloader_options' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:70: require_once JIP_PLUGIN_DIR . 'includes/class-jip-settings.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:71: require_once JIP_PLUGIN_DIR . 'includes/class-jip-admin.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:72: require_once JIP_PLUGIN_DIR . 'includes/class-jip-frontend.php';
+modules/immersive-preloader/jiuliu-immersive-preloader.php:80: register_activation_hook( JIP_PLUGIN_FILE, array( $this, 'on_activate' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:81: register_deactivation_hook( JIP_PLUGIN_FILE, array( $this, 'on_deactivate' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:90: add_filter( 'plugin_action_links_' . JIP_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:98: $defaults = JIP_Settings::get_defaults();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:99: $current  = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:104: update_option( JIP_OPTION_KEY, $merged );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:118: load_plugin_textdomain( 'jiuliu-immersive-preloader', false, dirname( JIP_PLUGIN_BASENAME ) . '/languages' );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:126: JIP_Admin::instance();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:129: JIP_Frontend::instance();
+modules/immersive-preloader/jiuliu-immersive-preloader.php:141: esc_url( admin_url( 'admin.php?page=' . JIP_MENU_SLUG ) ),
+modules/page-effects/assets/js/frontend.js:4: var cfg = window.XJPE_CONFIG || null;
+modules/page-effects/assets/js/frontend.js:17: window.XJPE_DISABLED = !!disabled;
+modules/page-effects/assets/js/frontend.js:18: window.XJPE_READY = true;
+modules/page-effects/wp-page-effects.php:20: if ( ! class_exists( 'XJPE_Plugin' ) ) {
+modules/page-effects/wp-page-effects.php:21: final class XJPE_Plugin {
+modules/page-effects/wp-page-effects.php:481: wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
+modules/page-effects/wp-page-effects.php:555: $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
+modules/page-effects/wp-page-effects.php:564: return "(function(run){var execute=function(){if(window.XJPE_DISABLED){return;}run();};if(window.XJPE_READY){execute();}else{document.addEventListener('xjpe:ready',execute,{once:true});}})(function(){try{\n" . $js . "\n}catch(e){console.warn('XJPE custom JS error:',e);}});";
+modules/page-effects/wp-page-effects.php:905: XJPE_Plugin::instance();
+modules/relative-media-urls/includes/class-jrmu-admin.php:13: * JRMU_Admin
+modules/relative-media-urls/includes/class-jrmu-admin.php:15: class JRMU_Admin {
+modules/relative-media-urls/includes/class-jrmu-admin.php:16: /** @var JRMU_Admin|null */
+modules/relative-media-urls/includes/class-jrmu-admin.php:49: JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:59: JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:70: JRMU_OPTION_KEY,
+modules/relative-media-urls/includes/class-jrmu-admin.php:73: 'sanitize_callback' => array( 'JRMU_Settings', 'sanitize' ),
+modules/relative-media-urls/includes/class-jrmu-admin.php:74: 'default'           => JRMU_Settings::get_defaults(),
+modules/relative-media-urls/includes/class-jrmu-admin.php:82: 'toplevel_page_' . JRMU_MENU_SLUG,
+modules/relative-media-urls/includes/class-jrmu-admin.php:83: defined( 'JLWA_MENU_SLUG' ) ? JLWA_MENU_SLUG . '_page_' . JRMU_MENU_SLUG : '',
+modules/relative-media-urls/includes/class-jrmu-admin.php:88: wp_enqueue_style( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/css/admin.css', array(), JRMU_VERSION );
+modules/relative-media-urls/includes/class-jrmu-admin.php:89: wp_enqueue_script( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/js/admin.js', array(), JRMU_VERSION, true );
+modules/relative-media-urls/includes/class-jrmu-admin.php:110: <span class="jiuliu-version-badge">v<?php echo esc_html( JRMU_VERSION ); ?></span>
+modules/relative-media-urls/includes/class-jrmu-admin.php:153: $url = admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=' . $key );
+modules/relative-media-urls/includes/class-jrmu-admin.php:180: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-admin.php:188: <tr><th>已上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_existing_media_output]" value="1" <?php checked( $options['convert_existing_media_output'], 1 ); ?>> 转换已经上传媒体的输出地址</label><p class="description">影响媒体库、编辑器、附件 URL API、特色图、srcset 的输出，不移动文件，不改核心。关闭即可恢复输出。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:189: <tr><th>未来上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_future_media_output]" value="1" <?php checked( $options['convert_future_media_output'], 1 ); ?>> 从开启后，新上传媒体默认相对地址输出</label><p class="description">只影响开启之后的新附件。插件会给新附件打标记。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:194: <tr><th>未来保存文章</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_save]" value="1" <?php checked( $options['convert_post_on_save'], 1 ); ?>> 保存文章/页面时自动转换内容中的媒体地址</label><p class="description">会永久保存到文章正文/摘要，只影响开启后保存的内容。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:195: <tr><th>前台临时输出</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_frontend]" value="1" <?php checked( $options['convert_post_on_frontend'], 1 ); ?>> 前台显示文章时临时转换旧内容</label><p class="description">不修改数据库，适合先测试旧文章图片是否走反代。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:200: <tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">解决从香港入口进入首页，点击文章又跳回源站固定域名的问题。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:201: <tr><th>允许域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_allowed_hosts]" rows="5" class="large-text code" placeholder="blog.jiuliu.org&#10;hk-blog.jiuliu.org&#10;origin-blog.jiuliu.org"><?php echo esc_textarea( $options['domain_allowed_hosts'] ); ?></textarea><p class="description">白名单模式下，只有这里列出的域名才会触发动态链接。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:202: <tr><th>适配模式</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="whitelist" <?php checked( $options['domain_mode'], 'whitelist' ); ?>> 白名单域名，推荐</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="any" <?php checked( $options['domain_mode'], 'any' ); ?>> 任意 Host，高级模式</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:203: <tr><th>协议</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="https" <?php checked( $options['domain_scheme'], 'https' ); ?>> 强制 HTTPS</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="auto" <?php checked( $options['domain_scheme'], 'auto' ); ?>> 自动识别 HTTPS / X-Forwarded-Proto</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="http" <?php checked( $options['domain_scheme'], 'http' ); ?>> 强制 HTTP</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:204: <tr><th>前台兜底改写</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_frontend_links]" value="1" <?php checked( $options['domain_rewrite_frontend_links'], 1 ); ?>> 前台 HTML 兜底替换站内绝对链接</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_mode]" value="current_full" <?php checked( $options['domain_rewrite_mode'], 'current_full' ); ?>> 替换为当前域名完整 URL</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_rewrite_mode]" value="root_relative" <?php checked( $options['domain_rewrite_mode'], 'root_relative' ); ?>> 替换为根相对路径</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:205: <tr><th>排除项</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_dynamic_siteurl]" value="1" <?php checked( $options['domain_dynamic_siteurl'], 1 ); ?>> 同时动态适配 siteurl</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_admin]" value="1" <?php checked( $options['domain_exclude_admin'], 1 ); ?>> 后台 wp-admin 保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_login]" value="1" <?php checked( $options['domain_exclude_login'], 1 ); ?>> 登录页保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_skip_system_endpoints]" value="1" <?php checked( $options['domain_skip_system_endpoints'], 1 ); ?>> REST API、Feed、Sitemap、XML 等保持原始站点地址</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:210: <tr><th>Canonical</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_enabled]" value="1" <?php checked( $options['canonical_enabled'], 1 ); ?>> Canonical 统一使用主域名</label><p class="description">多入口访问时，用户点击可跟随当前域名，但 SEO 规范地址可以统一到主域名。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:211: <tr><th>主域名</th><td><input type="text" class="regular-text" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_primary_host]" value="<?php echo esc_attr( $options['canonical_primary_host'] ); ?>" placeholder="blog.jiuliu.org"> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="https" <?php checked( $options['canonical_scheme'], 'https' ); ?>> https</label> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="http" <?php checked( $options['canonical_scheme'], 'http' ); ?>> http</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:216: <tr><th>路径范围</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_uploads]" value="1" <?php checked( $options['target_uploads'], 1 ); ?>> /wp-content/uploads/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_themes]" value="1" <?php checked( $options['target_themes'], 1 ); ?>> /wp-content/themes/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_plugins]" value="1" <?php checked( $options['target_plugins'], 1 ); ?>> /wp-content/plugins/</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:217: <tr><th>额外源站域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[extra_hosts]" rows="5" class="large-text code" placeholder="origin-blog.jiuliu.org&#10;旧域名.com"><?php echo esc_textarea( $options['extra_hosts'] ); ?></textarea><p class="description">用于识别旧源站链接、源站暴露和可转换媒体地址。</p></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:218: <tr><th>扫描限制</th><td><input type="number" min="10" max="1000" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_limit]" value="<?php echo esc_attr( $options['scan_limit'] ); ?>"> <label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_postmeta]" value="1" <?php checked( $options['scan_postmeta'], 1 ); ?>> 扫描 postmeta，只读提示，不自动修改</label></td></tr>
+modules/relative-media-urls/includes/class-jrmu-admin.php:226: <p><strong>允许媒体域名：</strong></p><?php $this->render_code_list( JRMU_Converter::instance()->get_allowed_hosts() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:227: <p><strong>允许路径：</strong></p><?php $this->render_code_list( JRMU_Converter::instance()->get_allowed_paths() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:228: <p><strong>可改写站内来源域名：</strong></p><?php $this->render_code_list( JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() ); ?>
+modules/relative-media-urls/includes/class-jrmu-admin.php:270: $options      = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-admin.php:276: $preview_action = isset( $_GET['jrmu_preview_action'] ) ? sanitize_key( wp_unslash( $_GET['jrmu_preview_action'] ) ) : JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
+modules/relative-media-urls/includes/class-jrmu-admin.php:277: if ( ! JRMU_Scanner::is_valid_action( $preview_action ) ) {
+modules/relative-media-urls/includes/class-jrmu-admin.php:278: $preview_action = JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
+modules/relative-media-urls/includes/class-jrmu-admin.php:280: $results = $should_scan ? JRMU_Scanner::instance()->scan_posts( array( 'post_type' => $post_type, 'post_status' => $post_status, 'keyword' => $keyword, 'target_base' => $target_base ) ) : array();
+modules/relative-media-urls/includes/class-jrmu-admin.php:281: $actions = JRMU_Scanner::get_actions();
+modules/relative-media-urls/includes/class-jrmu-admin.php:286: <input type="hidden" name="page" value="<?php echo esc_attr( JRMU_MENU_SLUG ); ?>"><input type="hidden" name="tab" value="scanner"><input type="hidden" name="jrmu_scan" value="1">
+modules/relative-media-urls/includes/class-jrmu-admin.php:319: $rows = JRMU_Scanner::instance()->scan_postmeta( 100 );
+modules/relative-media-urls/includes/class-jrmu-admin.php:333: $env = JRMU_Diagnostics::get_environment();
+modules/relative-media-urls/includes/class-jrmu-admin.php:338: $check = JRMU_Diagnostics::check_url_headers( $url );
+modules/relative-media-urls/includes/class-jrmu-admin.php:355: <form method="get"><input type="hidden" name="page" value="<?php echo esc_attr( JRMU_MENU_SLUG ); ?>"><input type="hidden" name="tab" value="diagnostics"><?php wp_nonce_field( 'jrmu_check_headers' ); ?><input type="url" class="large-text" name="jrmu_check_url" placeholder="https://blog.jiuliu.org/wp-content/uploads/example.jpg" value="<?php echo esc_attr( $url ); ?>"><?php submit_button( '检测 URL 响应头', 'secondary', 'submit', false ); ?></form>
+modules/relative-media-urls/includes/class-jrmu-admin.php:368: $config = JRMU_Diagnostics::generate_nginx_config();
+modules/relative-media-urls/includes/class-jrmu-admin.php:379: $logs = JRMU_Scanner::instance()->get_logs();
+modules/relative-media-urls/includes/class-jrmu-admin.php:403: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=security_failed' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:408: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=no_posts' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:412: if ( ! JRMU_Scanner::is_valid_action( $action ) ) {
+modules/relative-media-urls/includes/class-jrmu-admin.php:413: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=invalid_action' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:417: $result      = JRMU_Scanner::instance()->apply_post_action( $post_ids, $action, $target_base );
+modules/relative-media-urls/includes/class-jrmu-admin.php:418: $url         = add_query_arg( array( 'page' => JRMU_MENU_SLUG, 'tab' => 'scanner', 'jrmu_notice' => 'done', 'requested' => $result['requested'], 'updated' => $result['updated'], 'skipped' => isset( $result['skipped'] ) ? $result['skipped'] : 0 ), admin_url( 'admin.php' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:426: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=logs&jrmu_notice=security_failed' ) );
+modules/relative-media-urls/includes/class-jrmu-admin.php:429: delete_option( JRMU_LOG_OPTION_KEY );
+modules/relative-media-urls/includes/class-jrmu-admin.php:430: wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=logs&jrmu_notice=logs_cleared' ) );
+modules/relative-media-urls/includes/class-jrmu-converter.php:13: * JRMU_Converter
+modules/relative-media-urls/includes/class-jrmu-converter.php:15: class JRMU_Converter {
+modules/relative-media-urls/includes/class-jrmu-converter.php:16: /** @var JRMU_Converter|null */
+modules/relative-media-urls/includes/class-jrmu-converter.php:22: * @return JRMU_Converter
+modules/relative-media-urls/includes/class-jrmu-converter.php:38: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:74: update_post_meta( $attachment_id, JRMU_ATTACHMENT_META_KEY, time() );
+modules/relative-media-urls/includes/class-jrmu-converter.php:85: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:100: $marked_at = absint( get_post_meta( $attachment_id, JRMU_ATTACHMENT_META_KEY, true ) );
+modules/relative-media-urls/includes/class-jrmu-converter.php:283: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-converter.php:332: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:13: * JRMU_Diagnostics
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:15: class JRMU_Diagnostics {
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:44: 'domain_debug'      => JRMU_Domain_Adapter::instance()->get_debug_info(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:90: JRMU_Converter::instance()->get_allowed_hosts(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:91: JRMU_Domain_Adapter::instance()->get_allowed_domain_hosts(),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:92: JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts()
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:13: * JRMU_Domain_Adapter
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:15: class JRMU_Domain_Adapter {
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:16: /** @var JRMU_Domain_Adapter|null */
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:37: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:63: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:90: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:121: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:242: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:263: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:282: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:298: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:13: * JRMU_Scanner
+modules/relative-media-urls/includes/class-jrmu-scanner.php:15: class JRMU_Scanner {
+modules/relative-media-urls/includes/class-jrmu-scanner.php:16: /** @var JRMU_Scanner|null */
+modules/relative-media-urls/includes/class-jrmu-scanner.php:52: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:116: $conv    = JRMU_Converter::instance();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:117: $domain  = JRMU_Domain_Adapter::instance();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:155: $hosts  = array_merge( JRMU_Converter::instance()->get_allowed_hosts(), JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:164: foreach ( JRMU_Converter::instance()->get_allowed_paths() as $path ) {
+modules/relative-media-urls/includes/class-jrmu-scanner.php:221: $new_content = JRMU_Converter::instance()->convert_content( $old_content );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:222: $new_excerpt = JRMU_Converter::instance()->convert_content( $old_excerpt );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:225: $new_content = JRMU_Converter::instance()->restore_content_to_domain( $old_content, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:226: $new_excerpt = JRMU_Converter::instance()->restore_content_to_domain( $old_excerpt, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:229: $new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_content, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:230: $new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_domain( $old_excerpt, $target_base );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:233: $new_content = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_content );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:234: $new_excerpt = JRMU_Domain_Adapter::instance()->rewrite_html_to_relative( $old_excerpt );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:278: $hosts = array_merge( JRMU_Converter::instance()->get_allowed_hosts(), JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:314: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-scanner.php:346: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:361: update_option( JRMU_LOG_OPTION_KEY, $logs, false );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:366: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-seo.php:13: * JRMU_SEO
+modules/relative-media-urls/includes/class-jrmu-seo.php:15: class JRMU_SEO {
+modules/relative-media-urls/includes/class-jrmu-seo.php:16: /** @var JRMU_SEO|null */
+modules/relative-media-urls/includes/class-jrmu-seo.php:34: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-seo.php:56: $options = JRMU_Settings::get_options();
+modules/relative-media-urls/includes/class-jrmu-settings.php:13: * JRMU_Settings
+modules/relative-media-urls/includes/class-jrmu-settings.php:15: class JRMU_Settings {
+modules/relative-media-urls/includes/class-jrmu-settings.php:23: 'settings_version'              => JRMU_VERSION,
+modules/relative-media-urls/includes/class-jrmu-settings.php:94: $options = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-settings.php:145: $output['settings_version']       = JRMU_VERSION;
+modules/relative-media-urls/includes/class-jrmu-settings.php:210: return $host ? $scheme . '://' . $host . $uri : admin_url( 'admin.php?page=' . JRMU_MENU_SLUG );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:23: define( 'JRMU_VERSION', '4.1.1' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:24: define( 'JRMU_PLUGIN_FILE', __FILE__ );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:25: define( 'JRMU_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:26: define( 'JRMU_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:27: define( 'JRMU_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:28: define( 'JRMU_MENU_SLUG', defined( 'JLWA_MENU_SLUG' ) ? 'jlwa-relative-media-urls' : 'jiuliu-relative-media-urls' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:29: define( 'JRMU_OPTION_KEY', 'jiuliu_relative_media_urls_options' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:30: define( 'JRMU_ATTACHMENT_META_KEY', '_jrmu_future_relative_media' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:31: define( 'JRMU_LOG_OPTION_KEY', 'jiuliu_relative_media_urls_logs' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:69: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-settings.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:70: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-converter.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:71: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-domain-adapter.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:72: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-seo.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:73: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-scanner.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:74: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-diagnostics.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:75: require_once JRMU_PLUGIN_DIR . 'includes/class-jrmu-admin.php';
+modules/relative-media-urls/jiuliu-relative-media-urls.php:82: register_activation_hook( JRMU_PLUGIN_FILE, array( $this, 'on_activate' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:83: register_deactivation_hook( JRMU_PLUGIN_FILE, array( $this, 'on_deactivate' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:87: add_filter( 'plugin_action_links_' . JRMU_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:94: $current  = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:96: $defaults = JRMU_Settings::get_defaults();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:115: foreach ( JRMU_Settings::get_boolean_keys() as $key ) {
+modules/relative-media-urls/jiuliu-relative-media-urls.php:120: $merged['settings_version'] = JRMU_VERSION;
+modules/relative-media-urls/jiuliu-relative-media-urls.php:122: update_option( JRMU_OPTION_KEY, $merged );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:134: load_plugin_textdomain( 'jiuliu-relative-media-urls', false, dirname( JRMU_PLUGIN_BASENAME ) . '/languages' );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:141: JRMU_Domain_Adapter::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:142: JRMU_Converter::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:143: JRMU_SEO::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:146: JRMU_Admin::instance();
+modules/relative-media-urls/jiuliu-relative-media-urls.php:159: esc_url( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG ) ),
+
+=== ADMIN_MENUS ===
+includes/class-jlwa-admin.php:32: add_menu_page(
+includes/class-jlwa-admin.php:44: add_submenu_page(
+modules/ai-article-summary/includes/class-wpaias-admin.php:71: add_submenu_page(
+modules/ai-article-summary/includes/class-wpaias-admin.php:82: add_menu_page(
+modules/immersive-preloader/includes/class-jip-admin.php:52: add_submenu_page(
+modules/immersive-preloader/includes/class-jip-admin.php:63: add_menu_page(
+modules/page-effects/wp-page-effects.php:258: add_submenu_page(
+modules/page-effects/wp-page-effects.php:269: add_menu_page(
+modules/page-effects/wp-page-effects.php:279: add_submenu_page(
+modules/relative-media-urls/includes/class-jrmu-admin.php:44: add_submenu_page(
+modules/relative-media-urls/includes/class-jrmu-admin.php:55: add_menu_page(
+
+=== REGISTER_ACTIVATION ===
+jiuliu-wp-assistant.php:39: register_activation_hook( JLWA_PLUGIN_FILE, array( 'JLWA_Module_Loader', 'activate' ) );
+modules/ai-article-summary/wp-ai-article-summary.php:58: register_activation_hook( __FILE__, function () {
+modules/immersive-preloader/jiuliu-immersive-preloader.php:80: register_activation_hook( JIP_PLUGIN_FILE, array( $this, 'on_activate' ) );
+modules/page-effects/wp-page-effects.php:45: register_activation_hook( __FILE__, array( __CLASS__, 'activate' ) );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:82: register_activation_hook( JRMU_PLUGIN_FILE, array( $this, 'on_activate' ) );
+
+=== SETTINGS_OPTIONS ===
+includes/class-jlwa-module-loader.php:116: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+includes/class-jlwa-module-loader.php:119: update_option( WPAIAS_OPTION_KEY, wp_parse_args( $current, $defaults ) );
+includes/class-jlwa-module-loader.php:213: $active = (array) get_option( 'active_plugins', array() );
+modules/ai-article-summary/includes/class-wpaias-admin.php:174: $saved    = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/includes/class-wpaias-cache.php:100: update_option( self::INDEX_OPTION, array() );
+modules/ai-article-summary/includes/class-wpaias-cache.php:114: $index = get_option( self::INDEX_OPTION, array() );
+modules/ai-article-summary/includes/class-wpaias-cache.php:140: update_option( self::INDEX_OPTION, $index, false );
+modules/ai-article-summary/includes/class-wpaias-cache.php:159: update_option( self::INDEX_OPTION, $new, false );
+modules/ai-article-summary/includes/class-wpaias-plugin.php:73: $saved   = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/uninstall.php:15: delete_option( 'wpaias_settings' );
+modules/ai-article-summary/uninstall.php:16: delete_option( 'wpaias_cache_index' );
+modules/ai-article-summary/uninstall.php:34: delete_option( 'wpaias_settings' );
+modules/ai-article-summary/uninstall.php:35: delete_option( 'wpaias_cache_index' );
+modules/ai-article-summary/wp-ai-article-summary.php:60: $current  = get_option( WPAIAS_OPTION_KEY, array() );
+modules/ai-article-summary/wp-ai-article-summary.php:68: update_option( WPAIAS_OPTION_KEY, $merged );
+modules/immersive-preloader/includes/class-jip-settings.php:82: $opts = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:99: $current  = get_option( JIP_OPTION_KEY, array() );
+modules/immersive-preloader/jiuliu-immersive-preloader.php:104: update_option( JIP_OPTION_KEY, $merged );
+modules/immersive-preloader/uninstall.php:26: delete_option( 'jiuliu_immersive_preloader_options' );
+modules/immersive-preloader/uninstall.php:32: delete_option( 'jiuliu_immersive_preloader_options' );
+modules/page-effects/uninstall.php:10: delete_option( 'xjpe_options' );
+modules/page-effects/uninstall.php:11: delete_option( 'xjpe_options_backup' );
+modules/page-effects/wp-page-effects.php:51: if ( false === get_option( self::OPTION_NAME, false ) ) {
+modules/page-effects/wp-page-effects.php:52: add_option( self::OPTION_NAME, self::default_options(), '', false );
+modules/page-effects/wp-page-effects.php:58: $saved = get_option( self::OPTION_NAME, false );
+modules/page-effects/wp-page-effects.php:63: update_option( self::OPTION_NAME, self::default_options(), false );
+modules/page-effects/wp-page-effects.php:79: update_option( self::OPTION_NAME, $merged, false );
+modules/page-effects/wp-page-effects.php:97: update_option( self::OPTION_NAME, $options, false );
+modules/page-effects/wp-page-effects.php:120: update_option( self::OPTION_NAME, $options, false );
+modules/page-effects/wp-page-effects.php:302: $saved = get_option( self::OPTION_NAME, array() );
+modules/relative-media-urls/includes/class-jrmu-admin.php:429: delete_option( JRMU_LOG_OPTION_KEY );
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:42: 'permalink'         => get_option( 'permalink_structure' ),
+modules/relative-media-urls/includes/class-jrmu-diagnostics.php:43: 'upload_url_path'   => get_option( 'upload_url_path' ),
+modules/relative-media-urls/includes/class-jrmu-domain-adapter.php:415: $value                = get_option( $option );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:346: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:361: update_option( JRMU_LOG_OPTION_KEY, $logs, false );
+modules/relative-media-urls/includes/class-jrmu-scanner.php:366: $logs = get_option( JRMU_LOG_OPTION_KEY, array() );
+modules/relative-media-urls/includes/class-jrmu-settings.php:94: $options = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:94: $current  = get_option( JRMU_OPTION_KEY, array() );
+modules/relative-media-urls/jiuliu-relative-media-urls.php:122: update_option( JRMU_OPTION_KEY, $merged );
+modules/relative-media-urls/uninstall.php:12: delete_option( 'jiuliu_relative_media_urls_options' );
+modules/relative-media-urls/uninstall.php:13: delete_option( 'jiuliu_relative_media_urls_logs' );
+uninstall.php:12: delete_option( 'jlwa_last_update_check' );
+
+=== ASSET_HANDLES ===
+includes/class-jlwa-admin.php:68: wp_enqueue_style( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/css/admin.css', array(), JLWA_VERSION );
+includes/class-jlwa-admin.php:69: wp_enqueue_script( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/js/admin.js', array(), JLWA_VERSION, true );
+modules/ai-article-summary/includes/class-wpaias-admin.php:134: wp_enqueue_style( 'wpaias-admin' );
+modules/ai-article-summary/includes/class-wpaias-admin.php:135: wp_enqueue_script( 'wpaias-admin' );
+modules/ai-article-summary/includes/class-wpaias-frontend.php:302: wp_enqueue_style(
+modules/ai-article-summary/includes/class-wpaias-frontend.php:309: wp_enqueue_script(
+modules/immersive-preloader/includes/class-jip-admin.php:108: wp_enqueue_style( 'wp-color-picker' );
+modules/immersive-preloader/includes/class-jip-admin.php:110: wp_enqueue_style(
+modules/immersive-preloader/includes/class-jip-admin.php:117: wp_enqueue_script(
+modules/immersive-preloader/includes/class-jip-frontend.php:303: wp_enqueue_style(
+modules/immersive-preloader/includes/class-jip-frontend.php:310: wp_enqueue_script(
+modules/page-effects/wp-page-effects.php:455: wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
+modules/page-effects/wp-page-effects.php:456: wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
+modules/page-effects/wp-page-effects.php:477: wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), self::VERSION );
+modules/page-effects/wp-page-effects.php:480: wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, $in_footer );
+modules/relative-media-urls/includes/class-jrmu-admin.php:88: wp_enqueue_style( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/css/admin.css', array(), JRMU_VERSION );
+modules/relative-media-urls/includes/class-jrmu-admin.php:89: wp_enqueue_script( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/js/admin.js', array(), JRMU_VERSION, true );
