@@ -5,6 +5,11 @@ on:
     branches: [release/2.1.0]
     paths:
       - '.release/2.1.0/part-015.txt'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.release/2.1.0/**'
+      - '.github/workflows/apply-2.1.0-source.yml'
 
 permissions:
   contents: write
@@ -50,6 +55,7 @@ jobs:
           for file in assets/css/admin.css assets/js/admin.js includes/class-jlwa-admin.php includes/class-jlwa-module-loader.php includes/class-jlwa-updater.php modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js modules/relative-media-urls/jiuliu-relative-media-urls.php modules/ai-article-summary/wp-ai-article-summary.php modules/immersive-preloader/jiuliu-immersive-preloader.php readme.txt uninstall.php; do test -f "$file"; done
           for file in assets/css/admin.css assets/css/admin-content.css assets/js/admin.js assets/js/admin-content.js includes/class-jlwa-admin.php includes/class-jlwa-feature-registry.php includes/class-jlwa-updater.php features/page-effects/bootstrap.php features/page-effects/assets/js/frontend.js features/relative-media-urls/bootstrap.php features/ai-article-summary/bootstrap.php features/immersive-preloader/bootstrap.php readme.txt uninstall.php; do test -f "$file"; done
       - name: Commit final source and self-clean
+        if: github.event_name == 'pull_request'
         run: |
           set -euxo pipefail
           rm -rf .release
