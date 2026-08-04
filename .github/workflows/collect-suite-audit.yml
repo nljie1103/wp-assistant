@@ -1,0 +1,88 @@
+name: Collect suite audit snapshot
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/collect-suite-audit.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout suite
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone standalone repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/jiuliu-suite-audit
+          mkdir -p /tmp/jiuliu-suite-audit
+          for repo in wp-assistant wp-page-effects wp-immersive-preloader wp-relative-media-urls WP-AI-Article-Summary; do
+            git clone --depth=1 "https://github.com/nljie1103/${repo}.git" "/tmp/jiuliu-suite-audit/${repo}"
+          done
+
+      - name: Build source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .suite-audit
+          mkdir -p .suite-audit
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/jiuliu-suite-audit')
+          repos = ['wp-assistant', 'wp-page-effects', 'wp-immersive-preloader', 'wp-relative-media-urls', 'WP-AI-Article-Summary']
+          text_exts = {'.php', '.js', '.css', '.txt', '.md', '.json', '.yml', '.yaml', '.xml', '.html', '.htm'}
+          manifest = {}
+          output = []
+
+          for repo in repos:
+              repo_root = root / repo
+              files = []
+              for path in sorted(repo_root.rglob('*')):
+                  if not path.is_file() or '.git' in path.parts:
+                      continue
+                  rel = path.relative_to(repo_root).as_posix()
+                  data = path.read_bytes()
+                  entry = {
+                      'path': rel,
+                      'size': len(data),
+                      'sha256': hashlib.sha256(data).hexdigest(),
+                      'text': path.suffix.lower() in text_exts,
+                  }
+                  files.append(entry)
+                  if entry['text']:
+                      try:
+                          text = data.decode('utf-8')
+                      except UnicodeDecodeError:
+                          text = data.decode('utf-8', errors='replace')
+                      output.append(f'\n===== REPO {repo} FILE {rel} =====\n')
+                      output.append(text)
+                      if not text.endswith('\n'):
+                          output.append('\n')
+                      output.append(f'===== END REPO {repo} FILE {rel} =====\n')
+              manifest[repo] = files
+
+          Path('.suite-audit/manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+          Path('.suite-audit/sources.txt').write_text(''.join(output), encoding='utf-8')
+          PY
+
+      - name: Commit snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .suite-audit/manifest.json .suite-audit/sources.txt
+          git commit -m 'chore: collect suite audit snapshot'
+          git push origin HEAD:main
