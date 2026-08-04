@@ -88,14 +88,14 @@
 
 	function enhanceFeatureForms() {
 		document.querySelectorAll('.jlwa-feature-host form').forEach(function (form) {
-			form.addEventListener('submit', function () {
-				form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
-					if (button.dataset.jlwaOriginalLabel) return;
-					button.dataset.jlwaOriginalLabel = button.value || button.textContent || '';
-					button.disabled = true;
-					if (button.tagName === 'INPUT') button.value = '正在保存…';
-					else button.textContent = '正在保存…';
-				});
+			form.addEventListener('submit', function (event) {
+				form.classList.add('is-submitting');
+				form.setAttribute('aria-busy', 'true');
+				var button = event.submitter || null;
+				if (!button || button.dataset.jlwaOriginalLabel) return;
+				button.dataset.jlwaOriginalLabel = button.value || button.textContent || '';
+				if (button.tagName === 'INPUT') button.value = '正在保存…';
+				else button.textContent = '正在保存…';
 			});
 		});
 	}
