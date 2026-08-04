@@ -4,7 +4,7 @@ on:
   push:
     branches: [release/2.1.0]
     paths:
-      - '.release/2.1.0/part-005.txt'
+      - '.release/2.1.0/part-015.txt'
 
 permissions:
   contents: write
@@ -38,40 +38,17 @@ jobs:
           grep -q 'Version: 2.1.0' jiuliu-wp-assistant.php
           grep -q 'Stable tag: 2.1.0' readme.txt
           test "$(grep -c 'protected function perform_update' includes/class-jlwa-updater.php)" = '1'
-          for file in \
-            includes/class-jlwa-module-loader.php \
-            modules/page-effects/wp-page-effects.php \
-            modules/page-effects/assets/js/frontend.js \
-            modules/relative-media-urls/jiuliu-relative-media-urls.php \
-            modules/ai-article-summary/wp-ai-article-summary.php \
-            modules/immersive-preloader/jiuliu-immersive-preloader.php; do test -f "$file"; done
+          for file in includes/class-jlwa-module-loader.php modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js modules/relative-media-urls/jiuliu-relative-media-urls.php modules/ai-article-summary/wp-ai-article-summary.php modules/immersive-preloader/jiuliu-immersive-preloader.php; do test -f "$file"; done
           ! grep -R --include='*.php' -q 'Plugin Name:' modules includes/class-jlwa-module-loader.php
-          for file in \
-            assets/css/admin-content.css \
-            includes/class-jlwa-feature-registry.php \
-            features/page-effects/assets/js/frontend.js \
-            features/ai-article-summary/includes/class-wpaias-cache.php \
-            features/immersive-preloader/assets/js/preloader.js \
-            features/relative-media-urls/includes/class-jrmu-domain-adapter.php; do test -f "$file"; done
+          for file in assets/css/admin-content.css includes/class-jlwa-feature-registry.php features/page-effects/assets/js/frontend.js features/ai-article-summary/includes/class-wpaias-cache.php features/immersive-preloader/assets/js/preloader.js features/relative-media-urls/includes/class-jrmu-domain-adapter.php; do test -f "$file"; done
           grep -q 'wp_safe_remote_post' features/ai-article-summary/includes/class-wpaias-api.php
           grep -q 'package_sha256' includes/class-jlwa-updater.php
           ! grep -RInE '^(<<<<<<<|=======|>>>>>>>)' .
       - name: Verify legacy and current updater package rules
         run: |
           set -euxo pipefail
-          for file in \
-            assets/css/admin.css assets/js/admin.js includes/class-jlwa-admin.php \
-            includes/class-jlwa-module-loader.php includes/class-jlwa-updater.php \
-            modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js \
-            modules/relative-media-urls/jiuliu-relative-media-urls.php \
-            modules/ai-article-summary/wp-ai-article-summary.php \
-            modules/immersive-preloader/jiuliu-immersive-preloader.php readme.txt uninstall.php; do test -f "$file"; done
-          for file in \
-            assets/css/admin.css assets/css/admin-content.css assets/js/admin.js assets/js/admin-content.js \
-            includes/class-jlwa-admin.php includes/class-jlwa-feature-registry.php includes/class-jlwa-updater.php \
-            features/page-effects/bootstrap.php features/page-effects/assets/js/frontend.js \
-            features/relative-media-urls/bootstrap.php features/ai-article-summary/bootstrap.php \
-            features/immersive-preloader/bootstrap.php readme.txt uninstall.php; do test -f "$file"; done
+          for file in assets/css/admin.css assets/js/admin.js includes/class-jlwa-admin.php includes/class-jlwa-module-loader.php includes/class-jlwa-updater.php modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js modules/relative-media-urls/jiuliu-relative-media-urls.php modules/ai-article-summary/wp-ai-article-summary.php modules/immersive-preloader/jiuliu-immersive-preloader.php readme.txt uninstall.php; do test -f "$file"; done
+          for file in assets/css/admin.css assets/css/admin-content.css assets/js/admin.js assets/js/admin-content.js includes/class-jlwa-admin.php includes/class-jlwa-feature-registry.php includes/class-jlwa-updater.php features/page-effects/bootstrap.php features/page-effects/assets/js/frontend.js features/relative-media-urls/bootstrap.php features/ai-article-summary/bootstrap.php features/immersive-preloader/bootstrap.php readme.txt uninstall.php; do test -f "$file"; done
       - name: Commit final source and self-clean
         run: |
           set -euxo pipefail
