@@ -1,0 +1,73 @@
+name: Apply wp-assistant 2.1.0 source
+
+on:
+  push:
+    branches: [release/2.1.0]
+    paths:
+      - '.release/2.1.0/source.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: release/2.1.0
+          fetch-depth: 0
+      - name: Replace source from validated package
+        run: |
+          set -euxo pipefail
+          rm -rf /tmp/jlwa-source
+          mkdir -p /tmp/jlwa-source
+          unzip -q .release/2.1.0/source.zip -d /tmp/jlwa-source
+          test -f /tmp/jlwa-source/wp-assistant/jiuliu-wp-assistant.php
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.release/' \
+            /tmp/jlwa-source/wp-assistant/ ./
+      - name: PHP and JavaScript syntax
+        run: |
+          set -euxo pipefail
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+          find . -name '*.js' -not -path './.git/*' -print0 | while IFS= read -r -d '' file; do node --check "$file"; done
+      - name: Architecture and updater validation
+        run: |
+          set -euxo pipefail
+          test "$(grep -R --include='*.php' -h 'Plugin Name:' . | wc -l)" = '1'
+          test "$(grep -R --include='*.php' -h 'register_activation_hook' . | wc -l)" = '1'
+          grep -q 'Version: 2.1.0' jiuliu-wp-assistant.php
+          grep -q 'Stable tag: 2.1.0' readme.txt
+          test "$(grep -c 'protected function perform_update' includes/class-jlwa-updater.php)" = '1'
+          for file in \
+            includes/class-jlwa-module-loader.php \
+            modules/page-effects/wp-page-effects.php \
+            modules/page-effects/assets/js/frontend.js \
+            modules/relative-media-urls/jiuliu-relative-media-urls.php \
+            modules/ai-article-summary/wp-ai-article-summary.php \
+            modules/immersive-preloader/jiuliu-immersive-preloader.php; do test -f "$file"; done
+          ! grep -R --include='*.php' -q 'Plugin Name:' modules includes/class-jlwa-module-loader.php
+          for file in \
+            assets/css/admin-content.css \
+            includes/class-jlwa-feature-registry.php \
+            features/page-effects/assets/js/frontend.js \
+            features/ai-article-summary/includes/class-wpaias-cache.php \
+            features/immersive-preloader/assets/js/preloader.js \
+            features/relative-media-urls/includes/class-jrmu-domain-adapter.php; do test -f "$file"; done
+          grep -q 'wp_safe_remote_post' features/ai-article-summary/includes/class-wpaias-api.php
+          grep -q 'package_sha256' includes/class-jlwa-updater.php
+          ! grep -RInE '^(<<<<<<<|=======|>>>>>>>)' .
+      - name: Commit final source and self-clean
+        run: |
+          set -euxo pipefail
+          rm -rf .release
+          git rm .github/workflows/apply-2.1.0-source.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: release 九流WP助手 2.1.0'
+          git push origin release/2.1.0
