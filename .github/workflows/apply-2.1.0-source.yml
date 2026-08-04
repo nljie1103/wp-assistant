@@ -4,7 +4,7 @@ on:
   push:
     branches: [release/2.1.0]
     paths:
-      - '.release/2.1.0/source.zip'
+      - '.release/2.1.0/patch.b64'
 
 permissions:
   contents: write
@@ -18,18 +18,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: release/2.1.0
           fetch-depth: 0
-      - name: Replace source from validated package
+      - name: Apply validated source patch
         run: |
           set -euxo pipefail
-          rm -rf /tmp/jlwa-source
-          mkdir -p /tmp/jlwa-source
-          unzip -q .release/2.1.0/source.zip -d /tmp/jlwa-source
-          test -f /tmp/jlwa-source/wp-assistant/jiuliu-wp-assistant.php
-          rsync -a --delete \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.release/' \
-            /tmp/jlwa-source/wp-assistant/ ./
+          base64 -d .release/2.1.0/patch.b64 | gzip -d > /tmp/jlwa-2.1.0.patch
+          git apply --check /tmp/jlwa-2.1.0.patch
+          git apply /tmp/jlwa-2.1.0.patch
       - name: PHP and JavaScript syntax
         run: |
           set -euxo pipefail
@@ -61,6 +55,35 @@ jobs:
           grep -q 'wp_safe_remote_post' features/ai-article-summary/includes/class-wpaias-api.php
           grep -q 'package_sha256' includes/class-jlwa-updater.php
           ! grep -RInE '^(<<<<<<<|=======|>>>>>>>)' .
+      - name: Verify legacy and current updater package rules
+        run: |
+          set -euxo pipefail
+          for file in \
+            assets/css/admin.css \
+            assets/js/admin.js \
+            includes/class-jlwa-admin.php \
+            includes/class-jlwa-module-loader.php \
+            includes/class-jlwa-updater.php \
+            modules/page-effects/wp-page-effects.php \
+            modules/page-effects/assets/js/frontend.js \
+            modules/relative-media-urls/jiuliu-relative-media-urls.php \
+            modules/ai-article-summary/wp-ai-article-summary.php \
+            modules/immersive-preloader/jiuliu-immersive-preloader.php \
+            readme.txt uninstall.php; do test -f "$file"; done
+          for file in \
+            assets/css/admin.css \
+            assets/css/admin-content.css \
+            assets/js/admin.js \
+            assets/js/admin-content.js \
+            includes/class-jlwa-admin.php \
+            includes/class-jlwa-feature-registry.php \
+            includes/class-jlwa-updater.php \
+            features/page-effects/bootstrap.php \
+            features/page-effects/assets/js/frontend.js \
+            features/relative-media-urls/bootstrap.php \
+            features/ai-article-summary/bootstrap.php \
+            features/immersive-preloader/bootstrap.php \
+            readme.txt uninstall.php; do test -f "$file"; done
       - name: Commit final source and self-clean
         run: |
           set -euxo pipefail
