@@ -50,7 +50,7 @@ jobs:
           grep -q 'Version: 2.1.0' jiuliu-wp-assistant.php
           grep -q 'Stable tag: 2.1.0' readme.txt
           test "$(grep -c 'protected function perform_update' includes/class-jlwa-updater.php)" = '1'
-          for file in includes/class-jlwa-module-loader.php modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js modules/relative-media-urls/jiuli-relative-media-urls.php modules/ai-article-summary/wp-ai-article-summary.php modules/immersive-preloader/jiuliu-immersive-preloader.php; do test -f "$file"; done
+          for file in includes/class-jlwa-module-loader.php modules/page-effects/wp-page-effects.php modules/page-effects/assets/js/frontend.js modules/relative-media-urls/jiuliu-relative-media-urls.php modules/ai-article-summary/wp-ai-article-summary.php modules/immersive-preloader/jiuliu-immersive-preloader.php; do test -f "$file"; done
           ! grep -R --include='*.php' -q 'Plugin Name:' modules includes/class-jlwa-module-loader.php
           for file in assets/css/admin-content.css includes/class-jlwa-feature-registry.php features/page-effects/assets/js/frontend.js features/ai-article-summary/includes/class-wpaias-cache.php features/immersive-preloader/assets/js/preloader.js features/relative-media-urls/includes/class-jrmu-domain-adapter.php; do test -f "$file"; done
           grep -q 'wp_safe_remote_post' features/ai-article-summary/includes/class-wpaias-api.php
