@@ -1,0 +1,1931 @@
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/assets/css/admin.css /tmp/jiuliu-suite-diff/wp-page-effects/assets/css/admin.css
+--- modules/page-effects/assets/css/admin.css	2026-08-04 09:41:38.206255701 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/assets/css/admin.css	2026-08-04 09:41:38.622975684 +0000
+@@ -6,9 +6,6 @@
+ @media (max-width: 782px){ .jiuliu-admin-header { align-items:flex-start; flex-direction:column; } }
+ .xjpe-wrap { max-width: 1320px; }
+ .xjpe-subtitle { font-size: 15px; color: #666; }
+-.xjpe-tabs { margin-bottom:18px; }
+-.xjpe-tab-panel { display:none; }
+-.xjpe-tab-panel.is-active { display:block; }
+ .xjpe-savebar,
+ .xjpe-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:16px 0; }
+ .xjpe-savebar-note { color:#666; }
+@@ -35,4 +32,12 @@
+ .xjpe-tip { color:#646970; background:#f6f7f7; border-left:4px solid #72aee6; padding:10px 12px; }
+ .xjpe-code-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
+ .xjpe-code-field textarea { font-family:Consolas, Monaco, monospace; }
++.xjpe-update-card { border:1px solid #dcdcde; border-radius:14px; padding:16px; background:#f8f9fa; }
++.xjpe-update-main { display:flex; gap:18px; flex-wrap:wrap; align-items:stretch; }
++.xjpe-version-badge { min-width:140px; border-radius:14px; background:#2271b1; color:#fff; padding:14px 18px; }
++.xjpe-version-badge span { display:block; opacity:.86; }
++.xjpe-version-badge strong { font-size:26px; }
++.xjpe-version-source { display:flex; flex-direction:column; gap:6px; justify-content:center; }
++.xjpe-update-result { margin-top:12px; padding:12px; border-radius:10px; background:#fff; border:1px solid #dcdcde; }
++.xjpe-update-log { margin-top:12px; padding:12px; max-height:260px; overflow:auto; background:#1d2327; color:#f0f0f1; border-radius:10px; white-space:pre-wrap; }
+ @media (max-width: 782px){ .xjpe-global-panel { grid-template-columns:1fr; } }
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/assets/js/admin.js /tmp/jiuliu-suite-diff/wp-page-effects/assets/js/admin.js
+--- modules/page-effects/assets/js/admin.js	2026-08-04 09:41:38.206294716 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/assets/js/admin.js	2026-08-04 09:41:38.623012816 +0000
+@@ -17,7 +17,7 @@
+ 
+       function sync() {
+         card.classList.toggle('is-enabled', cb.checked);
+-        if (st) st.textContent = cb.checked ? '已启用' : '未启用';
++        if (st) st.textContent = cb.checked ? '● 已启用' : '○ 未启用';
+       }
+ 
+       cb.addEventListener('change', sync);
+@@ -27,9 +27,9 @@
+     var enableAll = document.querySelector('[data-xjpe-enable-all]');
+     var disableAll = document.querySelector('[data-xjpe-disable-all]');
+ 
+-    function setAll(v) {
++    function setAll(value) {
+       document.querySelectorAll('.xjpe-toggle').forEach(function (cb) {
+-        cb.checked = v;
++        cb.checked = value;
+         cb.dispatchEvent(new Event('change', { bubbles: true }));
+       });
+     }
+@@ -37,12 +37,113 @@
+     if (enableAll) enableAll.addEventListener('click', function () { setAll(true); });
+     if (disableAll) disableAll.addEventListener('click', function () { setAll(false); });
+ 
++    var contextToggle = document.querySelector('input[name="xjpe_options[effects][contextmenu][enabled]"]');
++    var noSourceToggle = document.querySelector('input[name="xjpe_options[effects][nosource][enabled]"]');
++    var conflictNotice = document.getElementById('xjpe-context-conflict');
++
++    function syncConflictNotice() {
++      if (!conflictNotice || !contextToggle || !noSourceToggle) return;
++      conflictNotice.hidden = !(contextToggle.checked && noSourceToggle.checked);
++    }
++
++    if (contextToggle) contextToggle.addEventListener('change', syncConflictNotice);
++    if (noSourceToggle) noSourceToggle.addEventListener('change', syncConflictNotice);
++    syncConflictNotice();
++
+     var form = document.getElementById('xjpe-settings-form');
+     if (form) {
+       form.addEventListener('submit', function () {
+-        form.querySelectorAll('button[type="submit"]').forEach(function (b) {
+-          b.disabled = true;
+-          b.textContent = '正在保存...';
++        form.querySelectorAll('button[type="submit"]').forEach(function (button) {
++          button.disabled = true;
++          button.textContent = '正在保存...';
++        });
++      });
++    }
++
++    var checkBtn = document.getElementById('xjpe-check-update');
++    var updateBtn = document.getElementById('xjpe-do-update');
++    var result = document.getElementById('xjpe-update-result');
++    var log = document.getElementById('xjpe-update-log');
++
++    function setResult(message) {
++      if (result) result.textContent = message;
++    }
++
++    function ajax(action) {
++      if (!window.XJPE_ADMIN || !XJPE_ADMIN.ajax_url) {
++        return Promise.reject(new Error('后台更新配置未加载，请刷新页面后重试。'));
++      }
++
++      var data = new FormData();
++      data.append('action', action);
++      data.append('nonce', XJPE_ADMIN.nonce);
++      data.append('force', '1');
++
++      return fetch(XJPE_ADMIN.ajax_url, {
++        method: 'POST',
++        credentials: 'same-origin',
++        body: data,
++        headers: { 'Accept': 'application/json' }
++      }).then(function (response) {
++        return response.text().then(function (text) {
++          var json;
++          try {
++            json = JSON.parse(text);
++          } catch (error) {
++            throw new Error('服务器返回的不是有效 JSON（HTTP ' + response.status + '）。');
++          }
++          if (!response.ok) {
++            throw new Error((json && json.data && json.data.message) || ('HTTP ' + response.status));
++          }
++          return json;
++        });
++      });
++    }
++
++    if (checkBtn) {
++      checkBtn.addEventListener('click', function () {
++        checkBtn.disabled = true;
++        setResult('正在检查远程版本...');
++
++        ajax('xjpe_check_update').then(function (json) {
++          if (!json || !json.success) {
++            throw new Error((json && json.data && json.data.message) || '未知错误');
++          }
++
++          setResult(json.data.message + ' 当前版本 v' + json.data.current_version + '，远程版本 v' + json.data.latest_version + '。');
++          if (log) {
++            log.hidden = !json.data.changelog;
++            log.textContent = json.data.changelog || '';
++          }
++          if (updateBtn) updateBtn.disabled = !json.data.has_update;
++        }).catch(function (error) {
++          setResult('检查失败：' + error.message);
++          if (updateBtn) updateBtn.disabled = true;
++        }).then(function () {
++          checkBtn.disabled = false;
++        });
++      });
++    }
++
++    if (updateBtn) {
++      updateBtn.addEventListener('click', function () {
++        if (!window.confirm('确定要从 GitHub 更新插件吗？更新器会先完整备份插件文件和当前配置，失败时自动回滚。')) return;
++
++        updateBtn.disabled = true;
++        setResult('正在下载、校验并更新，请不要关闭页面...');
++        var succeeded = false;
++
++        ajax('xjpe_do_update').then(function (json) {
++          if (!json || !json.success) {
++            throw new Error((json && json.data && json.data.message) || '未知错误');
++          }
++          succeeded = true;
++          setResult(json.data.message + ' 页面即将刷新。');
++          window.setTimeout(function () { window.location.reload(); }, 1500);
++        }).catch(function (error) {
++          setResult('更新失败：' + error.message);
++        }).then(function () {
++          if (!succeeded) updateBtn.disabled = false;
+         });
+       });
+     }
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/assets/js/frontend.js /tmp/jiuliu-suite-diff/wp-page-effects/assets/js/frontend.js
+--- modules/page-effects/assets/js/frontend.js	2026-08-04 09:41:38.206358759 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/assets/js/frontend.js	2026-08-04 09:41:38.623087459 +0000
+@@ -5,10 +5,48 @@
+   if (!cfg || !cfg.effects) return;
+ 
+   var global = cfg.global || {};
++  var compat = cfg.compat || {};
+   var effects = cfg.effects || {};
+   var z = parseInt(global.zIndex || 999999, 10);
+-  var timers = [];
+-  var rafs = [];
++  var safeMode = !(compat.safe_mode === false || compat.safe_mode === 0 || compat.safe_mode === '0');
++  var bodyWait = !(compat.body_wait === false || compat.body_wait === 0 || compat.body_wait === '0');
++  var rafLoops = [];
++  var initialized = false;
++
++  function emitReady(disabled) {
++    window.XJPE_DISABLED = !!disabled;
++    window.XJPE_READY = true;
++    try {
++      document.dispatchEvent(new CustomEvent('xjpe:ready', { detail: { disabled: !!disabled } }));
++    } catch (e) {
++      var event = document.createEvent('Event');
++      event.initEvent('xjpe:ready', false, false);
++      event.detail = { disabled: !!disabled };
++      document.dispatchEvent(event);
++    }
++  }
++
++  function isMobileDevice() {
++    var narrow = window.matchMedia && window.matchMedia('(max-width: 782px)').matches;
++    var touchMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
++    return !!(narrow || touchMobile);
++  }
++
++  if (global.mobileEnabled === false && isMobileDevice()) {
++    emitReady(true);
++    return;
++  }
++
++  function applyCustomCss() {
++    var css = typeof global.customCss === 'string' ? global.customCss.trim() : '';
++    if (!css || document.getElementById('xjpe-custom-css')) return;
++    var style = document.createElement('style');
++    style.id = 'xjpe-custom-css';
++    style.textContent = css;
++    (document.head || document.documentElement).appendChild(style);
++  }
++
++  applyCustomCss();
+ 
+   function ready(fn) {
+     if (document.readyState === 'loading') {
+@@ -18,6 +56,34 @@
+     }
+   }
+ 
++  function startWhenBodyExists(fn) {
++    var done = false;
++    var observer = null;
++
++    function run() {
++      if (done || !document.body) return;
++      done = true;
++      if (observer) observer.disconnect();
++      fn();
++    }
++
++    if (bodyWait) {
++      ready(run);
++      return;
++    }
++
++    if (document.body) {
++      run();
++      return;
++    }
++
++    if (window.MutationObserver && document.documentElement) {
++      observer = new MutationObserver(run);
++      observer.observe(document.documentElement, { childList: true, subtree: true });
++    }
++    document.addEventListener('DOMContentLoaded', run, { once: true });
++  }
++
+   function enabled(name) {
+     return effects[name] && !!effects[name].enabled;
+   }
+@@ -36,7 +102,7 @@
+     var el = document.createElement('div');
+     el.className = cls;
+     el.style.zIndex = String(z + (extra || 0));
+-    el.style.pointerEvents = 'none';
++    el.style.pointerEvents = safeMode ? 'none' : 'auto';
+     document.body.appendChild(el);
+     return el;
+   }
+@@ -45,17 +111,58 @@
+     var c = document.createElement('canvas');
+     c.className = cls;
+     c.style.zIndex = String(z + (extra || 0));
+-    c.style.pointerEvents = 'none';
++    c.style.pointerEvents = safeMode ? 'none' : 'auto';
+     document.body.appendChild(c);
++
+     function resize() {
+-      c.width = window.innerWidth;
+-      c.height = window.innerHeight;
++      var width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
++      var height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
++      if (c.width !== width) c.width = width;
++      if (c.height !== height) c.height = height;
+     }
++
+     resize();
+-    window.addEventListener('resize', resize);
++    window.addEventListener('resize', resize, { passive: true });
+     return c;
+   }
+ 
++  function createRafLoop(step) {
++    var loop = { id: 0, active: true };
++
++    function frame(timestamp) {
++      loop.id = 0;
++      if (!loop.active || document.hidden) return;
++      step(timestamp);
++      schedule();
++    }
++
++    function schedule() {
++      if (!loop.active || document.hidden || loop.id) return;
++      loop.id = window.requestAnimationFrame(frame);
++    }
++
++    loop.pause = function () {
++      if (loop.id) window.cancelAnimationFrame(loop.id);
++      loop.id = 0;
++    };
++    loop.resume = schedule;
++    loop.stop = function () {
++      loop.active = false;
++      loop.pause();
++    };
++
++    rafLoops.push(loop);
++    schedule();
++    return loop;
++  }
++
++  document.addEventListener('visibilitychange', function () {
++    rafLoops.forEach(function (loop) {
++      if (document.hidden) loop.pause();
++      else loop.resume();
++    });
++  });
++
+   function toast(message) {
+     var old = document.querySelector('.xjpe-toast');
+     if (old) old.remove();
+@@ -64,7 +171,9 @@
+     t.textContent = message || '操作已拦截';
+     t.style.zIndex = '2147483000';
+     document.body.appendChild(t);
+-    window.setTimeout(function () { if (t.parentNode) t.remove(); }, 1800);
++    window.setTimeout(function () {
++      if (t.parentNode) t.remove();
++    }, 1800);
+   }
+ 
+   function falling(name, char, className, defaults) {
+@@ -96,7 +205,7 @@
+       });
+     }
+ 
+-    function tick() {
++    createRafLoop(function () {
+       var w = window.innerWidth;
+       var h = window.innerHeight;
+       for (var i = 0; i < items.length; i++) {
+@@ -112,9 +221,7 @@
+         if (p.x > w + 80) p.x = -40;
+         p.el.style.transform = 'translate3d(' + p.x + 'px,' + p.y + 'px,0) rotate(' + p.rot + 'deg)';
+       }
+-      rafs.push(requestAnimationFrame(tick));
+-    }
+-    tick();
++    });
+   }
+ 
+   function initLantern() {
+@@ -123,6 +230,7 @@
+     var size = Math.max(36, Math.min(180, int(e.size, 82)));
+     var text = String(e.text || '福').slice(0, 2);
+     var wrap = layer('xjpe-lantern-wrap', 3);
++
+     for (var i = 0; i < count; i++) {
+       var l = document.createElement('div');
+       l.className = 'xjpe-lantern';
+@@ -138,38 +246,64 @@
+ 
+   function initParticles() {
+     var e = effects.particles || {};
+-    var count = Math.max(8, Math.min(220, int(e.count, 70)));
++    var count = Math.max(8, Math.min(200, int(e.count, 70)));
+     var speed = Math.max(0.03, num(e.speed, 0.7));
+     var opacity = Math.max(0.05, Math.min(1, num(e.opacity, 0.55)));
+-    var maxDist = Math.max(40, Math.min(320, int(e.line_distance, 130)));
++    var maxDist = Math.max(40, Math.min(300, int(e.line_distance, 130)));
++    var maxDistSq = maxDist * maxDist;
+     var c = canvasLayer('xjpe-canvas xjpe-particles-canvas', 0);
+     var ctx = c.getContext('2d');
++    if (!ctx) return;
++
+     var pts = [];
++    var lastFrame = 0;
++    var frameInterval = count > 120 ? 1000 / 30 : 1000 / 60;
++
+     for (var i = 0; i < count; i++) {
+-      pts.push({ x: Math.random() * c.width, y: Math.random() * c.height, vx: (-0.6 + Math.random() * 1.2) * speed, vy: (-0.6 + Math.random() * 1.2) * speed });
++      pts.push({
++        x: Math.random() * c.width,
++        y: Math.random() * c.height,
++        vx: (-0.6 + Math.random() * 1.2) * speed,
++        vy: (-0.6 + Math.random() * 1.2) * speed
++      });
+     }
+-    function tick() {
++
++    createRafLoop(function (timestamp) {
++      if (timestamp - lastFrame < frameInterval) return;
++      lastFrame = timestamp;
+       ctx.clearRect(0, 0, c.width, c.height);
+       ctx.fillStyle = 'rgba(120,160,255,' + opacity + ')';
++
+       for (var i = 0; i < pts.length; i++) {
+         var p = pts[i];
+-        p.x += p.vx; p.y += p.vy;
+-        if (p.x < 0 || p.x > c.width) p.vx *= -1;
+-        if (p.y < 0 || p.y > c.height) p.vy *= -1;
+-        ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
++        p.x += p.vx;
++        p.y += p.vy;
++        if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); }
++        else if (p.x > c.width) { p.x = c.width; p.vx = -Math.abs(p.vx); }
++        if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
++        else if (p.y > c.height) { p.y = c.height; p.vy = -Math.abs(p.vy); }
++
++        ctx.beginPath();
++        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
++        ctx.fill();
++
+         for (var j = i + 1; j < pts.length; j++) {
+           var q = pts[j];
+-          var dx = p.x - q.x, dy = p.y - q.y, d = Math.sqrt(dx * dx + dy * dy);
+-          if (d < maxDist) {
+-            ctx.strokeStyle = 'rgba(120,160,255,' + ((1 - d / maxDist) * opacity * 0.45) + ')';
++          var dx = p.x - q.x;
++          var dy = p.y - q.y;
++          var distanceSq = dx * dx + dy * dy;
++          if (distanceSq < maxDistSq) {
++            var ratio = 1 - Math.sqrt(distanceSq) / maxDist;
++            ctx.strokeStyle = 'rgba(120,160,255,' + (ratio * opacity * 0.45) + ')';
+             ctx.lineWidth = 1;
+-            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
++            ctx.beginPath();
++            ctx.moveTo(p.x, p.y);
++            ctx.lineTo(q.x, q.y);
++            ctx.stroke();
+           }
+         }
+       }
+-      rafs.push(requestAnimationFrame(tick));
+-    }
+-    tick();
++    });
+   }
+ 
+   function initCursor() {
+@@ -178,10 +312,12 @@
+     var density = Math.max(1, Math.min(5, int(e.density, 1)));
+     var symbol = String(e.symbol || '✦').slice(0, 2);
+     var last = 0;
++
+     document.addEventListener('mousemove', function (ev) {
+       var now = Date.now();
+       if (now - last < 26 / density) return;
+       last = now;
++
+       var s = document.createElement('span');
+       s.className = 'xjpe-star-trail';
+       s.textContent = symbol;
+@@ -191,12 +327,23 @@
+       s.style.fontSize = size + 'px';
+       s.style.color = 'hsl(' + Math.floor(Math.random() * 360) + ' 88% 62%)';
+       document.body.appendChild(s);
+-      var dx = (-18 + Math.random() * 36), dy = (-24 - Math.random() * 18);
+-      s.animate([
+-        { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 },
+-        { transform: 'translate3d(' + dx + 'px,' + dy + 'px,0) scale(.2)', opacity: 0 }
+-      ], { duration: 760, easing: 'ease-out' }).onfinish = function () { if (s.parentNode) s.remove(); };
+-    });
++
++      var dx = -18 + Math.random() * 36;
++      var dy = -24 - Math.random() * 18;
++      if (s.animate) {
++        var animation = s.animate([
++          { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 },
++          { transform: 'translate3d(' + dx + 'px,' + dy + 'px,0) scale(.2)', opacity: 0 }
++        ], { duration: 760, easing: 'ease-out' });
++        animation.onfinish = function () {
++          if (s.parentNode) s.remove();
++        };
++      } else {
++        window.setTimeout(function () {
++          if (s.parentNode) s.remove();
++        }, 760);
++      }
++    }, { passive: true });
+   }
+ 
+   function initRibbon() {
+@@ -204,6 +351,8 @@
+     var opacity = Math.max(0.05, Math.min(1, num(e.opacity, 0.42)));
+     var c = canvasLayer('xjpe-canvas xjpe-ribbon-canvas', -1);
+     var ctx = c.getContext('2d');
++    if (!ctx) return;
++
+     function draw() {
+       ctx.clearRect(0, 0, c.width, c.height);
+       for (var i = 0; i < 24; i++) {
+@@ -216,13 +365,18 @@
+         ctx.rotate(Math.random() * Math.PI);
+         ctx.fillStyle = 'hsla(' + Math.floor(Math.random() * 360) + ', 85%, 65%, ' + opacity + ')';
+         ctx.beginPath();
+-        ctx.moveTo(0, 0); ctx.lineTo(w, h * .2); ctx.lineTo(w * .75, h); ctx.lineTo(-w * .1, h * .75); ctx.closePath();
++        ctx.moveTo(0, 0);
++        ctx.lineTo(w, h * 0.2);
++        ctx.lineTo(w * 0.75, h);
++        ctx.lineTo(-w * 0.1, h * 0.75);
++        ctx.closePath();
+         ctx.fill();
+         ctx.restore();
+       }
+     }
++
+     draw();
+-    window.addEventListener('resize', draw);
++    window.addEventListener('resize', draw, { passive: true });
+     if (e.click) document.addEventListener('click', draw);
+   }
+ 
+@@ -232,6 +386,29 @@
+     document.documentElement.classList.add('xjpe-grayscale');
+   }
+ 
++  function copyText(text) {
++    if (navigator.clipboard && window.isSecureContext) {
++      return navigator.clipboard.writeText(text);
++    }
++
++    return new Promise(function (resolve, reject) {
++      try {
++        var textarea = document.createElement('textarea');
++        textarea.value = text;
++        textarea.setAttribute('readonly', 'readonly');
++        textarea.style.position = 'fixed';
++        textarea.style.opacity = '0';
++        document.body.appendChild(textarea);
++        textarea.select();
++        var copied = document.execCommand('copy');
++        textarea.remove();
++        copied ? resolve() : reject(new Error('copy failed'));
++      } catch (e) {
++        reject(e);
++      }
++    });
++  }
++
+   function initContextMenu() {
+     if (enabled('nosource')) return;
+     var e = effects.contextmenu || {};
+@@ -241,99 +418,273 @@
+     m.querySelector('.xjpe-context-title').textContent = e.title || '九流网站菜单';
+     m.style.zIndex = '2147483000';
+     document.body.appendChild(m);
++
+     var box = m.querySelector('.xjpe-context-items');
+-    function add(label, action) {
++    var seen = {};
++
++    function add(label, action, key) {
++      key = String(key || label).toLowerCase();
++      if (seen[key]) return;
++      seen[key] = true;
+       var b = document.createElement('button');
+-      b.type = 'button'; b.textContent = label; b.addEventListener('click', function(){ m.style.display='none'; action(); });
++      b.type = 'button';
++      b.textContent = label;
++      b.addEventListener('click', function () {
++        m.style.display = 'none';
++        action();
++      });
+       box.appendChild(b);
+     }
+-    if (e.show_copy) add('复制当前链接', function(){ navigator.clipboard && navigator.clipboard.writeText(location.href); toast('链接已复制'); });
+-    if (e.show_refresh) add('刷新页面', function(){ location.reload(); });
+-    if (e.show_top) add('返回顶部', function(){ window.scrollTo({ top: 0, behavior: 'smooth' }); });
+-    if (e.show_back) add('返回上一页', function(){ history.back(); });
+-    String(e.custom_items || '').split(/\r?\n/).forEach(function(line){
++
++    function copyCurrentLink() {
++      copyText(location.href).then(function () {
++        toast('链接已复制');
++      }).catch(function () {
++        toast('复制失败，请手动复制地址栏链接');
++      });
++    }
++
++    if (e.show_copy) add('复制当前链接', copyCurrentLink, '#copy');
++    if (e.show_refresh) add('刷新页面', function () { location.reload(); }, '#refresh');
++    if (e.show_top) add('返回顶部', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); }, '#top');
++    if (e.show_back) add('返回上一页', function () { history.back(); }, '#back');
++
++    String(e.custom_items || '').split(/\r?\n/).forEach(function (line) {
+       var parts = line.split('|');
+       if (parts.length < 2) return;
+-      var label = parts[0].trim(), url = parts.slice(1).join('|').trim();
++      var label = parts[0].trim();
++      var url = parts.slice(1).join('|').trim();
+       if (!label || !url) return;
+-      add(label, function(){
++
++      add(label, function () {
+         if (url === '#top') window.scrollTo({ top: 0, behavior: 'smooth' });
+         else if (url === '#refresh') location.reload();
+         else if (url === '#back') history.back();
+-        else if (url === '#copy') { navigator.clipboard && navigator.clipboard.writeText(location.href); toast('链接已复制'); }
++        else if (url === '#copy') copyCurrentLink();
+         else location.href = url;
+-      });
++      }, url);
+     });
+-    document.addEventListener('contextmenu', function(ev){
++
++    document.addEventListener('contextmenu', function (ev) {
+       ev.preventDefault();
+       m.style.display = 'block';
+       var x = Math.min(ev.clientX, window.innerWidth - m.offsetWidth - 10);
+       var y = Math.min(ev.clientY, window.innerHeight - m.offsetHeight - 10);
+-      m.style.left = Math.max(8, x) + 'px'; m.style.top = Math.max(8, y) + 'px';
++      m.style.left = Math.max(8, x) + 'px';
++      m.style.top = Math.max(8, y) + 'px';
++    });
++    document.addEventListener('click', function () {
++      m.style.display = 'none';
++    });
++    window.addEventListener('blur', function () {
++      m.style.display = 'none';
+     });
+-    document.addEventListener('click', function(){ m.style.display = 'none'; });
+   }
+ 
+   function initNoSource() {
+     var message = (effects.nosource || {}).message || '本站已开启基础防复制保护。';
+-    document.addEventListener('contextmenu', function(ev){ ev.preventDefault(); toast(message); });
+-    document.addEventListener('keydown', function(ev){
++    document.addEventListener('contextmenu', function (ev) {
++      ev.preventDefault();
++      toast(message);
++    });
++    document.addEventListener('keydown', function (ev) {
+       var k = String(ev.key || '').toLowerCase();
+-      var blocked = k === 'f12' || (ev.ctrlKey && ['u','s','p'].indexOf(k) >= 0) || (ev.ctrlKey && ev.shiftKey && ['i','j','c'].indexOf(k) >= 0);
+-      if (blocked) { ev.preventDefault(); ev.stopPropagation(); toast(message); }
++      var blocked = k === 'f12' ||
++        (ev.ctrlKey && ['u', 's', 'p'].indexOf(k) >= 0) ||
++        (ev.ctrlKey && ev.shiftKey && ['i', 'j', 'c', 'k'].indexOf(k) >= 0);
++      if (blocked) {
++        ev.preventDefault();
++        ev.stopPropagation();
++        toast(message);
++      }
+     }, true);
+   }
+ 
+   function initMusic() {
+     var e = effects.bgmusic || {};
+     if (!e.url) return;
++
+     var audio = new Audio(e.url);
+     audio.loop = !!e.loop;
+     audio.volume = Math.max(0, Math.min(1, num(e.volume, 0.35)));
++    audio.preload = 'metadata';
++
+     var b = document.createElement('button');
+-    b.type = 'button'; b.className = 'xjpe-music-btn'; b.title = e.title || '背景音乐'; b.textContent = '🎵'; b.style.zIndex = String(z + 10);
++    b.type = 'button';
++    b.className = 'xjpe-music-btn';
++    b.title = e.title || '背景音乐';
++    b.setAttribute('aria-label', e.title || '背景音乐');
++    b.textContent = '🎵';
++    b.style.zIndex = String(z + 10);
+     document.body.appendChild(b);
+-    function play(){ audio.play().then(function(){ b.classList.add('is-playing'); }).catch(function(){}); }
+-    function pause(){ audio.pause(); b.classList.remove('is-playing'); }
+-    b.addEventListener('click', function(){ audio.paused ? play() : pause(); });
++
++    function play() {
++      var result;
++      try {
++        result = audio.play();
++      } catch (error) {
++        return Promise.reject(error);
++      }
++      return Promise.resolve(result).then(function () {
++        b.classList.add('is-playing');
++      });
++    }
++
++    function pause() {
++      audio.pause();
++      b.classList.remove('is-playing');
++    }
++
++    b.addEventListener('click', function () {
++      if (audio.paused) {
++        play().catch(function () {
++          toast('浏览器阻止了播放，请再次点击音乐按钮');
++        });
++      } else {
++        pause();
++      }
++    });
++
++    audio.addEventListener('ended', function () {
++      if (!audio.loop) b.classList.remove('is-playing');
++    });
++    audio.addEventListener('pause', function () {
++      b.classList.remove('is-playing');
++    });
++    audio.addEventListener('error', function () {
++      b.classList.remove('is-playing');
++      b.title = '背景音乐加载失败';
++    });
++
+     if (e.autoplay) {
+-      var once = function(){ play(); document.removeEventListener('click', once); document.removeEventListener('touchstart', once); };
+-      document.addEventListener('click', once); document.addEventListener('touchstart', once);
++      var events = ['click', 'touchstart', 'keydown'];
++      var attempt = function () {
++        play().then(function () {
++          events.forEach(function (name) {
++            document.removeEventListener(name, attempt);
++          });
++        }).catch(function () {
++          // 保留监听器，等待下一次真实用户交互再次尝试。
++        });
++      };
++      events.forEach(function (name) {
++        document.addEventListener(name, attempt, { passive: name === 'touchstart' });
++      });
++    }
++  }
++
++  function pad2(value) {
++    return value < 10 ? '0' + value : String(value);
++  }
++
++  function localDateKey(date) {
++    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
++  }
++
++  function festivalGreeting(date) {
++    var key = pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
++    var festivals = {
++      '01-01': ['元旦快乐', '新的一年，愿你平安顺遂，所愿皆所得。'],
++      '02-14': ['情人节快乐', '愿今天有爱、有花，也有值得珍惜的温柔。'],
++      '03-08': ['妇女节快乐', '愿每一位女性都被尊重、被看见，自信而闪耀。'],
++      '03-12': ['植树节快乐', '种下一点绿色，也种下一份对未来的期待。'],
++      '05-01': ['劳动节快乐', '致敬每一份认真付出，愿劳动也带来收获与快乐。'],
++      '06-01': ['儿童节快乐', '愿你永远保留好奇心，也保留心里的童真。'],
++      '10-01': ['国庆节快乐', '祝愿祖国繁荣昌盛，也祝你假期平安愉快。'],
++      '10-31': ['万圣夜快乐', '愿今晚有一点神秘、有一点惊喜，还有很多快乐。'],
++      '12-24': ['平安夜快乐', '愿今夜平安温暖，身边有牵挂，也有陪伴。'],
++      '12-25': ['圣诞快乐', '愿节日的灯光照亮好心情，祝你喜乐安康。']
++    };
++    return festivals[key] || null;
++  }
++
++  function storageGet(key) {
++    try {
++      return window.localStorage ? localStorage.getItem(key) : null;
++    } catch (e) {
++      return null;
++    }
++  }
++
++  function storageSet(key, value) {
++    try {
++      if (window.localStorage) localStorage.setItem(key, value);
++    } catch (e) {
++      // 禁用存储时仅退化为每次显示，不中断其他特效。
+     }
+   }
+ 
+   function initWelcome() {
+     var e = effects.welcome || {};
+-    var key = 'xjpe_welcome_' + (new Date()).toISOString().slice(0,10);
+-    if (e.once_per_day && !global.preview && localStorage.getItem(key)) return;
+-    if (e.once_per_day && !global.preview) localStorage.setItem(key, '1');
++    var now = new Date();
++    var greeting = e.auto_festival ? festivalGreeting(now) : null;
++    var title = greeting ? greeting[0] : (e.title || '欢迎访问');
++    var message = greeting ? greeting[1] : (e.message || '欢迎来到我的网站。');
++    var key = 'xjpe_welcome_' + localDateKey(now) + '_' + (greeting ? pad2(now.getMonth() + 1) + pad2(now.getDate()) : 'default');
++
++    if (e.once_per_day && !global.preview && storageGet(key)) return;
++
+     var mask = document.createElement('div');
+     mask.className = 'xjpe-welcome-mask';
+-    mask.innerHTML = '<div class="xjpe-welcome-box"><h3></h3><p></p><button type="button">知道了</button></div>';
+-    mask.querySelector('h3').textContent = e.title || '欢迎访问';
+-    mask.querySelector('p').textContent = e.message || '欢迎来到我的网站。';
+-    mask.querySelector('button').addEventListener('click', function(){ mask.remove(); });
+-    mask.addEventListener('click', function(ev){ if (ev.target === mask) mask.remove(); });
++    mask.innerHTML = '<div class="xjpe-welcome-box" role="dialog" aria-modal="true" aria-labelledby="xjpe-welcome-title"><h3 id="xjpe-welcome-title"></h3><p></p><button type="button">知道了</button></div>';
++    mask.querySelector('h3').textContent = title;
++    mask.querySelector('p').textContent = message;
++
++    function onKeydown(ev) {
++      if (ev.key === 'Escape') close();
++    }
++
++    function close() {
++      document.removeEventListener('keydown', onKeydown);
++      if (mask.parentNode) mask.remove();
++    }
++
++    mask.querySelector('button').addEventListener('click', close);
++    mask.addEventListener('click', function (ev) {
++      if (ev.target === mask) close();
++    });
++    document.addEventListener('keydown', onKeydown);
++
+     document.body.appendChild(mask);
++    if (e.once_per_day && !global.preview) storageSet(key, '1');
+   }
+ 
+-  ready(function () {
+-    if (!document.body) return;
+-    if (global.respectReduceMotion && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+-      document.documentElement.classList.add('xjpe-respect-motion');
+-      return;
++  function safeInit(name, fn) {
++    try {
++      fn();
++    } catch (error) {
++      if (window.console && console.warn) console.warn('XJPE ' + name + ' init error:', error);
+     }
+-    if (enabled('particles')) initParticles();
+-    if (enabled('ribbon')) initRibbon();
+-    if (enabled('sakura')) falling('sakura', '🌸', 'xjpe-petal', { count: 28, size: 18, speed: 1, opacity: 0.85 });
+-    if (enabled('snow')) falling('snow', '❄', 'xjpe-snowflake', { count: 48, size: 13, speed: 1, opacity: 0.9 });
+-    if (enabled('lantern')) initLantern();
+-    if (enabled('cursor')) initCursor();
+-    if (enabled('grayscale')) initGrayscale();
+-    if (enabled('contextmenu')) initContextMenu();
+-    if (enabled('nosource')) initNoSource();
+-    if (enabled('bgmusic')) initMusic();
+-    if (enabled('welcome')) initWelcome();
+-    window.XJPE_READY = true;
+-  });
++  }
++
++  function initialize() {
++    if (initialized || !document.body) return;
++    initialized = true;
++
++    var reduceMotion = !!(
++      global.respectReduceMotion &&
++      window.matchMedia &&
++      window.matchMedia('(prefers-reduced-motion: reduce)').matches
++    );
++
++    if (reduceMotion) {
++      document.documentElement.classList.add('xjpe-respect-motion');
++    } else {
++      if (enabled('particles')) safeInit('particles', initParticles);
++      if (enabled('ribbon')) safeInit('ribbon', initRibbon);
++      if (enabled('sakura')) safeInit('sakura', function () { falling('sakura', '🌸', 'xjpe-petal', { count: 28, size: 18, speed: 1, opacity: 0.85 }); });
++      if (enabled('snow')) safeInit('snow', function () { falling('snow', '❄', 'xjpe-snowflake', { count: 48, size: 13, speed: 1, opacity: 0.9 }); });
++      if (enabled('lantern')) safeInit('lantern', initLantern);
++      if (enabled('cursor')) safeInit('cursor', initCursor);
++    }
++
++    if (enabled('grayscale')) safeInit('grayscale', initGrayscale);
++    if (enabled('contextmenu')) safeInit('contextmenu', initContextMenu);
++    if (enabled('nosource')) safeInit('nosource', initNoSource);
++    if (enabled('bgmusic')) safeInit('bgmusic', initMusic);
++    if (enabled('welcome')) safeInit('welcome', initWelcome);
++    emitReady(false);
++  }
++
++  startWhenBodyExists(initialize);
+ })();
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/includes/class-xjpe-updater.php /tmp/jiuliu-suite-diff/wp-page-effects/includes/class-xjpe-updater.php
+--- modules/page-effects/includes/class-xjpe-updater.php	1970-01-01 00:00:00.000000000 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/includes/class-xjpe-updater.php	2026-08-04 09:41:38.623087459 +0000
+@@ -0,0 +1,515 @@
++<?php
++/**
++ * 九流页面美化特效 - GitHub 在线更新器。
++ *
++ * 更新流程：
++ * - 按插件设置读取 GitHub 更新源。
++ * - 校验远程主文件版本与 SHA-256。
++ * - 下载并解压更新包，验证必要文件。
++ * - 完整备份当前插件目录及配置。
++ * - 清理旧文件后安装新版本，失败时自动回滚。
++ *
++ * @package Xiaojie_Page_Effects
++ */
++
++if ( ! defined( 'ABSPATH' ) ) {
++    exit;
++}
++
++if ( ! class_exists( 'XJPE_Updater' ) ) {
++    final class XJPE_Updater {
++        const TRANSIENT_KEY = 'xjpe_remote_update_info';
++        const TRANSIENT_TTL = 6 * HOUR_IN_SECONDS;
++
++        const DEFAULT_GITHUB_OWNER  = 'nljie1103';
++        const DEFAULT_GITHUB_REPO   = 'wp-page-effects';
++        const DEFAULT_GITHUB_BRANCH = 'main';
++        const DEFAULT_MAIN_FILE     = 'wp-page-effects.php';
++
++        private static $instance = null;
++        private $plugin_file;
++        private $plugin_dir;
++
++        public static function instance( $plugin_file ) {
++            if ( null === self::$instance ) {
++                self::$instance = new self( $plugin_file );
++            }
++            return self::$instance;
++        }
++
++        private function __construct( $plugin_file ) {
++            $this->plugin_file = $plugin_file;
++            $this->plugin_dir  = untrailingslashit( plugin_dir_path( $plugin_file ) );
++
++            add_action( 'wp_ajax_xjpe_check_update', array( $this, 'ajax_check_update' ) );
++            add_action( 'wp_ajax_xjpe_do_update', array( $this, 'ajax_do_update' ) );
++        }
++
++        public function ajax_check_update() {
++            check_ajax_referer( 'xjpe_admin_nonce', 'nonce' );
++
++            if ( ! current_user_can( 'update_plugins' ) ) {
++                wp_send_json_error( array( 'message' => '权限不足。' ) );
++            }
++
++            $force = ! empty( $_POST['force'] );
++            $info  = $this->fetch_remote_info( $force );
++
++            if ( ! empty( $info['error'] ) ) {
++                wp_send_json_error( array( 'message' => $info['error'] ) );
++            }
++
++            $has_update = ! empty( $info['latest_version'] ) && version_compare( $info['latest_version'], XJPE_Plugin::VERSION, '>' );
++
++            wp_send_json_success(
++                array(
++                    'current_version' => XJPE_Plugin::VERSION,
++                    'latest_version'  => $info['latest_version'],
++                    'has_update'      => (bool) $has_update,
++                    'changelog'       => isset( $info['changelog'] ) ? $info['changelog'] : '',
++                    'checked_at'      => isset( $info['checked_at'] ) ? (int) $info['checked_at'] : time(),
++                    'message'         => $has_update ? '检测到新版本 v' . $info['latest_version'] . '，可一键更新。' : '当前已是最新版本。',
++                )
++            );
++        }
++
++        public function ajax_do_update() {
++            check_ajax_referer( 'xjpe_admin_nonce', 'nonce' );
++
++            if ( ! current_user_can( 'update_plugins' ) ) {
++                wp_send_json_error( array( 'message' => '权限不足。' ) );
++            }
++
++            $result = $this->run_update();
++
++            if ( ! empty( $result['success'] ) ) {
++                delete_transient( self::TRANSIENT_KEY );
++                wp_send_json_success( $result );
++            }
++
++            wp_send_json_error( $result );
++        }
++
++        public function fetch_remote_info( $force = false ) {
++            $settings = $this->get_update_settings();
++            if ( empty( $settings['enabled'] ) ) {
++                return $this->error_info( '在线更新已关闭。' );
++            }
++
++            $source_key = md5( wp_json_encode( $settings ) );
++            if ( ! $force ) {
++                $cached = get_transient( self::TRANSIENT_KEY );
++                if ( is_array( $cached ) && isset( $cached['source_key'] ) && hash_equals( $source_key, (string) $cached['source_key'] ) ) {
++                    return $cached;
++                }
++            }
++
++            $response = wp_remote_get(
++                $this->raw_main_url( $settings ),
++                array(
++                    'timeout'     => 15,
++                    'redirection' => 5,
++                    'user-agent'  => 'WP-Page-Effects-Updater/' . XJPE_Plugin::VERSION . '; ' . home_url( '/' ),
++                    'headers'     => array(
++                        'Accept'        => 'text/plain',
++                        'Cache-Control' => 'no-cache',
++                    ),
++                )
++            );
++
++            if ( is_wp_error( $response ) ) {
++                return $this->error_info( $response->get_error_message() );
++            }
++
++            $code = wp_remote_retrieve_response_code( $response );
++            $body = wp_remote_retrieve_body( $response );
++            if ( $code < 200 || $code >= 300 ) {
++                return $this->error_info( '远程 HTTP ' . (int) $code );
++            }
++            if ( ! is_string( $body ) || '' === trim( $body ) ) {
++                return $this->error_info( '远程主插件文件为空。' );
++            }
++
++            $latest = $this->parse_version_from_string( $body );
++            if ( '' === $latest ) {
++                return $this->error_info( '远程主插件文件没有解析到 Version。' );
++            }
++
++            $info = array(
++                'latest_version' => $latest,
++                'main_sha256'    => hash( 'sha256', $body ),
++                'changelog'      => $this->fetch_changelog_snippet( $settings ),
++                'source_key'     => $source_key,
++                'error'          => '',
++                'checked_at'     => time(),
++            );
++
++            set_transient( self::TRANSIENT_KEY, $info, self::TRANSIENT_TTL );
++            return $info;
++        }
++
++        protected function run_update() {
++            @set_time_limit( 0 );
++
++            $settings = $this->get_update_settings();
++            if ( empty( $settings['enabled'] ) ) {
++                return $this->result_error( '在线更新已关闭。' );
++            }
++
++            $info = $this->fetch_remote_info( true );
++            if ( ! empty( $info['error'] ) ) {
++                return $this->result_error( $info['error'] );
++            }
++            if ( empty( $info['latest_version'] ) || ! version_compare( $info['latest_version'], XJPE_Plugin::VERSION, '>' ) ) {
++                return $this->result_error( '没有可更新的新版本。' );
++            }
++
++            require_once ABSPATH . 'wp-admin/includes/file.php';
++
++            global $wp_filesystem;
++            if ( ! WP_Filesystem() || ! is_object( $wp_filesystem ) ) {
++                return $this->result_error( '初始化 WP_Filesystem 失败，请检查插件目录写入权限或文件系统凭据。' );
++            }
++
++            $upgrade_dir = trailingslashit( WP_CONTENT_DIR ) . 'upgrade';
++            $work_dir    = trailingslashit( $upgrade_dir ) . 'xjpe_update_' . wp_generate_uuid4();
++            $extract_dir = trailingslashit( $work_dir ) . 'extract';
++            $backup_dir  = trailingslashit( $work_dir ) . 'backup';
++
++            if ( ! $wp_filesystem->is_dir( $upgrade_dir ) && ! $wp_filesystem->mkdir( $upgrade_dir, FS_CHMOD_DIR ) ) {
++                return $this->result_error( '无法创建 wp-content/upgrade 目录。' );
++            }
++            if ( ! $wp_filesystem->mkdir( $work_dir, FS_CHMOD_DIR ) ||
++                ! $wp_filesystem->mkdir( $extract_dir, FS_CHMOD_DIR ) ||
++                ! $wp_filesystem->mkdir( $backup_dir, FS_CHMOD_DIR ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '创建更新临时目录失败。' );
++            }
++
++            $zip_path = download_url( $this->zip_url( $settings ), 60 );
++            if ( is_wp_error( $zip_path ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '下载失败：' . $zip_path->get_error_message() );
++            }
++
++            $unzipped = unzip_file( $zip_path, $extract_dir );
++            @unlink( $zip_path );
++            if ( is_wp_error( $unzipped ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '解压失败：' . $unzipped->get_error_message() );
++            }
++
++            $inner = $this->find_extracted_root( $extract_dir, $settings['main_file'] );
++            if ( ! $inner ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '未在压缩包中找到插件主文件。' );
++            }
++
++            $validation = $this->validate_package( $inner, $settings, $info );
++            if ( is_wp_error( $validation ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( $validation->get_error_message() );
++            }
++
++            $settings_snapshot = get_option( XJPE_Plugin::OPTION_NAME, array() );
++            update_option(
++                'xjpe_options_backup',
++                array(
++                    'time'     => time(),
++                    'version'  => XJPE_Plugin::VERSION,
++                    'settings' => $settings_snapshot,
++                ),
++                false
++            );
++
++            $backup_result = copy_dir( $this->plugin_dir, $backup_dir );
++            if ( is_wp_error( $backup_result ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '备份当前插件文件失败：' . $backup_result->get_error_message() );
++            }
++            if ( ! $wp_filesystem->exists( trailingslashit( $backup_dir ) . $settings['main_file'] ) ) {
++                $this->cleanup_path( $work_dir );
++                return $this->result_error( '插件文件备份不完整，更新已中止。' );
++            }
++
++            $install_result = $this->install_package( $inner );
++            if ( is_wp_error( $install_result ) ) {
++                $rollback = $this->rollback( $backup_dir, $settings_snapshot );
++                $this->cleanup_path( $work_dir );
++                $message = '安装失败：' . $install_result->get_error_message();
++                if ( is_wp_error( $rollback ) ) {
++                    $message .= '；自动回滚也失败：' . $rollback->get_error_message();
++                } else {
++                    $message .= '；已自动恢复旧版本。';
++                }
++                return $this->result_error( $message );
++            }
++
++            $installed_main = trailingslashit( $this->plugin_dir ) . $settings['main_file'];
++            $installed_version = $this->parse_version_from_file( $installed_main );
++            if ( ! file_exists( $installed_main ) || $installed_version !== $info['latest_version'] ) {
++                $rollback = $this->rollback( $backup_dir, $settings_snapshot );
++                $this->cleanup_path( $work_dir );
++                $message = '安装后的文件校验失败。';
++                if ( is_wp_error( $rollback ) ) {
++                    $message .= ' 自动回滚也失败：' . $rollback->get_error_message();
++                } else {
++                    $message .= ' 已自动恢复旧版本。';
++                }
++                return $this->result_error( $message );
++            }
++
++            $after = get_option( XJPE_Plugin::OPTION_NAME, null );
++            if ( ( ! is_array( $after ) || empty( $after ) ) && is_array( $settings_snapshot ) ) {
++                update_option( XJPE_Plugin::OPTION_NAME, $settings_snapshot, false );
++            }
++
++            $this->cleanup_path( $work_dir );
++            return array(
++                'success'     => true,
++                'message'     => '已成功更新：v' . XJPE_Plugin::VERSION . ' → v' . $installed_version . '（配置已保留，旧文件已清理）。',
++                'old_version' => XJPE_Plugin::VERSION,
++                'new_version' => $installed_version,
++            );
++        }
++
++        protected function install_package( $source_dir ) {
++            global $wp_filesystem;
++
++            if ( ! $wp_filesystem->delete( $this->plugin_dir, true ) ) {
++                return new WP_Error( 'xjpe_delete_failed', '无法清理旧插件目录。' );
++            }
++            if ( ! $wp_filesystem->mkdir( $this->plugin_dir, FS_CHMOD_DIR ) && ! $wp_filesystem->is_dir( $this->plugin_dir ) ) {
++                return new WP_Error( 'xjpe_mkdir_failed', '无法重新创建插件目录。' );
++            }
++
++            $result = copy_dir( $source_dir, $this->plugin_dir );
++            if ( is_wp_error( $result ) ) {
++                return $result;
++            }
++            return true;
++        }
++
++        protected function rollback( $backup_dir, $settings_snapshot ) {
++            global $wp_filesystem;
++
++            $wp_filesystem->delete( $this->plugin_dir, true );
++            if ( ! $wp_filesystem->mkdir( $this->plugin_dir, FS_CHMOD_DIR ) && ! $wp_filesystem->is_dir( $this->plugin_dir ) ) {
++                return new WP_Error( 'xjpe_rollback_mkdir_failed', '无法重新创建插件目录。' );
++            }
++
++            $result = copy_dir( $backup_dir, $this->plugin_dir );
++            if ( is_wp_error( $result ) ) {
++                return $result;
++            }
++
++            if ( is_array( $settings_snapshot ) ) {
++                update_option( XJPE_Plugin::OPTION_NAME, $settings_snapshot, false );
++            }
++            return true;
++        }
++
++        protected function validate_package( $root, $settings, $info ) {
++            $main = trailingslashit( $root ) . $settings['main_file'];
++            if ( ! file_exists( $main ) || ! is_readable( $main ) ) {
++                return new WP_Error( 'xjpe_missing_main', '压缩包内主插件文件缺失或不可读。' );
++            }
++
++            $new_version = $this->parse_version_from_file( $main );
++            if ( '' === $new_version ) {
++                return new WP_Error( 'xjpe_missing_version', '新版本主文件没有 Version 头。' );
++            }
++            if ( $new_version !== $info['latest_version'] ) {
++                return new WP_Error( 'xjpe_version_mismatch', '压缩包版本与远程主文件版本不一致，更新中止。' );
++            }
++            if ( ! version_compare( $new_version, XJPE_Plugin::VERSION, '>' ) ) {
++                return new WP_Error( 'xjpe_not_newer', '下载到的版本不高于当前版本。' );
++            }
++
++            $main_hash = hash_file( 'sha256', $main );
++            if ( empty( $info['main_sha256'] ) || ! is_string( $main_hash ) || ! hash_equals( $info['main_sha256'], $main_hash ) ) {
++                return new WP_Error( 'xjpe_hash_mismatch', '压缩包主文件与远程版本文件校验值不一致。' );
++            }
++
++            $required = array(
++                'assets/css/frontend.css',
++                'assets/js/frontend.js',
++                'assets/css/admin.css',
++                'assets/js/admin.js',
++                'includes/class-xjpe-updater.php',
++                'readme.txt',
++                'uninstall.php',
++            );
++            foreach ( $required as $relative ) {
++                if ( ! file_exists( trailingslashit( $root ) . $relative ) ) {
++                    return new WP_Error( 'xjpe_incomplete_package', '更新包缺少必要文件：' . $relative );
++                }
++            }
++
++            return true;
++        }
++
++        protected function fetch_changelog_snippet( $settings ) {
++            $response = wp_remote_get(
++                $this->raw_readme_url( $settings ),
++                array(
++                    'timeout'     => 12,
++                    'redirection' => 5,
++                    'user-agent'  => 'WP-Page-Effects-Updater/' . XJPE_Plugin::VERSION,
++                )
++            );
++
++            if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
++                return '';
++            }
++
++            $body = wp_remote_retrieve_body( $response );
++            if ( ! is_string( $body ) || '' === $body ) {
++                return '';
++            }
++
++            if ( preg_match( '/==\s*Changelog\s*==\s*(.+?)(\n==\s|\z)/su', $body, $match ) ) {
++                $snippet = trim( $match[1] );
++                if ( strlen( $snippet ) > 2000 ) {
++                    $snippet = substr( $snippet, 0, 2000 ) . "\n…";
++                }
++                return $snippet;
++            }
++
++            return '';
++        }
++
++        protected function get_update_settings() {
++            $defaults = array(
++                'enabled'      => 1,
++                'github_owner' => self::DEFAULT_GITHUB_OWNER,
++                'github_repo'  => self::DEFAULT_GITHUB_REPO,
++                'branch'       => self::DEFAULT_GITHUB_BRANCH,
++                'main_file'    => self::DEFAULT_MAIN_FILE,
++                'zip_url'      => '',
++            );
++
++            $saved = get_option( XJPE_Plugin::OPTION_NAME, array() );
++            $input = isset( $saved['update'] ) && is_array( $saved['update'] ) ? $saved['update'] : array();
++            $settings = array_merge( $defaults, $input );
++
++            $settings['enabled']      = empty( $settings['enabled'] ) ? 0 : 1;
++            $settings['github_owner'] = preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) $settings['github_owner'] ) ?: self::DEFAULT_GITHUB_OWNER;
++            $settings['github_repo']  = preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) $settings['github_repo'] ) ?: self::DEFAULT_GITHUB_REPO;
++            $settings['branch']       = trim( str_replace( '..', '', preg_replace( '/[^a-zA-Z0-9_.\/-]/', '', (string) $settings['branch'] ) ), '/' );
++            $settings['main_file']    = ltrim( str_replace( '..', '', preg_replace( '/[^a-zA-Z0-9_.\/-]/', '', (string) $settings['main_file'] ) ), '/' );
++            $settings['zip_url']      = esc_url_raw( (string) $settings['zip_url'] );
++
++            if ( '' === $settings['branch'] ) {
++                $settings['branch'] = self::DEFAULT_GITHUB_BRANCH;
++            }
++            if ( '' === $settings['main_file'] ) {
++                $settings['main_file'] = self::DEFAULT_MAIN_FILE;
++            }
++            return $settings;
++        }
++
++        protected function raw_main_url( $settings ) {
++            return sprintf(
++                'https://raw.githubusercontent.com/%s/%s/%s/%s',
++                rawurlencode( $settings['github_owner'] ),
++                rawurlencode( $settings['github_repo'] ),
++                $this->encode_path( $settings['branch'] ),
++                $this->encode_path( $settings['main_file'] )
++            );
++        }
++
++        protected function raw_readme_url( $settings ) {
++            return sprintf(
++                'https://raw.githubusercontent.com/%s/%s/%s/readme.txt',
++                rawurlencode( $settings['github_owner'] ),
++                rawurlencode( $settings['github_repo'] ),
++                $this->encode_path( $settings['branch'] )
++            );
++        }
++
++        protected function zip_url( $settings ) {
++            if ( ! empty( $settings['zip_url'] ) && 'https' === wp_parse_url( $settings['zip_url'], PHP_URL_SCHEME ) ) {
++                return $settings['zip_url'];
++            }
++            return sprintf(
++                'https://github.com/%s/%s/archive/refs/heads/%s.zip',
++                rawurlencode( $settings['github_owner'] ),
++                rawurlencode( $settings['github_repo'] ),
++                $this->encode_path( $settings['branch'] )
++            );
++        }
++
++        protected function encode_path( $path ) {
++            return implode( '/', array_map( 'rawurlencode', explode( '/', trim( (string) $path, '/' ) ) ) );
++        }
++
++        protected function find_extracted_root( $tmp_dir, $main_file ) {
++            $tmp_dir = untrailingslashit( $tmp_dir );
++            $direct  = trailingslashit( $tmp_dir ) . $main_file;
++            if ( file_exists( $direct ) ) {
++                return $tmp_dir;
++            }
++
++            try {
++                $iterator = new RecursiveIteratorIterator(
++                    new RecursiveDirectoryIterator( $tmp_dir, FilesystemIterator::SKIP_DOTS ),
++                    RecursiveIteratorIterator::SELF_FIRST
++                );
++                foreach ( $iterator as $item ) {
++                    if ( ! $item->isDir() || $iterator->getDepth() > 2 ) {
++                        continue;
++                    }
++                    $candidate = trailingslashit( $item->getPathname() ) . $main_file;
++                    if ( file_exists( $candidate ) ) {
++                        return $item->getPathname();
++                    }
++                }
++            } catch ( UnexpectedValueException $exception ) {
++                return false;
++            }
++
++            return false;
++        }
++
++        protected function parse_version_from_file( $file ) {
++            if ( ! file_exists( $file ) || ! is_readable( $file ) ) {
++                return '';
++            }
++            $head = file_get_contents( $file, false, null, 0, 8192 );
++            return is_string( $head ) ? $this->parse_version_from_string( $head ) : '';
++        }
++
++        protected function parse_version_from_string( $content ) {
++            if ( preg_match( '/^[ \t\/*#@]*Version:\s*([0-9A-Za-z\.\-_+]+)/mi', (string) $content, $match ) ) {
++                return trim( $match[1] );
++            }
++            return '';
++        }
++
++        protected function cleanup_path( $path ) {
++            global $wp_filesystem;
++            if ( is_object( $wp_filesystem ) ) {
++                $wp_filesystem->delete( $path, true );
++            }
++        }
++
++        protected function error_info( $message ) {
++            return array(
++                'latest_version' => '',
++                'main_sha256'    => '',
++                'changelog'      => '',
++                'source_key'     => '',
++                'error'          => (string) $message,
++                'checked_at'     => time(),
++            );
++        }
++
++        protected function result_error( $message ) {
++            return array(
++                'success' => false,
++                'message' => (string) $message,
++            );
++        }
++    }
++}
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/uninstall.php /tmp/jiuliu-suite-diff/wp-page-effects/uninstall.php
+--- modules/page-effects/uninstall.php	2026-08-04 09:41:38.206358759 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/uninstall.php	2026-08-04 09:41:38.623087459 +0000
+@@ -8,3 +8,5 @@
+ }
+ 
+ delete_option( 'xjpe_options' );
++delete_option( 'xjpe_options_backup' );
++delete_transient( 'xjpe_remote_update_info' );
+diff -ruN '--exclude=.git' '--exclude=.github' '--exclude=.gitignore' '--exclude=LICENSE' '--exclude=README.md' '--exclude=readme.txt' modules/page-effects/wp-page-effects.php /tmp/jiuliu-suite-diff/wp-page-effects/wp-page-effects.php
+--- modules/page-effects/wp-page-effects.php	2026-08-04 09:41:38.206358759 +0000
++++ /tmp/jiuliu-suite-diff/wp-page-effects/wp-page-effects.php	2026-08-04 09:41:38.623087459 +0000
+@@ -3,7 +3,7 @@
+  * Plugin Name: 九流页面美化特效
+  * Plugin URI: https://github.com/nljie1103/wp-page-effects
+  * Description: 独立后台页面一键勾选樱花、雪花、灯笼、粒子、鼠标跟随、彩带、灰色模式、右键菜单、基础防查看、背景音乐和节日欢迎弹窗，支持兼容注入模式。
+- * Version: 1.5.1
++ * Version: 1.6.0
+  * Author: 九流
+  * Author URI: https://www.jiuliu.org
+  * License: GPLv2 or later
+@@ -19,9 +19,9 @@
+ 
+ if ( ! class_exists( 'XJPE_Plugin' ) ) {
+     final class XJPE_Plugin {
+-        const VERSION     = '1.5.1';
++        const VERSION     = '1.6.0';
+         const OPTION_NAME = 'xjpe_options';
+-        const MENU_SLUG   = 'jlwa-page-effects';
++        const MENU_SLUG   = 'wp-page-effects';
+ 
+         private static $instance = null;
+ 
+@@ -45,6 +45,10 @@
+             register_activation_hook( __FILE__, array( __CLASS__, 'activate' ) );
+             add_action( 'template_redirect', array( $this, 'maybe_start_buffer_injection' ), 0 );
+ 
++            if ( is_admin() ) {
++                require_once plugin_dir_path( __FILE__ ) . 'includes/class-xjpe-updater.php';
++                XJPE_Updater::instance( __FILE__ );
++            }
+         }
+ 
+         public static function activate() {
+@@ -76,6 +80,14 @@
+                 $merged['compat']['load_location'] = 'head';
+                 $merged['global']['respect_reduce_motion'] = 0;
+             }
++            if ( version_compare( $old_version, '1.6.0', '<' ) ) {
++                // 旧版设置页没有提交 update 字段，保存时可能误把在线更新开关写成关闭。
++                $merged['update']['enabled'] = 1;
++                $merged['update']['github_owner'] = 'nljie1103';
++                $merged['update']['github_repo'] = 'wp-page-effects';
++                $merged['update']['branch'] = 'main';
++                $merged['update']['main_file'] = 'wp-page-effects.php';
++            }
+             update_option( self::OPTION_NAME, $merged, false );
+         }
+ 
+@@ -162,6 +174,14 @@
+                     'body_wait'     => 1,
+                     'safe_mode'     => 1,
+                 ),
++                'update' => array(
++                    'enabled'      => 1,
++                    'github_owner' => 'nljie1103',
++                    'github_repo'  => 'wp-page-effects',
++                    'branch'       => 'main',
++                    'main_file'    => 'wp-page-effects.php',
++                    'zip_url'      => '',
++                ),
+                 'effects' => array(
+                     'sakura' => array(
+                         'enabled' => 0,
+@@ -212,7 +232,7 @@
+                         'show_refresh' => 1,
+                         'show_top'     => 1,
+                         'show_back'    => 1,
+-                        'custom_items' => "首页|/\n刷新页面|#refresh\n返回顶部|#top",
++                        'custom_items' => "首页|/",
+                     ),
+                     'nosource' => array(
+                         'enabled' => 0,
+@@ -254,18 +274,6 @@
+         }
+ 
+         public function add_admin_menu() {
+-            if ( defined( 'JLWA_MENU_SLUG' ) ) {
+-                add_submenu_page(
+-                    JLWA_MENU_SLUG,
+-                    '九流页面美化',
+-                    '页面美化',
+-                    'manage_options',
+-                    self::MENU_SLUG,
+-                    array( $this, 'render_admin_page' )
+-                );
+-                return;
+-            }
+-
+             add_menu_page(
+                 '九流页面美化',
+                 '页面美化',
+@@ -341,6 +349,26 @@
+             $output['compat']['body_wait']     = empty( $compat['body_wait'] ) ? 0 : 1;
+             $output['compat']['safe_mode']     = empty( $compat['safe_mode'] ) ? 0 : 1;
+ 
++            $current_saved  = get_option( self::OPTION_NAME, array() );
++            $current_update = isset( $current_saved['update'] ) && is_array( $current_saved['update'] ) ? $current_saved['update'] : $defaults['update'];
++            $update = isset( $input['update'] ) && is_array( $input['update'] ) ? $input['update'] : $current_update;
++            $output['update']['enabled'] = empty( $update['enabled'] ) ? 0 : 1;
++
++            $owner  = preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) ( $update['github_owner'] ?? 'nljie1103' ) );
++            $repo   = preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) ( $update['github_repo'] ?? 'wp-page-effects' ) );
++            $branch = preg_replace( '/[^a-zA-Z0-9_.\/-]/', '', (string) ( $update['branch'] ?? 'main' ) );
++            $branch = trim( str_replace( '..', '', $branch ), '/' );
++
++            $main_file = isset( $update['main_file'] ) ? wp_strip_all_tags( (string) $update['main_file'] ) : 'wp-page-effects.php';
++            $main_file = preg_replace( '/[^a-zA-Z0-9_\-\.\/]/', '', $main_file );
++            $main_file = ltrim( str_replace( '..', '', $main_file ), '/' );
++
++            $output['update']['github_owner'] = $owner ?: 'nljie1103';
++            $output['update']['github_repo']  = $repo ?: 'wp-page-effects';
++            $output['update']['branch']       = $branch ?: 'main';
++            $output['update']['main_file']    = $main_file ?: 'wp-page-effects.php';
++            $output['update']['zip_url']      = esc_url_raw( $update['zip_url'] ?? '' );
++
+             $effects = isset( $input['effects'] ) && is_array( $input['effects'] ) ? $input['effects'] : array();
+ 
+             foreach ( $defaults['effects'] as $key => $default_effect ) {
+@@ -417,7 +445,8 @@
+ 
+         private function sanitize_custom_js( $js ) {
+             $js = is_string( $js ) ? $js : '';
+-            $js = str_replace( array( '<script', '</script' ), array( '&lt;script', '&lt;/script' ), $js );
++            // 防止自定义代码提前闭合插件生成的 script 标签，同时不破坏普通 JavaScript 语法。
++            $js = preg_replace( '#</script#i', '<\/script', $js );
+             return trim( $js );
+         }
+ 
+@@ -445,7 +474,6 @@
+             $allowed_hooks = array(
+                 'toplevel_page_' . self::MENU_SLUG,
+                 'settings_page_' . self::MENU_SLUG,
+-                defined( 'JLWA_MENU_SLUG' ) ? JLWA_MENU_SLUG . '_page_' . self::MENU_SLUG : '',
+             );
+             if ( ! in_array( $hook, $allowed_hooks, true ) ) {
+                 return;
+@@ -453,6 +481,15 @@
+ 
+             wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
+             wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
++            wp_localize_script(
++                'xjpe-admin',
++                'XJPE_ADMIN',
++                array(
++                    'ajax_url' => admin_url( 'admin-ajax.php' ),
++                    'nonce'    => wp_create_nonce( 'xjpe_admin_nonce' ),
++                    'version'  => self::VERSION,
++                )
++            );
+         }
+ 
+         public function enqueue_frontend_assets() {
+@@ -473,17 +510,13 @@
+             }
+ 
+             $config = $this->frontend_config( $options );
+-
+             wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), self::VERSION );
+-            if ( ! empty( $options['global']['custom_css'] ) ) {
+-                wp_add_inline_style( 'xjpe-frontend', $options['global']['custom_css'] );
+-            }
+ 
+             $in_footer = isset( $options['compat']['load_location'] ) && 'footer' === $options['compat']['load_location'];
+             wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, $in_footer );
+-            wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config ) . ';', 'before' );
++            wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
+             if ( ! empty( $options['global']['custom_js'] ) ) {
+-                wp_add_inline_script( 'xjpe-frontend', "\ntry {\n" . $options['global']['custom_js'] . "\n} catch(e) { console.warn('XJPE custom JS error:', e); }\n", 'after' );
++                wp_add_inline_script( 'xjpe-frontend', $this->custom_js_wrapper( $options['global']['custom_js'] ), 'after' );
+             }
+         }
+ 
+@@ -500,9 +533,6 @@
+             if ( empty( $options['global']['enabled'] ) ) {
+                 return false;
+             }
+-            if ( empty( $options['global']['mobile_enabled'] ) && wp_is_mobile() ) {
+-                return false;
+-            }
+             return $this->has_enabled_effect_or_code( $options );
+         }
+ 
+@@ -535,8 +565,14 @@
+             if ( false === stripos( $html, '<html' ) && false === stripos( $html, '<!doctype' ) ) {
+                 return $html;
+             }
+-            $options = $this->get_options();
+-            $assets  = $this->direct_assets_html( $options );
++
++            $options  = $this->get_options();
++            $assets   = $this->direct_assets_html( $options );
++            $location = isset( $options['compat']['load_location'] ) ? $options['compat']['load_location'] : 'head';
++
++            if ( 'footer' === $location && false !== stripos( $html, '</body>' ) ) {
++                return preg_replace( '/<\/body>/i', $assets . "\n</body>", $html, 1 );
++            }
+             if ( false !== stripos( $html, '</head>' ) ) {
+                 return preg_replace( '/<\/head>/i', $assets . "\n</head>", $html, 1 );
+             }
+@@ -547,22 +583,23 @@
+         }
+ 
+         private function direct_assets_html( $options ) {
+-            $config   = $this->frontend_config( $options );
+-            $css_url  = plugins_url( 'assets/css/frontend.css', __FILE__ );
+-            $js_url   = plugins_url( 'assets/js/frontend.js', __FILE__ );
+-            $html     = "\n<!-- 九流页面美化特效 v" . esc_html( self::VERSION ) . " -->\n";
+-            $html    .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
+-            if ( ! empty( $options['global']['custom_css'] ) ) {
+-                $html .= '<style id="xjpe-custom-css">' . "\n" . $options['global']['custom_css'] . "\n</style>\n";
+-            }
+-            $html .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . wp_json_encode( $config ) . ';</script>' . "\n";
+-            $html .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
++            $config_json = wp_json_encode( $this->frontend_config( $options ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
++            $css_url     = plugins_url( 'assets/css/frontend.css', __FILE__ );
++            $js_url      = plugins_url( 'assets/js/frontend.js', __FILE__ );
++            $html        = "\n<!-- 九流页面美化特效 v" . esc_html( self::VERSION ) . " -->\n";
++            $html       .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
++            $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
++            $html       .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
+             if ( ! empty( $options['global']['custom_js'] ) ) {
+-                $html .= '<script id="xjpe-custom-js">try {' . "\n" . $options['global']['custom_js'] . "\n" . '} catch(e) { console.warn("XJPE custom JS error:", e); }</script>' . "\n";
++                $html .= '<script id="xjpe-custom-js">' . $this->custom_js_wrapper( $options['global']['custom_js'] ) . '</script>' . "\n";
+             }
+             return $html;
+         }
+ 
++        private function custom_js_wrapper( $js ) {
++            return "(function(run){var execute=function(){if(window.XJPE_DISABLED){return;}run();};if(window.XJPE_READY){execute();}else{document.addEventListener('xjpe:ready',execute,{once:true});}})(function(){try{\n" . $js . "\n}catch(e){console.warn('XJPE custom JS error:',e);}});";
++        }
++
+         private function has_enabled_effect_or_code( $options ) {
+             foreach ( $options['effects'] as $effect ) {
+                 if ( ! empty( $effect['enabled'] ) ) {
+@@ -575,6 +612,7 @@
+         private function frontend_config( $options ) {
+             if ( $this->is_preview_request() ) {
+                 $options['global']['enabled'] = 1;
++                $options['global']['mobile_enabled'] = 1;
+                 $options['global']['respect_reduce_motion'] = 0;
+                 foreach ( array( 'sakura', 'snow', 'lantern', 'cursor', 'ribbon', 'welcome' ) as $preview_effect ) {
+                     if ( isset( $options['effects'][ $preview_effect ] ) ) {
+@@ -591,6 +629,8 @@
+                 'global'  => array(
+                     'zIndex'              => (int) $options['global']['z_index'],
+                     'respectReduceMotion' => ! empty( $options['global']['respect_reduce_motion'] ),
++                    'mobileEnabled'       => ! empty( $options['global']['mobile_enabled'] ),
++                    'customCss'           => (string) $options['global']['custom_css'],
+                     'homeUrl'             => home_url( '/' ),
+                     'preview'             => $this->is_preview_request(),
+                 ),
+@@ -612,25 +652,33 @@
+         }
+ 
+         private function is_preview_request() {
+-            return isset( $_GET['xjpe_preview'] ) && '1' === (string) $_GET['xjpe_preview']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
++            if ( ! isset( $_GET['xjpe_preview'], $_GET['_xjpe_nonce'] ) || '1' !== (string) $_GET['xjpe_preview'] ) {
++                return false;
++            }
++            if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
++                return false;
++            }
++            return (bool) wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_xjpe_nonce'] ) ), 'xjpe_preview' );
++        }
++
++        private function preview_url() {
++            return add_query_arg(
++                array(
++                    'xjpe_preview' => '1',
++                    '_xjpe_nonce'  => wp_create_nonce( 'xjpe_preview' ),
++                ),
++                home_url( '/' )
++            );
+         }
++
+         public function render_admin_page() {
+             if ( ! current_user_can( 'manage_options' ) ) {
+                 return;
+             }
+ 
+-            $options = $this->get_options();
+-            $defs    = self::effect_definitions();
+-            $tab     = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'basic'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+-            $tabs    = array(
+-                'basic'       => '基础设置',
+-                'effects'     => '特效管理',
+-                'custom-code' => '自定义代码',
+-                'diagnostics' => '前台诊断',
+-            );
+-            if ( ! isset( $tabs[ $tab ] ) ) {
+-                $tab = 'basic';
+-            }
++            $options     = $this->get_options();
++            $defs        = self::effect_definitions();
++            $preview_url = $this->preview_url();
+             ?>
+             <div class="wrap xjpe-wrap">
+                 <div class="jiuliu-admin-header">
+@@ -643,12 +691,7 @@
+                 <?php if ( isset( $_GET['xjpe_saved'] ) && '1' === $_GET['xjpe_saved'] ) : ?>
+                     <div class="notice notice-success inline"><p><strong>配置已保存。</strong> 请刷新前台页面，或点击“打开前台预览”测试特效。</p></div>
+                 <?php endif; ?>
+-
+-                <h2 class="nav-tab-wrapper xjpe-tabs">
+-                    <?php foreach ( $tabs as $key => $label ) : ?>
+-                        <a class="nav-tab <?php echo $tab === $key ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=' . $key ) ); ?>"><?php echo esc_html( $label ); ?></a>
+-                    <?php endforeach; ?>
+-                </h2>
++                <div id="xjpe-context-conflict" class="notice notice-warning inline" <?php echo ( ! empty( $options['effects']['contextmenu']['enabled'] ) && ! empty( $options['effects']['nosource']['enabled'] ) ) ? '' : 'hidden'; ?>><p><strong>功能冲突：</strong>“基础防查看”会接管右键事件，因此同时启用时“右键美化”不会显示。</p></div>
+ 
+                 <form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>" class="xjpe-form" id="xjpe-settings-form">
+                     <input type="hidden" name="xjpe_direct_save" value="1">
+@@ -657,105 +700,127 @@
+ 
+                     <div class="xjpe-savebar">
+                         <button type="submit" class="button button-primary button-hero">保存美化配置</button>
+-                        <a class="button button-hero" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">不保存，直接测试前台特效</a>
++                        <a class="button button-hero" href="<?php echo esc_url( $preview_url ); ?>" target="_blank" rel="noopener">不保存，直接测试前台特效</a>
+                         <span class="xjpe-savebar-note">保存后页面会返回并显示“配置已保存”，不会悄悄无反应。</span>
+                     </div>
+ 
+-                    <div class="xjpe-tab-panel <?php echo 'basic' === $tab ? 'is-active' : ''; ?>">
+-                        <section class="xjpe-panel xjpe-global-panel">
+-                            <div>
+-                                <h2>基础设置</h2>
+-                                <p>控制插件是否加载、移动端策略和全站层级。</p>
+-                            </div>
+-                            <div class="xjpe-global-grid">
+-                                <?php $this->render_checkbox( 'global', 'enabled', '启用插件总开关', $options['global']['enabled'] ); ?>
+-                                <?php $this->render_checkbox( 'global', 'mobile_enabled', '手机端也启用', $options['global']['mobile_enabled'] ); ?>
+-                                <?php $this->render_checkbox( 'global', 'respect_reduce_motion', '尊重系统减少动态效果', $options['global']['respect_reduce_motion'] ); ?>
+-                                <label class="xjpe-field">
+-                                    <span>层级 z-index</span>
+-                                    <input type="number" min="1000" max="2147483000" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][z_index]" value="<?php echo esc_attr( $options['global']['z_index'] ); ?>">
++                    <section class="xjpe-panel xjpe-global-panel">
++                        <div>
++                            <h2>全局设置</h2>
++                            <p>控制插件是否加载、是否在手机端启用、是否尊重系统减少动态效果。</p>
++                        </div>
++                        <div class="xjpe-global-grid">
++                            <?php $this->render_checkbox( 'global', 'enabled', '启用插件总开关', $options['global']['enabled'] ); ?>
++                            <?php $this->render_checkbox( 'global', 'mobile_enabled', '手机端也启用', $options['global']['mobile_enabled'] ); ?>
++                            <?php $this->render_checkbox( 'global', 'respect_reduce_motion', '尊重系统减少动态效果', $options['global']['respect_reduce_motion'] ); ?>
++                            <label class="xjpe-field">
++                                <span>层级 z-index</span>
++                                <input type="number" min="1000" max="2147483000" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][z_index]" value="<?php echo esc_attr( $options['global']['z_index'] ); ?>">
++                            </label>
++                        </div>
++                    </section>
++
++                    <section class="xjpe-panel">
++                        <h2>主题兼容设置</h2>
++                        <p>美化插件默认不插入文章正文，而是使用独立的全站覆盖层，适配 Zibll、子比、Astra、Divi、Elementor、古腾堡区块主题、FSE 等大多数主题。</p>
++                        <div class="xjpe-global-grid">
++                            <label class="xjpe-field">
++                                <span>注入模式</span>
++                                <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][injection_mode]">
++                                    <option value="enqueue" <?php selected( $options['compat']['injection_mode'], 'enqueue' ); ?>>标准模式：WordPress 队列加载，推荐正常主题</option>
++                                    <option value="head_footer" <?php selected( $options['compat']['injection_mode'], 'head_footer' ); ?>>强制钩子模式：直接输出资源，适合魔改主题</option>
++                                    <option value="buffer" <?php selected( $options['compat']['injection_mode'], 'buffer' ); ?>>终极兼容模式：HTML 缓冲注入，适合缺失 wp_head/wp_footer 的主题</option>
++                                </select>
++                            </label>
++                            <label class="xjpe-field">
++                                <span>前台 JS 加载位置</span>
++                                <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][load_location]">
++                                    <option value="head" <?php selected( $options['compat']['load_location'], 'head' ); ?>>头部加载：兼容优先</option>
++                                    <option value="footer" <?php selected( $options['compat']['load_location'], 'footer' ); ?>>页脚加载：性能优先</option>
++                                </select>
++                            </label>
++                            <?php $this->render_checkbox( 'compat', 'body_wait', '等待 DOM 完成后再创建特效层', $options['compat']['body_wait'] ); ?>
++                            <?php $this->render_checkbox( 'compat', 'safe_mode', '安全模式：特效层默认不拦截鼠标点击', $options['compat']['safe_mode'] ); ?>
++                        </div>
++                        <p class="xjpe-tip">兼容原则：不用 the_content，不依赖主题文章容器，不修改主题文件；如果标准模式无效，改成“强制钩子模式”，再不行改成“终极兼容模式”。</p>
++                    </section>
++
++                    <div class="xjpe-toolbar">
++                        <button type="button" class="button" data-xjpe-enable-all>全部启用</button>
++                        <button type="button" class="button" data-xjpe-disable-all>全部关闭</button>
++                        <a class="button" href="<?php echo esc_url( $preview_url ); ?>" target="_blank" rel="noopener">打开前台预览</a>
++                    </div>
++
++                    <section class="xjpe-effects-grid">
++                        <?php foreach ( $defs as $key => $def ) : ?>
++                            <?php $effect = $options['effects'][ $key ]; ?>
++                            <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card>
++                                <label class="xjpe-card-head">
++                                    <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?>>
++                                    <span class="xjpe-icon"><?php echo esc_html( $def['icon'] ); ?></span>
++                                    <span class="xjpe-card-text">
++                                        <strong><?php echo esc_html( $def['title'] ); ?></strong>
++                                        <small><?php echo esc_html( $def['desc'] ); ?></small>
++                                        <em class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '● 已启用' : '○ 未启用'; ?></em>
++                                    </span>
+                                 </label>
++                                <div class="xjpe-card-body">
++                                    <?php $this->render_effect_fields( $key, $effect ); ?>
++                                </div>
++                            </article>
++                        <?php endforeach; ?>
++                    </section>
++
++                    <section class="xjpe-panel xjpe-update-panel" id="xjpe-update-panel">
++                        <h2>在线更新</h2>
++                        <p>这一块已经按 <strong>WP-AI-Article-Summary</strong> 的方式重做：固定从 GitHub 仓库读取主插件文件 Version，读取 readme.txt 变更日志，下载并校验 GitHub 分支 ZIP，完整备份当前插件目录和配置，清理旧文件后安装；任何步骤失败都会自动回滚。</p>
++
++                        <div class="xjpe-update-card">
++                            <div class="xjpe-update-main">
++                                <div class="xjpe-version-badge">
++                                    <span>当前版本</span>
++                                    <strong>v<?php echo esc_html( self::VERSION ); ?></strong>
++                                </div>
++                                <div class="xjpe-version-source">
++                                    <strong>更新源</strong>
++                                    <code>github.com/nljie1103/wp-page-effects</code>
++                                    <small>主文件：<code>wp-page-effects.php</code>；分支：<code>main</code></small>
++                                </div>
+                             </div>
+-                        </section>
+ 
+-                        <section class="xjpe-panel">
+-                            <h2>主题兼容设置</h2>
+-                            <p>不插入文章正文，而是使用独立的全站覆盖层，适配 Zibll、Astra、Divi、Elementor、FSE 等主题。</p>
+-                            <div class="xjpe-global-grid">
+-                                <label class="xjpe-field">
+-                                    <span>注入模式</span>
+-                                    <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][injection_mode]">
+-                                        <option value="enqueue" <?php selected( $options['compat']['injection_mode'], 'enqueue' ); ?>>标准模式：WordPress 队列加载，推荐正常主题</option>
+-                                        <option value="head_footer" <?php selected( $options['compat']['injection_mode'], 'head_footer' ); ?>>强制钩子模式：直接输出资源，适合魔改主题</option>
+-                                        <option value="buffer" <?php selected( $options['compat']['injection_mode'], 'buffer' ); ?>>终极兼容模式：HTML 缓冲注入，适合缺失 wp_head/wp_footer 的主题</option>
+-                                    </select>
+-                                </label>
+-                                <label class="xjpe-field">
+-                                    <span>前台 JS 加载位置</span>
+-                                    <select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[compat][load_location]">
+-                                        <option value="head" <?php selected( $options['compat']['load_location'], 'head' ); ?>>头部加载：兼容优先</option>
+-                                        <option value="footer" <?php selected( $options['compat']['load_location'], 'footer' ); ?>>页脚加载：性能优先</option>
+-                                    </select>
+-                                </label>
+-                                <?php $this->render_checkbox( 'compat', 'body_wait', '等待 DOM 完成后再创建特效层', $options['compat']['body_wait'] ); ?>
+-                                <?php $this->render_checkbox( 'compat', 'safe_mode', '安全模式：特效层默认不拦截鼠标点击', $options['compat']['safe_mode'] ); ?>
++                            <div class="xjpe-toolbar xjpe-update-actions">
++                                <button type="button" class="button" id="xjpe-check-update">检查更新</button>
++                                <button type="button" class="button button-primary" id="xjpe-do-update" disabled>立即更新</button>
++                                <a class="button" href="https://github.com/nljie1103/wp-page-effects" target="_blank" rel="noopener noreferrer">打开 GitHub 仓库</a>
+                             </div>
+-                            <p class="xjpe-tip">如果标准模式无效，改成“强制钩子模式”，再不行改成“终极兼容模式”。</p>
+-                        </section>
+-                    </div>
+ 
+-                    <div class="xjpe-tab-panel <?php echo 'effects' === $tab ? 'is-active' : ''; ?>">
+-                        <div class="xjpe-toolbar">
+-                            <button type="button" class="button" data-xjpe-enable-all>全部启用</button>
+-                            <button type="button" class="button" data-xjpe-disable-all>全部关闭</button>
+-                            <a class="button" href="<?php echo esc_url( home_url( '/?xjpe_preview=1' ) ); ?>" target="_blank" rel="noopener">打开前台预览</a>
++                            <div id="xjpe-update-result" class="xjpe-update-result">当前版本：v<?php echo esc_html( self::VERSION ); ?>。点击“检查更新”后会显示远程版本。</div>
++                            <pre id="xjpe-update-log" class="xjpe-update-log" hidden></pre>
+                         </div>
+ 
+-                        <section class="xjpe-effects-grid">
+-                            <?php foreach ( $defs as $key => $def ) : ?>
+-                                <?php $effect = $options['effects'][ $key ]; ?>
+-                                <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card>
+-                                    <label class="xjpe-card-head">
+-                                        <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?>>
+-                                        <span class="xjpe-icon"><?php echo esc_html( $def['icon'] ); ?></span>
+-                                        <span class="xjpe-card-text">
+-                                            <strong><?php echo esc_html( $def['title'] ); ?></strong>
+-                                            <small><?php echo esc_html( $def['desc'] ); ?></small>
+-                                            <em class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '● 已启用' : '○ 未启用'; ?></em>
+-                                        </span>
+-                                    </label>
+-                                    <div class="xjpe-card-body">
+-                                        <?php $this->render_effect_fields( $key, $effect ); ?>
+-                                    </div>
+-                                </article>
+-                            <?php endforeach; ?>
+-                        </section>
+-                    </div>
++                        <p class="xjpe-tip">说明：后台更新不会修改文章或清空特效配置；更新前会备份完整插件文件并保存 <code>xjpe_options</code> 快照，安装失败时自动恢复。以后只要把新版代码推送到 GitHub，并提升插件头部 <code>Version</code>，这里就能检测到。</p>
++                    </section>
+ 
+-                    <div class="xjpe-tab-panel <?php echo 'custom-code' === $tab ? 'is-active' : ''; ?>">
+-                        <section class="xjpe-panel">
+-                            <h2>自定义代码注入</h2>
+-                            <p>只有管理员能填写。用于补充你自己的全站 CSS / JS；不填写就不加载。</p>
+-                            <div class="xjpe-code-grid">
+-                                <label class="xjpe-field xjpe-code-field">
+-                                    <span>自定义 CSS</span>
+-                                    <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_css]" rows="8" spellcheck="false" placeholder="body { } ..."><?php echo esc_textarea( $options['global']['custom_css'] ); ?></textarea>
+-                                </label>
+-                                <label class="xjpe-field xjpe-code-field">
+-                                    <span>自定义 JS</span>
+-                                    <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_js]" rows="8" spellcheck="false" placeholder="console.log('hello');"><?php echo esc_textarea( $options['global']['custom_js'] ); ?></textarea>
+-                                </label>
+-                            </div>
+-                        </section>
+-                    </div>
++                    <section class="xjpe-panel">
++                        <h2>自定义代码注入</h2>
++                        <p>只有管理员能填写。用于补充你自己的全站 CSS / JS；不填写就不加载。</p>
++                        <div class="xjpe-code-grid">
++                            <label class="xjpe-field xjpe-code-field">
++                                <span>自定义 CSS</span>
++                                <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_css]" rows="8" spellcheck="false" placeholder="body { } ..."><?php echo esc_textarea( $options['global']['custom_css'] ); ?></textarea>
++                            </label>
++                            <label class="xjpe-field xjpe-code-field">
++                                <span>自定义 JS</span>
++                                <textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[global][custom_js]" rows="8" spellcheck="false" placeholder="console.log('hello');"><?php echo esc_textarea( $options['global']['custom_js'] ); ?></textarea>
++                            </label>
++                        </div>
++                    </section>
+ 
+-                    <div class="xjpe-tab-panel <?php echo 'diagnostics' === $tab ? 'is-active' : ''; ?>">
+-                        <section class="xjpe-panel">
+-                            <h2>前台诊断</h2>
+-                            <p>保存后打开前台源代码，搜索 <code>九流页面美化特效</code> 或 <code>xjpe-frontend-js</code>。能搜到说明插件已经注入；看不到则把注入模式改成“终极兼容模式”。</p>
+-                            <p class="xjpe-tip">当前注入模式：<strong><?php echo esc_html( $options['compat']['injection_mode'] ); ?></strong>；当前已启用特效：<strong><?php echo esc_html( $this->enabled_effect_names( $options, $defs ) ); ?></strong></p>
+-                        </section>
+-                    </div>
++                    <section class="xjpe-panel">
++                        <h2>前台诊断</h2>
++                        <p>保存后打开前台源代码，搜索 <code>九流页面美化特效</code> 或 <code>xjpe-frontend-js</code>。能搜到说明插件已经注入；看不到则把注入模式改成“终极兼容模式”。</p>
++                        <p class="xjpe-tip">当前注入模式：<strong><?php echo esc_html( $options['compat']['injection_mode'] ); ?></strong>；当前已启用特效：<strong><?php echo esc_html( $this->enabled_effect_names( $options, $defs ) ); ?></strong></p>
++                    </section>
+ 
+                     <?php submit_button( '保存美化配置' ); ?>
+                 </form>
