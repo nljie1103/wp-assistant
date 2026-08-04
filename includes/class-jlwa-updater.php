@@ -287,15 +287,17 @@ class JLWA_Updater {
 
 		$required = array(
 			'assets/css/admin.css',
+			'assets/css/admin-content.css',
 			'assets/js/admin.js',
+			'assets/js/admin-content.js',
 			'includes/class-jlwa-admin.php',
-			'includes/class-jlwa-module-loader.php',
+			'includes/class-jlwa-feature-registry.php',
 			'includes/class-jlwa-updater.php',
-			'modules/page-effects/wp-page-effects.php',
-			'modules/page-effects/assets/js/frontend.js',
-			'modules/relative-media-urls/jiuliu-relative-media-urls.php',
-			'modules/ai-article-summary/wp-ai-article-summary.php',
-			'modules/immersive-preloader/jiuliu-immersive-preloader.php',
+			'features/page-effects/bootstrap.php',
+			'features/page-effects/assets/js/frontend.js',
+			'features/relative-media-urls/bootstrap.php',
+			'features/ai-article-summary/bootstrap.php',
+			'features/immersive-preloader/bootstrap.php',
 			'readme.txt',
 			'uninstall.php',
 		);

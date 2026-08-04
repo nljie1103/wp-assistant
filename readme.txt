@@ -4,7 +4,7 @@ Tags: wordpress, ai summary, media urls, effects, preloader
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.0.1
+Stable tag: 2.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,6 +37,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.0.2 =
+* 修复 2.0.0/2.0.1 后台更新仍按旧 modules 架构校验，导致无法在线升级的问题。
+* 更新包改为校验 2.x 的 features 架构、统一内容样式和中央注册表。
+* 增加仅用于跨架构升级的空兼容占位文件；不会注册插件、不会执行旧模块。
 
 = 2.0.1 =
 * 修复功能页旧资源 hook 不匹配导致的正文无样式问题。
