@@ -48,27 +48,7 @@ class JIP_Admin {
 	 * 期望位置：外观（60）和插件（65）之间，使用 61.5 让它落在中间。
 	 */
 	public function register_menu() {
-		if ( defined( 'JLWA_MENU_SLUG' ) ) {
-			add_submenu_page(
-				JLWA_MENU_SLUG,
-				'九流沉浸式预加载',
-				'沉浸式预加载',
-				'manage_options',
-				JIP_MENU_SLUG,
-				array( $this, 'render_settings_page' )
-			);
-			return;
-		}
-
-		add_menu_page(
-			'九流沉浸式预加载',
-			'沉浸式预加载',
-			'manage_options',
-			JIP_MENU_SLUG,
-			array( $this, 'render_settings_page' ),
-			'dashicons-admin-customizer',
-			61.5
-		);
+		return;
 	}
 
 	/**

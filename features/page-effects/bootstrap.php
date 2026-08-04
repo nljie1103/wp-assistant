@@ -1,24 +1,12 @@
 <?php
-/**
- * Plugin Name: 九流页面美化特效
- * Plugin URI: https://github.com/nljie1103/wp-page-effects
- * Description: 独立后台页面一键勾选樱花、雪花、灯笼、粒子、鼠标跟随、彩带、灰色模式、右键菜单、基础防查看、背景音乐和节日欢迎弹窗，支持兼容注入模式。
- * Version: 1.6.0
- * Author: 九流
- * Author URI: https://www.jiuliu.org
- * License: GPLv2 or later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: xiaojie-page-effects
- * Requires at least: 5.8
- * Requires PHP: 7.4
- */
+/** Internal page effects feature. */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-if ( ! class_exists( 'XJPE_Plugin' ) ) {
-    final class XJPE_Plugin {
+if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
+    final class JLWA_Page_Effects_Feature {
         const VERSION     = '1.6.0';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';
@@ -34,15 +22,11 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
 
         private function __construct() {
             add_action( 'init', array( $this, 'maybe_upgrade_options' ), 1 );
-            add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
             add_action( 'admin_init', array( $this, 'register_settings' ) );
             add_action( 'admin_init', array( $this, 'maybe_handle_direct_save' ) );
             add_action( 'admin_post_xjpe_save_options', array( $this, 'handle_save_options' ) );
-            add_action( 'admin_notices', array( $this, 'activation_notice' ) );
-            add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
             add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
-            register_activation_hook( __FILE__, array( __CLASS__, 'activate' ) );
             add_action( 'template_redirect', array( $this, 'maybe_start_buffer_injection' ), 0 );
 
         }
@@ -131,13 +115,8 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         }
 
         public function activation_notice() {
-            if ( ! current_user_can( 'manage_options' ) || ! get_transient( 'xjpe_activated_notice' ) ) {
-                return;
-            }
-            delete_transient( 'xjpe_activated_notice' );
-            $url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
-            echo '<div class="notice notice-success is-dismissible"><p><strong>九流页面美化已启用。</strong> 请进入左侧菜单 <a href="' . esc_url( $url ) . '">页面美化</a> 勾选需要的特效并保存。</p></div>';
-        }
+		return;
+	}
 
         public function plugin_action_links( $links ) {
             $settings_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
@@ -254,37 +233,8 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         }
 
         public function add_admin_menu() {
-            if ( defined( 'JLWA_MENU_SLUG' ) ) {
-                add_submenu_page(
-                    JLWA_MENU_SLUG,
-                    '九流页面美化',
-                    '页面美化',
-                    'manage_options',
-                    self::MENU_SLUG,
-                    array( $this, 'render_admin_page' )
-                );
-                return;
-            }
-
-            add_menu_page(
-                '九流页面美化',
-                '页面美化',
-                'manage_options',
-                self::MENU_SLUG,
-                array( $this, 'render_admin_page' ),
-                'dashicons-admin-customizer',
-                58
-            );
-
-            add_submenu_page(
-                self::MENU_SLUG,
-                '特效设置',
-                '特效设置',
-                'manage_options',
-                self::MENU_SLUG,
-                array( $this, 'render_admin_page' )
-            );
-        }
+		return;
+	}
 
         public function register_settings() {
             register_setting(
@@ -902,5 +852,5 @@ if ( ! class_exists( 'XJPE_Plugin' ) ) {
         }
     }
 
-    XJPE_Plugin::instance();
+    JLWA_Page_Effects_Feature::instance();
 }

@@ -60,7 +60,7 @@ class WPAIAS_Frontend {
 			return false;
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		if ( empty( $settings['enabled'] ) ) {
 			return false;
 		}
@@ -120,7 +120,7 @@ class WPAIAS_Frontend {
 			return $content;
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$method   = isset( $settings['insert_method'] ) ? $settings['insert_method'] : 'auto';
 
 		// 用户选了 shortcode_only / js / manual 模式时，跳过 the_content 注入。
@@ -167,7 +167,7 @@ class WPAIAS_Frontend {
 		// 短代码下，强制视为已渲染，避免与自动注入重复。
 		$this->rendered[ $post->ID ] = true;
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$cached   = WPAIAS_Cache::get( $post->ID );
 
 		return $this->build_card_html( $post, false === $cached ? '' : (string) $cached, $settings );
@@ -185,7 +185,7 @@ class WPAIAS_Frontend {
 		if ( ! $this->should_show() ) {
 			return;
 		}
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$method   = isset( $settings['insert_method'] ) ? $settings['insert_method'] : 'auto';
 
 		// 手动 / shortcode_only 模式，不输出 DOM 注入模板。
@@ -333,7 +333,7 @@ class WPAIAS_Frontend {
 		if ( ! $this->should_show() ) {
 			return;
 		}
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		$color    = $settings['cursor_color'];
 		$duration = max( 100, (int) $settings['anim_duration'] );
 		$delay    = max( 0, (int) $settings['anim_delay'] );
@@ -365,7 +365,7 @@ class WPAIAS_Frontend {
 			wp_send_json_success( array( 'summary' => $cached, 'cached' => true ) );
 		}
 
-		$settings = WPAIAS_Plugin::get_settings();
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 		if ( empty( $settings['enabled'] ) ) {
 			wp_send_json_error( array( 'message' => __( '插件未开启。', 'wp-ai-article-summary' ) ), 403 );
 		}
@@ -445,7 +445,7 @@ class WPAIAS_Frontend {
  */
 if ( ! function_exists( 'wpaias_render_summary' ) ) {
 	function wpaias_render_summary() {
-		if ( class_exists( 'WPAIAS_Plugin' ) ) {
+		if ( class_exists( 'JLWA_AI_Summary_Feature' ) ) {
 			echo do_shortcode( '[wpaias_summary]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 	}

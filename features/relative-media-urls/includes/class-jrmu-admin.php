@@ -40,27 +40,7 @@ class JRMU_Admin {
 
 	/** 菜单。 */
 	public function add_admin_menu() {
-		if ( defined( 'JLWA_MENU_SLUG' ) ) {
-			add_submenu_page(
-				JLWA_MENU_SLUG,
-				'九流媒体相对地址',
-				'媒体相对地址',
-				'manage_options',
-				JRMU_MENU_SLUG,
-				array( $this, 'render_page' )
-			);
-			return;
-		}
-
-		add_menu_page(
-			'九流媒体相对地址',
-			'媒体相对地址',
-			'manage_options',
-			JRMU_MENU_SLUG,
-			array( $this, 'render_page' ),
-			'dashicons-admin-customizer',
-			58
-		);
+		return;
 	}
 
 	/** 注册设置。 */

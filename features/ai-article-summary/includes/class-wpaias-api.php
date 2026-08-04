@@ -74,7 +74,7 @@ class WPAIAS_API {
 		}
 
 		if ( null === $api_key ) {
-			$api_key = WPAIAS_Plugin::get_api_key_for_model( $settings, $provider_key, $model );
+			$api_key = JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $provider_key, $model );
 		}
 		$api_key = str_replace( array( "\r", "\n" ), '', trim( (string) $api_key ) );
 

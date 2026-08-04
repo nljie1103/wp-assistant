@@ -10,14 +10,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class WPAIAS_Plugin
+ * Class JLWA_AI_Summary_Feature
  */
-class WPAIAS_Plugin {
+class JLWA_AI_Summary_Feature {
 
 	/**
 	 * 单例。
 	 *
-	 * @var WPAIAS_Plugin|null
+	 * @var JLWA_AI_Summary_Feature|null
 	 */
 	protected static $instance = null;
 
@@ -38,7 +38,7 @@ class WPAIAS_Plugin {
 	/**
 	 * 获取单例。
 	 *
-	 * @return WPAIAS_Plugin
+	 * @return JLWA_AI_Summary_Feature
 	 */
 	public static function instance() {
 		if ( null === self::$instance ) {
