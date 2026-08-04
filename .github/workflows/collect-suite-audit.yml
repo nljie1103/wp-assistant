@@ -29,7 +29,7 @@ jobs:
             git clone --depth=1 "https://github.com/nljie1103/${repo}.git" "/tmp/jiuliu-suite-audit/${repo}"
           done
 
-      - name: Build source snapshot
+      - name: Build comparison and source snapshot
         shell: bash
         run: |
           set -euo pipefail
@@ -38,51 +38,154 @@ jobs:
           python3 - <<'PY'
           import hashlib
           import json
+          import re
           from pathlib import Path
 
           root = Path('/tmp/jiuliu-suite-audit')
+          suite = root / 'wp-assistant'
           repos = ['wp-assistant', 'wp-page-effects', 'wp-immersive-preloader', 'wp-relative-media-urls', 'WP-AI-Article-Summary']
+          module_map = {
+              'wp-page-effects': 'modules/page-effects',
+              'wp-immersive-preloader': 'modules/immersive-preloader',
+              'wp-relative-media-urls': 'modules/relative-media-urls',
+              'WP-AI-Article-Summary': 'modules/ai-article-summary',
+          }
           text_exts = {'.php', '.js', '.css', '.txt', '.md', '.json', '.yml', '.yaml', '.xml', '.html', '.htm'}
-          manifest = {}
-          output = []
+          ignored_roots = {'.git', '.github', '.suite-audit'}
+          metadata_names = {'.gitignore', 'LICENSE', 'README.md', 'README.txt'}
 
-          for repo in repos:
-              repo_root = root / repo
-              files = []
-              for path in sorted(repo_root.rglob('*')):
-                  if not path.is_file() or '.git' in path.parts:
+          def file_map(base):
+              result = {}
+              for path in sorted(base.rglob('*')):
+                  if not path.is_file() or any(part in ignored_roots for part in path.parts):
                       continue
-                  rel = path.relative_to(repo_root).as_posix()
+                  rel = path.relative_to(base).as_posix()
                   data = path.read_bytes()
-                  entry = {
-                      'path': rel,
+                  result[rel] = {
                       'size': len(data),
                       'sha256': hashlib.sha256(data).hexdigest(),
                       'text': path.suffix.lower() in text_exts,
                   }
-                  files.append(entry)
-                  if entry['text']:
-                      try:
-                          text = data.decode('utf-8')
-                      except UnicodeDecodeError:
-                          text = data.decode('utf-8', errors='replace')
-                      output.append(f'\n===== REPO {repo} FILE {rel} =====\n')
-                      output.append(text)
-                      if not text.endswith('\n'):
-                          output.append('\n')
-                      output.append(f'===== END REPO {repo} FILE {rel} =====\n')
-              manifest[repo] = files
+              return result
 
-          Path('.suite-audit/manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+          def plugin_headers(base):
+              headers = []
+              for path in sorted(base.glob('*.php')):
+                  text = path.read_text(encoding='utf-8', errors='replace')
+                  if 'Plugin Name:' not in text[:5000]:
+                      continue
+                  def value(name):
+                      match = re.search(r'^\s*\*?\s*' + re.escape(name) + r':\s*(.+?)\s*$', text[:5000], re.M)
+                      return match.group(1).strip() if match else ''
+                  headers.append({
+                      'file': path.name,
+                      'name': value('Plugin Name'),
+                      'version': value('Version'),
+                      'requires_php': value('Requires PHP'),
+                      'requires_wp': value('Requires at least'),
+                  })
+              return headers
+
+          manifest = {repo: file_map(root / repo) for repo in repos}
+          comparison = {}
+          for repo, module_rel in module_map.items():
+              standalone = manifest[repo]
+              embedded = file_map(suite / module_rel)
+              all_paths = sorted(set(standalone) | set(embedded))
+              changed = []
+              missing = []
+              extra = []
+              functional_changed = []
+              for rel in all_paths:
+                  if rel not in embedded:
+                      missing.append(rel)
+                  elif rel not in standalone:
+                      extra.append(rel)
+                  elif standalone[rel]['sha256'] != embedded[rel]['sha256']:
+                      changed.append(rel)
+                  if rel in metadata_names or rel.lower() == 'readme.txt':
+                      continue
+                  if rel not in embedded or rel not in standalone or standalone.get(rel, {}).get('sha256') != embedded.get(rel, {}).get('sha256'):
+                      functional_changed.append(rel)
+              comparison[repo] = {
+                  'module_path': module_rel,
+                  'standalone_headers': plugin_headers(root / repo),
+                  'embedded_headers': plugin_headers(suite / module_rel),
+                  'standalone_file_count': len(standalone),
+                  'embedded_file_count': len(embedded),
+                  'missing_in_suite': missing,
+                  'extra_in_suite': extra,
+                  'changed_files': changed,
+                  'functional_differences': functional_changed,
+                  'identical_functional_source': not functional_changed,
+              }
+
+          high_risk_patterns = {
+              'dynamic_execution': r'\b(eval|assert|shell_exec|exec|system|passthru|proc_open|popen)\s*\(',
+              'obfuscation_decode': r'\b(base64_decode|gzinflate|str_rot13)\s*\(',
+              'unsafe_unserialize': r'\bunserialize\s*\(',
+              'filesystem_write': r'\b(file_put_contents|fopen|copy|rename|unlink|rmdir|mkdir)\s*\(',
+              'remote_request': r'\b(wp_remote_get|wp_remote_post|wp_remote_request|curl_exec)\s*\(',
+              'ajax_public': r'wp_ajax_nopriv_',
+          }
+          security = {key: [] for key in high_risk_patterns}
+          for path in sorted(suite.rglob('*')):
+              if not path.is_file() or path.suffix.lower() not in {'.php', '.js'} or any(part in ignored_roots for part in path.parts):
+                  continue
+              rel = path.relative_to(suite).as_posix()
+              text = path.read_text(encoding='utf-8', errors='replace')
+              for lineno, line in enumerate(text.splitlines(), 1):
+                  for key, pattern in high_risk_patterns.items():
+                      if re.search(pattern, line):
+                          security[key].append({'path': rel, 'line': lineno, 'code': line.strip()[:300]})
+
+          output = []
+          for repo in repos:
+              repo_root = root / repo
+              for path in sorted(repo_root.rglob('*')):
+                  if not path.is_file() or any(part in ignored_roots for part in path.parts) or path.suffix.lower() not in text_exts:
+                      continue
+                  rel = path.relative_to(repo_root).as_posix()
+                  text = path.read_text(encoding='utf-8', errors='replace')
+                  output.append(f'\n===== REPO {repo} FILE {rel} =====\n{text}')
+                  if not text.endswith('\n'):
+                      output.append('\n')
+                  output.append(f'===== END REPO {repo} FILE {rel} =====\n')
+
+          report = {
+              'repositories': {repo: {'headers': plugin_headers(root / repo), 'files': manifest[repo]} for repo in repos},
+              'comparison': comparison,
+              'security_scan': security,
+          }
+          Path('.suite-audit/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
           Path('.suite-audit/sources.txt').write_text(''.join(output), encoding='utf-8')
           PY
 
-      - name: Commit snapshot
+      - name: Run PHP syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > .suite-audit/php-lint.txt
+          while IFS= read -r -d '' file; do
+            php -l "$file" | tee -a .suite-audit/php-lint.txt
+          done < <(find /tmp/jiuliu-suite-audit/wp-assistant -path '*/.git' -prune -o -name '*.php' -print0)
+
+      - name: Run JavaScript syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > .suite-audit/js-lint.txt
+          while IFS= read -r -d '' file; do
+            node --check "$file" >> .suite-audit/js-lint.txt 2>&1
+            echo "OK $file" >> .suite-audit/js-lint.txt
+          done < <(find /tmp/jiuliu-suite-audit/wp-assistant -path '*/.git' -prune -o -name '*.js' -print0)
+
+      - name: Commit audit report
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .suite-audit/manifest.json .suite-audit/sources.txt
-          git commit -m 'chore: collect suite audit snapshot'
+          git add .suite-audit/report.json .suite-audit/sources.txt .suite-audit/php-lint.txt .suite-audit/js-lint.txt
+          git commit -m 'chore: refresh suite comparison audit'
           git push origin HEAD:main
