@@ -93,8 +93,16 @@ class JLWA_Admin {
 		if ( ! $this->is_plugin_page( $page ) ) {
 			return;
 		}
+
+		$feature_key = JLWA_Feature_Registry::key_from_slug( $page );
+		if ( '' !== $feature_key ) {
+			$this->enqueue_feature_assets( $feature_key );
+		}
+
 		wp_enqueue_style( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/css/admin.css', array(), JLWA_VERSION );
+		wp_enqueue_style( 'jlwa-admin-content', JLWA_PLUGIN_URL . 'assets/css/admin-content.css', array( 'jlwa-admin' ), JLWA_VERSION );
 		wp_enqueue_script( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/js/admin.js', array(), JLWA_VERSION, true );
+		wp_enqueue_script( 'jlwa-admin-content', JLWA_PLUGIN_URL . 'assets/js/admin-content.js', array( 'jlwa-admin' ), JLWA_VERSION, true );
 		wp_localize_script(
 			'jlwa-admin',
 			'JLWA_ADMIN',
@@ -104,6 +112,46 @@ class JLWA_Admin {
 				'page'    => $page,
 			)
 		);
+	}
+
+	/**
+	 * Force-load each feature's mature assets with the exact submenu hook.
+	 * This avoids pages becoming unstyled when a legacy hook suffix changes.
+	 *
+	 * @param string $key Feature key.
+	 */
+	protected function enqueue_feature_assets( $key ) {
+		$feature = JLWA_Feature_Registry::get( $key );
+		if ( ! $feature ) {
+			return;
+		}
+		$feature_hook = JLWA_MENU_SLUG . '_page_' . $feature['slug'];
+
+		switch ( $key ) {
+			case 'page-effects':
+				if ( class_exists( 'JLWA_Page_Effects_Feature' ) ) {
+					JLWA_Page_Effects_Feature::instance()->enqueue_admin_assets( $feature_hook );
+				}
+				break;
+			case 'ai-summary':
+				if ( class_exists( 'JLWA_AI_Summary_Feature' ) ) {
+					$plugin = JLWA_AI_Summary_Feature::instance();
+					if ( isset( $plugin->admin ) && is_object( $plugin->admin ) ) {
+						$plugin->admin->enqueue_assets( $feature_hook );
+					}
+				}
+				break;
+			case 'preloader':
+				if ( class_exists( 'JIP_Admin' ) ) {
+					JIP_Admin::instance()->enqueue_assets( $feature_hook );
+				}
+				break;
+			case 'media-urls':
+				if ( class_exists( 'JRMU_Admin' ) ) {
+					JRMU_Admin::instance()->enqueue_assets( $feature_hook );
+				}
+				break;
+		}
 	}
 
 	/** @param array<int,string> $links Plugin links. @return array<int,string> */
@@ -220,9 +268,15 @@ class JLWA_Admin {
 		if ( empty( $status['loaded'] ) ) {
 			echo '<section class="jlwa-empty-state"><span class="dashicons dashicons-warning"></span><h2>该功能暂未启动</h2><p>' . esc_html( isset( $status['message'] ) ? $status['message'] : '状态未知。' ) . '</p><a class="button button-primary" href="' . esc_url( admin_url( 'plugins.php' ) ) . '">检查旧插件冲突</a></section>';
 		} else {
-			echo '<div class="jlwa-feature-host jlwa-feature-host--' . esc_attr( $key ) . '">';
+			$state = JLWA_Feature_Registry::state( $key );
+			echo '<section class="jlwa-feature-intro jlwa-feature-intro--' . esc_attr( $key ) . '">';
+			echo '<span class="jlwa-feature-intro__icon"><span class="dashicons ' . esc_attr( $feature['icon'] ) . '"></span></span>';
+			echo '<div><h2>' . esc_html( $feature['label'] ) . '设置中心</h2><p>所有设置都属于九流WP助手本体，保存后继续沿用原有数据，不需要重复配置。</p></div>';
+			echo '<div class="jlwa-feature-intro__meta"><span class="jlwa-feature-intro__version">功能 v' . esc_html( JLWA_Feature_Registry::version( $key ) ) . '</span><span class="jlwa-feature-intro__state is-' . esc_attr( $state['tone'] ) . '">' . esc_html( $state['label'] ) . '</span></div>';
+			echo '</section>';
+			echo '<div class="jlwa-feature-canvas"><div class="jlwa-feature-host jlwa-feature-host--' . esc_attr( $key ) . '">';
 			JLWA_Feature_Registry::render_admin( $key );
-			echo '</div>';
+			echo '</div></div>';
 		}
 		$this->shell_end();
 	}

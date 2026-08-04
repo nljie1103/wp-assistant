@@ -4,7 +4,7 @@ Tags: wordpress, ai summary, media urls, effects, preloader
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,6 +37,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.0.1 =
+* 修复功能页旧资源 hook 不匹配导致的正文无样式问题。
+* 由统一后台强制调度四项功能的 CSS、JavaScript、媒体上传器和颜色选择器资源。
+* 新增统一功能状态卡、内容画布、卡片、表单、选项卡和响应式布局。
+* 重做页面美化特效卡片、AI 摘要设置、预加载效果网格和媒体扫描诊断界面。
+* 增加未保存修改提示与选择卡片状态同步。
 
 = 2.0.0 =
 * 从四插件套件重构为真正的单插件架构。

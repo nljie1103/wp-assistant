@@ -258,7 +258,6 @@
 .jlwa-feature-host--page-effects .xjpe-global-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .jlwa-feature-host--page-effects .xjpe-switch-line,
 .jlwa-feature-host--page-effects .xjpe-field {
-	dis: block;
 	padding: 13px 14px;
 	border: 1px solid #edf0f4;
 	border-radius: 11px;
