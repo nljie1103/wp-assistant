@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
     final class JLWA_Page_Effects_Feature {
-        const VERSION     = '1.7.1';
+        const VERSION     = '1.8.0';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';
 
@@ -197,12 +197,13 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         'duration'   => 760,
                     ),
                     'waves' => array(
-                        'enabled' => 0,
-                        'height'  => 72,
-                        'opacity' => 0.48,
-                        'speed'   => 12,
-                        'color_1' => '#5b8cff',
-                        'color_2' => '#9b5cff',
+                        'enabled'         => 0,
+                        'height'          => 72,
+                        'opacity'         => 0.48,
+                        'speed'           => 12,
+                        'color_1'         => '#5b8cff',
+                        'color_2'         => '#9b5cff',
+                        'footer_selector' => 'footer.footer, #footer.footer, footer.site-footer, #colophon.site-footer, footer',
                     ),
                     'ribbon' => array(
                         'enabled' => 0,
@@ -279,7 +280,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'lantern' => array( 'icon' => '🏮', 'title' => '节日灯笼', 'desc' => '页面顶部悬挂灯笼', 'group' => '氛围特效' ),
                 'particles' => array( 'icon' => '✨', 'title' => '粒子背景', 'desc' => '动态粒子连线效果', 'group' => '氛围特效' ),
                 'cursor' => array( 'icon' => '🌟', 'title' => '鼠标跟随', 'desc' => '星星、爱心、萤火、花瓣、气泡或自定义拖尾', 'group' => '交互增强' ),
-                'waves' => array( 'icon' => '🌊', 'title' => '底部波浪', 'desc' => '页面底部流动的双层渐变波浪', 'group' => '氛围特效' ),
+                'waves' => array( 'icon' => '🌊', 'title' => '底部波浪', 'desc' => '只在滚动到页面底部时出现，位于子比页脚与友情链接区域上方', 'group' => '氛围特效' ),
                 'ribbon' => array( 'icon' => '🎀', 'title' => '彩带背景', 'desc' => '点击刷新彩带背景', 'group' => '氛围特效' ),
                 'grayscale' => array( 'icon' => '🕯️', 'title' => '全站灰色', 'desc' => '纪念/悼念模式', 'group' => '特殊模式' ),
                 'contextmenu' => array( 'icon' => '🖱️', 'title' => '右键美化', 'desc' => '自定义右键菜单', 'group' => '交互增强' ),
@@ -386,6 +387,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $output['effects']['waves']['speed']   = $this->sanitize_int( $effects['waves']['speed'] ?? 12, 4, 40, 12 );
             $output['effects']['waves']['color_1'] = sanitize_hex_color( $effects['waves']['color_1'] ?? '#5b8cff' ) ?: '#5b8cff';
             $output['effects']['waves']['color_2'] = sanitize_hex_color( $effects['waves']['color_2'] ?? '#9b5cff' ) ?: '#9b5cff';
+            $output['effects']['waves']['footer_selector'] = sanitize_text_field( $effects['waves']['footer_selector'] ?? 'footer.footer, #footer.footer, footer.site-footer, #colophon.site-footer, footer' );
 
             $output['effects']['ribbon']['opacity'] = $this->sanitize_float( $effects['ribbon']['opacity'] ?? 0.42, 0.05, 1, 0.42 );
             $output['effects']['ribbon']['click']   = empty( $effects['ribbon']['click'] ) ? 0 : 1;
@@ -686,7 +688,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $config_json = wp_json_encode( $this->frontend_config( $options ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
             $css_url     = plugins_url( 'assets/css/frontend.css', __FILE__ );
             $js_url      = plugins_url( 'assets/js/frontend.js', __FILE__ );
-            $html        = "\n<!-- 九流页面美化特效 v" . esc_html( self::VERSION ) . " -->\n";
+            $html        = "\n<!-- 九流WP助手：页面美化 -->\n";
             $html       .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
             $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
             $html       .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
@@ -798,7 +800,6 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         <h1><span class="dashicons dashicons-admin-customizer"></span>九流页面美化</h1>
                         <p class="jiuliu-admin-subtitle">独立后台控制台：勾选需要的特效，保存后前台立即加载；不修改主题文件和文章内容。</p>
                     </div>
-                    <span class="jiuliu-version-badge">v<?php echo esc_html( self::VERSION ); ?></span>
                 </div>
                 <?php if ( isset( $_GET['xjpe_saved'] ) && '1' === $_GET['xjpe_saved'] ) : ?>
                     <div class="notice notice-success inline"><p><strong>配置已保存。</strong> 请刷新前台页面，或点击“打开前台预览”测试特效。</p></div>
@@ -974,6 +975,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->number_field( $base, 'speed', '流动周期（秒）', $effect['speed'], 4, 40, 1 );
                     $this->color_field( $base, 'color_1', '前层颜色', $effect['color_1'] );
                     $this->color_field( $base, 'color_2', '后层颜色', $effect['color_2'] );
+                    $this->text_field( $base, 'footer_selector', '页脚选择器', $effect['footer_selector'], 'footer.footer, #footer.footer, footer.site-footer, #colophon.site-footer, footer' );
+                    echo '<p class="xjpe-tip">波浪会作为普通页面内容插入到匹配页脚之前。子比主题默认匹配 <code>footer.footer</code>，只有滚动到页面底部时才会看到，不再固定悬浮在浏览器下方。</p>';
                     break;
                 case 'ribbon':
                     $this->number_field( $base, 'opacity', '透明度', $effect['opacity'], 0.05, 1, 0.05 );

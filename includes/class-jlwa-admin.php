@@ -234,7 +234,7 @@ class JLWA_Admin {
 					<h3><?php echo esc_html( $feature['label'] ); ?></h3>
 					<p><?php echo esc_html( $feature['description'] ); ?></p>
 					<div class="jlwa-feature-card__footer">
-						<span>内部功能版本 v<?php echo esc_html( JLWA_Feature_Registry::version( $key ) ); ?></span>
+						<span>统一随九流WP助手主版本更新</span>
 						<?php if ( ! empty( $status['loaded'] ) ) : ?>
 							<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $feature['slug'] ) ); ?>">管理功能</a>
 						<?php else : ?>
@@ -279,7 +279,7 @@ class JLWA_Admin {
 			echo '<section class="jlwa-feature-intro jlwa-feature-intro--' . esc_attr( $key ) . '">';
 			echo '<span class="jlwa-feature-intro__icon"><span class="dashicons ' . esc_attr( $feature['icon'] ) . '"></span></span>';
 			echo '<div><h2>' . esc_html( $feature['label'] ) . '设置中心</h2><p>所有设置都属于九流WP助手本体，保存后继续沿用原有数据，不需要重复配置。</p></div>';
-			echo '<div class="jlwa-feature-intro__meta"><span class="jlwa-feature-intro__version">功能 v' . esc_html( JLWA_Feature_Registry::version( $key ) ) . '</span><span class="jlwa-feature-intro__state is-' . esc_attr( $state['tone'] ) . '">' . esc_html( $state['label'] ) . '</span></div>';
+			echo '<div class="jlwa-feature-intro__meta"><span class="jlwa-feature-intro__state is-' . esc_attr( $state['tone'] ) . '">' . esc_html( $state['label'] ) . '</span></div>';
 			echo '</section>';
 			echo '<div class="jlwa-feature-canvas"><div class="jlwa-feature-host jlwa-feature-host--' . esc_attr( $key ) . '">';
 			JLWA_Feature_Registry::render_admin( $key );
@@ -292,7 +292,7 @@ class JLWA_Admin {
 		if ( ! current_user_can( 'update_plugins' ) ) {
 			return;
 		}
-		$this->shell_start( 'system', '系统与更新', '检查完整性、查看功能版本，并从唯一主仓库安全更新。' );
+		$this->shell_start( 'system', '系统与更新', '检查完整性、查看主插件版本，并从唯一主仓库安全更新。' );
 		?>
 		<div class="jlwa-system-grid">
 			<section class="jlwa-update-panel">
@@ -306,10 +306,9 @@ class JLWA_Admin {
 				<pre id="jlwa-update-log" class="jlwa-update-log">（检查后显示版本说明）</pre>
 			</section>
 			<aside class="jlwa-system-side">
-				<h2>功能版本</h2>
-				<?php foreach ( JLWA_Feature_Registry::features() as $key => $feature ) : ?>
-					<div class="jlwa-system-version"><span class="dashicons <?php echo esc_attr( $feature['icon'] ); ?>"></span><div><strong><?php echo esc_html( $feature['label'] ); ?></strong><span>v<?php echo esc_html( JLWA_Feature_Registry::version( $key ) ); ?></span></div></div>
-				<?php endforeach; ?>
+				<h2>统一版本管理</h2>
+				<div class="jlwa-system-version"><span class="dashicons dashicons-admin-plugins"></span><div><strong>九流WP助手</strong><span>v<?php echo esc_html( JLWA_VERSION ); ?></span></div></div>
+				<div class="jlwa-system-tip"><strong>功能域策略</strong><p>五项功能不再对外显示独立版本号，全部跟随九流WP助手主版本一起安装、更新和回滚。</p></div>
 				<div class="jlwa-system-tip"><strong>数据策略</strong><p>更新插件不会删除现有设置、AI 缓存、媒体扫描记录或文章数据。</p></div>
 			</aside>
 		</div>

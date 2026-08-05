@@ -7,6 +7,7 @@
   var detectors = cfg.detectors;
   var decision = cfg.decision;
   var response = cfg.response;
+  var layers = response.layers || {};
   var score = 0;
   var reasons = Object.create(null);
   var lastSignal = Object.create(null);
@@ -25,7 +26,13 @@
   var consoleProbeToken = 0;
   var lastConsoleProbeAt = 0;
   var lastPerformanceProbeAt = 0;
+  var layerTimers = [];
+  var loopTimers = [];
+  var cleanupHandlers = [];
+  var historyLocked = false;
+  var clipboardLocked = false;
   var safeConsole = window.console || { log: function () {}, clear: function () {}, table: function () {} };
+  var storageKey = 'jlwa_ad_lock_v2';
 
   function now() {
     return window.performance && performance.now ? performance.now() : Date.now();
@@ -35,10 +42,23 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function int(value, fallback) {
+    var parsed = parseInt(value, 10);
+    return isFinite(parsed) ? parsed : fallback;
+  }
+
+  function bool(value) {
+    return value === true || value === 1 || value === '1';
+  }
+
+  function layer(name) {
+    return layers[name] || {};
+  }
+
   function signal(name, points) {
     if (destroyed) return;
     var time = Date.now();
-    var cooldown = parseInt(decision.detector_cooldown_ms || 1800, 10);
+    var cooldown = int(decision.detector_cooldown_ms, 1800);
     if (lastSignal[name] && time - lastSignal[name] < cooldown) return;
     lastSignal[name] = time;
     score = clamp(score + points, 0, 500);
@@ -48,19 +68,19 @@
   }
 
   function recentReasons(time) {
-    var windowMs = parseInt(decision.hit_window_ms || 4200, 10);
+    var windowMs = int(decision.hit_window_ms, 4200);
     return Object.keys(reasons).filter(function (name) {
       return time - reasons[name] <= windowMs;
     });
   }
 
   function evaluate(time) {
-    var threshold = parseInt(decision.threshold || 85, 10);
-    var windowMs = parseInt(decision.hit_window_ms || 4200, 10);
+    var threshold = int(decision.threshold, 85);
+    var windowMs = int(decision.hit_window_ms, 4200);
     thresholdHits = thresholdHits.filter(function (stamp) { return time - stamp <= windowMs; });
     if (score >= threshold) {
       if (!thresholdHits.length || time - thresholdHits[thresholdHits.length - 1] > 250) thresholdHits.push(time);
-      if (thresholdHits.length >= parseInt(decision.confirm_hits || 2, 10)) activate(recentReasons(time));
+      if (thresholdHits.length >= int(decision.confirm_hits, 2)) activate(recentReasons(time), false);
     }
   }
 
@@ -79,7 +99,7 @@
     overlay.className = 'jlwa-ad-overlay';
     overlay.setAttribute('role', 'alertdialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML = '<div class="jlwa-ad-overlay__card"><span class="jlwa-ad-overlay__shield">🛡️</span><h2></h2><p></p><div class="jlwa-ad-overlay__status"><span></span><strong>等待调试环境关闭</strong></div><small></small></div>';
+    overlay.innerHTML = '<div class="jlwa-ad-overlay__card"><span class="jlwa-ad-overlay__shield">🛡️</span><h2></h2><p></p><div class="jlwa-ad-overlay__status"><span></span><strong>防御层已启用</strong></div><small></small></div>';
     overlay.querySelector('h2').textContent = response.message || '检测到调试环境';
     overlay.querySelector('p').textContent = response.detail || '请关闭开发者工具后继续访问。';
     overlay.querySelector('small').textContent = triggerReasons.length ? '检测信号：' + triggerReasons.join('、') : '';
@@ -88,7 +108,7 @@
   }
 
   function applyBlur() {
-    document.documentElement.style.setProperty('--jlwa-ad-blur', clamp(parseInt(response.blur_px || 16, 10), 0, 40) + 'px');
+    document.documentElement.style.setProperty('--jlwa-ad-blur', clamp(int(response.blur_px, 16), 0, 60) + 'px');
     contentNodes().forEach(function (node) { node.classList.add('jlwa-ad-protected-content'); });
   }
 
@@ -106,58 +126,202 @@
     });
   }
 
-  function activate(triggerReasons) {
-    if (active || destroyed) return;
-    active = true;
-    activatedAt = Date.now();
-    document.documentElement.classList.add('jlwa-ad-active');
-    logEvent(triggerReasons);
+  function schedule(fn, delay) {
+    var id = window.setTimeout(function () {
+      layerTimers = layerTimers.filter(function (item) { return item !== id; });
+      if (active && !destroyed) fn();
+    }, Math.max(0, int(delay, 0)));
+    layerTimers.push(id);
+  }
 
-    var action = String(response.action || 'overlay');
-    if (action === 'observe') return;
-    if (action === 'overlay') {
-      applyBlur();
-      createOverlay(triggerReasons);
-    } else if (action === 'replace') {
-      replaceContent();
-      createOverlay(triggerReasons);
-    } else if (action === 'redirect') {
-      redirect();
-    } else if (action === 'close') {
-      closeOrRedirect();
+  function repeat(fn, interval) {
+    var id = window.setInterval(function () {
+      if (!active || destroyed) return;
+      fn();
+    }, clamp(int(interval, 500), 80, 10000));
+    loopTimers.push(id);
+    return id;
+  }
+
+  function addCleanup(fn) {
+    cleanupHandlers.push(fn);
+  }
+
+  function applyInteractionLock() {
+    document.documentElement.classList.add('jlwa-ad-block-interaction');
+    contentNodes().forEach(function (node) { node.classList.add('jlwa-ad-no-interaction'); });
+  }
+
+  function applySelectionLock() {
+    document.documentElement.classList.add('jlwa-ad-block-selection');
+  }
+
+  function installClipboardGuard() {
+    if (clipboardLocked) return;
+    clipboardLocked = true;
+    var handler = function (event) {
+      if (!active) return;
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      return false;
+    };
+    document.addEventListener('copy', handler, true);
+    document.addEventListener('cut', handler, true);
+    addCleanup(function () {
+      document.removeEventListener('copy', handler, true);
+      document.removeEventListener('cut', handler, true);
+      clipboardLocked = false;
+    });
+  }
+
+  function installHistoryLock() {
+    if (historyLocked || !window.history || !history.pushState) return;
+    historyLocked = true;
+    try { history.pushState({ jlwaAd: 1 }, document.title, window.location.href); } catch (error) {}
+    var handler = function () {
+      if (!active) return;
+      try { history.pushState({ jlwaAd: 1 }, document.title, window.location.href); } catch (error) {}
+    };
+    window.addEventListener('popstate', handler, true);
+    addCleanup(function () {
+      window.removeEventListener('popstate', handler, true);
+      historyLocked = false;
+    });
+  }
+
+  function clearConsoleLoop(interval) {
+    try { safeConsole.clear(); } catch (error) {}
+    repeat(function () {
+      try { safeConsole.clear(); } catch (error) {}
+    }, interval);
+  }
+
+  function setPersistentLock(minutes, source) {
+    try {
+      var expires = Date.now() + clamp(int(minutes, 10), 1, 1440) * 60000;
+      sessionStorage.setItem(storageKey, JSON.stringify({ expires: expires, source: source || 'layer' }));
+    } catch (error) {}
+  }
+
+  function clearPersistentLock() {
+    try { sessionStorage.removeItem(storageKey); } catch (error) {}
+  }
+
+  function getPersistentLock() {
+    try {
+      var raw = sessionStorage.getItem(storageKey);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.expires || parsed.expires < Date.now()) {
+        sessionStorage.removeItem(storageKey);
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      return null;
     }
+  }
+
+  function startReloadLoop(interval, persistMinutes) {
+    setPersistentLock(persistMinutes, 'reload_loop');
+    repeat(function () {
+      try { window.location.reload(); } catch (error) { window.location.href = window.location.href; }
+    }, interval);
+  }
+
+  function attemptClose() {
+    try {
+      window.open('', '_self');
+      window.close();
+    } catch (error) {}
+  }
+
+  function startCloseLoop(interval) {
+    attemptClose();
+    repeat(attemptClose, interval);
+  }
+
+  function startDebuggerLoop(interval) {
+    repeat(function () {
+      try { Function('debugger')(); } catch (error) {}
+    }, interval);
   }
 
   function redirect() {
     var url = String(response.redirect_url || '');
     if (url) window.location.replace(url);
-    else {
-      applyBlur();
-      createOverlay(recentReasons(Date.now()));
-    }
   }
 
-  function closeOrRedirect() {
-    if (response.close_attempt) {
-      try {
-        window.open('', '_self');
-        window.close();
-      } catch (error) {}
-    }
-    window.setTimeout(function () {
-      if (!document.hidden) redirect();
-    }, 180);
+  function runLevel1(triggerReasons) {
+    var l = layer('level1');
+    if (!bool(l.enabled)) return;
+    if (bool(l.overlay)) createOverlay(triggerReasons);
+    if (bool(l.blur)) applyBlur();
+    if (bool(l.block_interaction)) applyInteractionLock();
+    if (bool(l.block_selection)) applySelectionLock();
   }
 
-  function recoverIfSafe() {
-    if (!active || !response.auto_recover) return;
-    var delay = parseInt(response.recover_delay_ms || 1800, 10);
-    if (Date.now() - lastSuspiciousAt < delay || score >= parseInt(decision.threshold || 85, 10) * 0.45) return;
-    active = false;
-    thresholdHits = [];
-    logSent = false;
-    document.documentElement.classList.remove('jlwa-ad-active');
-    contentNodes().forEach(function (node) { node.classList.remove('jlwa-ad-protected-content'); });
+  function runLevel2() {
+    var l = layer('level2');
+    if (!bool(l.enabled)) return;
+    if (bool(l.replace_content)) replaceContent();
+    if (bool(l.clear_console)) clearConsoleLoop(l.console_clear_interval_ms);
+    if (bool(l.history_lock)) installHistoryLock();
+    if (bool(l.clipboard_guard)) installClipboardGuard();
+  }
+
+  function runLevel3() {
+    var l = layer('level3');
+    if (!bool(l.enabled)) return;
+    if (bool(l.persist_session)) setPersistentLock(l.persist_minutes, 'level3');
+    if (bool(l.close_loop)) startCloseLoop(l.close_interval_ms);
+    if (bool(l.reload_loop)) startReloadLoop(l.reload_interval_ms, l.persist_minutes);
+    if (bool(l.redirect)) redirect();
+  }
+
+  function runLevel4() {
+    var l = layer('level4');
+    if (!bool(l.enabled)) return;
+    if (bool(l.persist_session)) setPersistentLock(l.persist_minutes, 'level4');
+    if (bool(l.hard_lock)) document.documentElement.classList.add('jlwa-ad-hard-lock');
+    if (bool(l.debugger_loop)) startDebuggerLoop(l.debugger_interval_ms);
+    if (bool(l.clear_console)) clearConsoleLoop(l.console_clear_interval_ms);
+    if (bool(l.close_loop)) startCloseLoop(l.close_interval_ms);
+    if (bool(l.reload_loop)) startReloadLoop(l.reload_interval_ms, l.persist_minutes);
+  }
+
+  function scheduleDefenseLayers(triggerReasons) {
+    var l1 = layer('level1');
+    var l2 = layer('level2');
+    var l3 = layer('level3');
+    var l4 = layer('level4');
+    if (bool(l1.enabled)) schedule(function () { runLevel1(triggerReasons); }, l1.delay_ms);
+    if (bool(l2.enabled)) schedule(runLevel2, l2.delay_ms);
+    if (bool(l3.enabled)) schedule(runLevel3, l3.delay_ms);
+    if (bool(l4.enabled)) schedule(runLevel4, l4.delay_ms);
+  }
+
+  function activate(triggerReasons, persistent) {
+    if (active || destroyed) return;
+    active = true;
+    activatedAt = Date.now();
+    lastSuspiciousAt = Date.now();
+    document.documentElement.classList.add('jlwa-ad-active');
+    if (persistent) reasons.persistent_lock = Date.now();
+    logEvent(triggerReasons);
+    scheduleDefenseLayers(triggerReasons);
+  }
+
+  function clearDefenseEffects(clearStorage) {
+    layerTimers.forEach(function (id) { window.clearTimeout(id); });
+    loopTimers.forEach(function (id) { window.clearInterval(id); });
+    layerTimers = [];
+    loopTimers = [];
+    cleanupHandlers.forEach(function (fn) { try { fn(); } catch (error) {} });
+    cleanupHandlers = [];
+    document.documentElement.classList.remove('jlwa-ad-active', 'jlwa-ad-block-interaction', 'jlwa-ad-block-selection', 'jlwa-ad-hard-lock');
+    contentNodes().forEach(function (node) { node.classList.remove('jlwa-ad-protected-content', 'jlwa-ad-no-interaction'); });
     replaceSnapshots.forEach(function (snapshot) {
       if (snapshot.node && snapshot.node.isConnected) snapshot.node.innerHTML = snapshot.html;
     });
@@ -168,6 +332,18 @@
       overlay = null;
       window.setTimeout(function () { if (old.parentNode) old.remove(); }, 240);
     }
+    if (clearStorage) clearPersistentLock();
+  }
+
+  function recoverIfSafe() {
+    if (!active || !bool(response.auto_recover)) return;
+    if (getPersistentLock()) return;
+    var delay = int(response.recover_delay_ms, 1800);
+    if (Date.now() - lastSuspiciousAt < delay || score >= int(decision.threshold, 85) * 0.45) return;
+    active = false;
+    thresholdHits = [];
+    logSent = false;
+    clearDefenseEffects(false);
   }
 
   function logEvent(triggerReasons) {
@@ -207,8 +383,8 @@
     if (!baseline || !current.outerW || !current.innerW) return;
     var addedW = current.gapW - baseline.gapW;
     var addedH = current.gapH - baseline.gapH;
-    var absThreshold = parseInt(detectors.viewport_threshold || 220, 10);
-    var ratio = parseInt(detectors.viewport_ratio || 18, 10) / 100;
+    var absThreshold = int(detectors.viewport_threshold, 220);
+    var ratio = int(detectors.viewport_ratio, 18) / 100;
     var suspiciousW = addedW > absThreshold && addedW > current.innerW * ratio && Math.abs(current.outerW - baseline.outerW) < 70;
     var suspiciousH = addedH > absThreshold && addedH > current.innerH * ratio && Math.abs(current.outerH - baseline.outerH) < 70;
 
@@ -226,11 +402,9 @@
   function detectDebuggerTiming() {
     if (!detectors.debugger_timing || document.hidden) return;
     var start = now();
-    try {
-      Function('debugger')(); // Deliberately low-frequency and optional.
-    } catch (error) {}
+    try { Function('debugger')(); } catch (error) {}
     var elapsed = now() - start;
-    if (elapsed > parseInt(detectors.debugger_threshold || 180, 10)) signal('debugger_timing', 58);
+    if (elapsed > int(detectors.debugger_threshold, 180)) signal('debugger_timing', 58);
   }
 
   function detectConsoleGetter() {
@@ -259,7 +433,7 @@
     var start = now();
     try { safeConsole.table(rows); } catch (error) { return; }
     var elapsed = now() - start;
-    if (elapsed > parseInt(detectors.performance_threshold || 110, 10)) signal('console_performance', 46);
+    if (elapsed > int(detectors.performance_threshold, 110)) signal('console_performance', 46);
   }
 
   function detectDebugLibraries() {
@@ -288,17 +462,14 @@
       detectDebuggerTiming();
       detectConsolePerformance();
       detectFocusSignal();
-      score = Math.max(0, score - parseInt(decision.score_decay || 12, 10));
+      score = Math.max(0, score - int(decision.score_decay, 12));
       Object.keys(reasons).forEach(function (name) {
-        if (Date.now() - reasons[name] > parseInt(decision.hit_window_ms || 4200, 10) * 2) delete reasons[name];
+        if (Date.now() - reasons[name] > int(decision.hit_window_ms, 4200) * 2) delete reasons[name];
       });
       evaluate(Date.now());
       recoverIfSafe();
-      if (active && response.action === 'overlay' && Date.now() - activatedAt > parseInt(response.escalate_after_ms || 5500, 10)) {
-        if (String(response.redirect_url || '')) redirect();
-      }
     }
-    timer = window.setTimeout(tick, clamp(parseInt(detectors.interval_ms || 1100, 10), 450, 5000));
+    timer = window.setTimeout(tick, clamp(int(detectors.interval_ms, 1100), 450, 5000));
   }
 
   function shortcutHandler(event) {
@@ -323,6 +494,7 @@
 
   function init() {
     if (!document.documentElement) return;
+    var storedLock = getPersistentLock();
     updateBaseline(true);
     window.addEventListener('keydown', shortcutHandler, true);
     document.addEventListener('keydown', shortcutHandler, true);
@@ -333,6 +505,10 @@
     window.addEventListener('resize', function () {
       if (detectors.viewport) window.setTimeout(detectViewport, 80);
     }, { passive: true });
+    if (storedLock) {
+      score = int(decision.threshold, 85);
+      activate(['persistent_lock'], true);
+    }
     window.setTimeout(function () {
       updateBaseline(true);
       tick();

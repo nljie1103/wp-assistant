@@ -129,7 +129,7 @@ class JIP_Admin {
 					<h1><span class="dashicons dashicons-admin-customizer"></span>九流沉浸式预加载</h1>
 					<p class="jiuliu-admin-subtitle">为 WordPress 网站提供炫酷的沉浸式预加载效果，实现丝滑的开门式进入体验。</p>
 				</div>
-				<span class="jiuliu-version-badge">v<?php echo esc_html( JIP_VERSION ); ?></span>
+				
 			</div>
 
 			<h2 class="nav-tab-wrapper jip-tabs">
@@ -299,7 +299,7 @@ class JIP_Admin {
 			</form>
 
 			<div class="jip-footer">
-				<p>作者：<a href="https://www.jiuliu.org" target="_blank" rel="noopener">九流</a> · 许可证：GPLv2+ · 版本：<?php echo esc_html( JIP_VERSION ); ?></p>
+				<p>作者：<a href="https://www.jiuliu.org" target="_blank" rel="noopener">九流</a> · 许可证：GPLv2+</p>
 			</div>
 		</div>
 		<?php

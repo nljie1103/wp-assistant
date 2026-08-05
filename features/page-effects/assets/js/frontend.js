@@ -343,13 +343,21 @@
 
   function initWaves() {
     var e = effects.waves || {};
-    var wrap = layer('xjpe-waves', 2);
+    var selector = String(e.footer_selector || 'footer.footer, #footer.footer, footer.site-footer, #colophon.site-footer, footer');
+    var footer = null;
+    try { footer = document.querySelector(selector); } catch (error) {}
+    if (!footer || !footer.parentNode) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'xjpe-waves';
+    wrap.setAttribute('aria-hidden', 'true');
     wrap.style.setProperty('--xjpe-wave-height', clamp(int(e.height, 72), 24, 220) + 'px');
     wrap.style.setProperty('--xjpe-wave-opacity', String(clamp(num(e.opacity, 0.48), 0.05, 1)));
     wrap.style.setProperty('--xjpe-wave-speed', clamp(int(e.speed, 12), 4, 40) + 's');
     wrap.style.setProperty('--xjpe-wave-color-1', String(e.color_1 || '#5b8cff'));
     wrap.style.setProperty('--xjpe-wave-color-2', String(e.color_2 || '#9b5cff'));
-    wrap.innerHTML = '<div class="xjpe-wave xjpe-wave-a"></div><div class="xjpe-wave xjpe-wave-b"></div>';
+    wrap.innerHTML = '<div class="xjpe-wave xjpe-wave-b"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path d="M0 74 C240 28 480 112 720 68 C960 24 1200 104 1440 62 L1440 120 L0 120 Z"></path><path transform="translate(1440 0)" d="M0 74 C240 28 480 112 720 68 C960 24 1200 104 1440 62 L1440 120 L0 120 Z"></path></svg></div><div class="xjpe-wave xjpe-wave-a"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path d="M0 82 C180 44 360 38 540 74 C720 110 900 106 1080 66 C1260 26 1350 48 1440 70 L1440 120 L0 120 Z"></path><path transform="translate(1440 0)" d="M0 82 C180 44 360 38 540 74 C720 110 900 106 1080 66 C1260 26 1350 48 1440 70 L1440 120 L0 120 Z"></path></svg></div>';
+    footer.parentNode.insertBefore(wrap, footer);
   }
 
   function initRibbon() {

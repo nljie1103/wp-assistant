@@ -358,7 +358,7 @@ class WPAIAS_Admin {
 					<h1><span class="dashicons dashicons-admin-customizer"></span><?php esc_html_e( '九流 AI 文章摘要', 'wp-ai-article-summary' ); ?></h1>
 					<p class="jiuliu-admin-subtitle"><?php esc_html_e( '自动在文章顶部插入 AI 智能摘要，并支持缓存、样式预览和主题兼容设置。', 'wp-ai-article-summary' ); ?></p>
 				</div>
-				<span class="jiuliu-version-badge">v<?php echo esc_html( WPAIAS_VERSION ); ?></span>
+				
 			</div>
 
 			<h2 class="nav-tab-wrapper wpaias-tabs">

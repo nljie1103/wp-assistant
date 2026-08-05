@@ -206,3 +206,53 @@
   .jlwa-ad-panel { padding: 18px; }
   .jlwa-ad-grid, .jlwa-ad-fields-4, .jlwa-ad-response-grid { grid-template-columns: 1fr; }
 }
+
+.jlwa-ad-danger-note,
+.jlwa-ad-emergency {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid #f2c7c7;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff7f7, #fffaf2);
+}
+.jlwa-ad-danger-note strong,
+.jlwa-ad-emergency strong { display: block; margin-bottom: 6px; }
+.jlwa-ad-danger-note p,
+.jlwa-ad-emergency p { margin: 0; color: #6f5960; line-height: 1.65; }
+.jlwa-ad-emergency code { display: block; overflow-wrap: anywhere; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #fff; }
+
+.jlwa-ad-layer {
+  margin: 0 0 20px;
+  padding: 20px;
+  border: 1px solid #e3e8f3;
+  border-radius: 18px;
+  background: #fbfcff;
+}
+.jlwa-ad-layer > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.jlwa-ad-layer > header > span {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e9edff;
+  color: #4356d7;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.jlwa-ad-layer > header strong { display: block; margin-bottom: 4px; font-size: 16px; }
+.jlwa-ad-layer > header p { margin: 0; color: #6d778b; }
+.jlwa-ad-layer--3 { border-color: #f0d6b6; background: #fffaf3; }
+.jlwa-ad-layer--4 { border-color: #efbfc4; background: #fff7f8; }
+.jlwa-ad-layer--4 > header > span { background: #ffe1e4; color: #b42331; }
+.jlwa-ad-option.is-dangerous { border-color: #efc3c8; background: #fffafa; }
+.jlwa-ad-option.is-dangerous strong::after {
+  content: ' 高风险';
+  color: #c52233;
+  font-size: 11px;
+  font-weight: 800;
+}

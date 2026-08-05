@@ -43,7 +43,14 @@
     root.querySelectorAll('.jlwa-ad-option').forEach(function (card) {
       syncCard(card);
       var input = card.querySelector('input[type="checkbox"]');
-      if (input) input.addEventListener('change', function () { syncCard(card); });
+      if (!input) return;
+      input.addEventListener('change', function () {
+        if (card.classList.contains('is-dangerous') && input.checked) {
+          var accepted = window.confirm('这是高风险防御动作，可能造成循环刷新、持续断点或页面无法正常关闭。请确认管理员绕过和紧急旁路地址已经可用。');
+          if (!accepted) input.checked = false;
+        }
+        syncCard(card);
+      });
     });
 
     var tabs = root.querySelectorAll('[data-tab]');
@@ -61,7 +68,7 @@
         applyMode(mode.value, root);
         if (mode.value === 'strict') {
           window.setTimeout(function () {
-            window.alert('严格模式会启用窗口差值与 debugger 耗时探测。请先使用“只记录”动作测试日志，再切换遮罩或跳转。');
+            window.alert('严格模式会启用窗口差值与 debugger 耗时探测。防御层仍由“分级防御链”单独决定，不会自动开启循环刷新或无限 debugger。');
           }, 10);
         }
       });

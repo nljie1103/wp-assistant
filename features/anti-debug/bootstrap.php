@@ -2,9 +2,9 @@
 /**
  * Dedicated anti-debug protection feature for 九流WP助手.
  *
- * This feature intentionally avoids endless debugger loops and forced reload
- * storms. It uses multiple low-frequency signals, score confirmation and
- * reversible responses to reduce false positives.
+ * This feature supports independently configurable detector and response
+ * layers, including optional aggressive debugger, reload and close loops.
+ * Every aggressive action is disabled by default and keeps administrator bypass.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 	final class JLWA_Anti_Debug_Feature {
-		const VERSION     = '1.0.0';
+		const VERSION     = '1.1.0';
 		const OPTION_NAME = 'jlwa_anti_debug_options';
 		const LOG_OPTION  = 'jlwa_anti_debug_logs';
 		const MENU_SLUG   = 'jlwa-anti-debug';
@@ -41,7 +41,9 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 		/** Install defaults without autoloading a large configuration object. */
 		public static function activate() {
 			if ( false === get_option( self::OPTION_NAME, false ) ) {
-				add_option( self::OPTION_NAME, self::defaults(), '', false );
+				$defaults = self::defaults();
+				$defaults['scope']['emergency_key'] = wp_generate_password( 18, false, false );
+				add_option( self::OPTION_NAME, $defaults, '', false );
 			}
 			if ( false === get_option( self::LOG_OPTION, false ) ) {
 				add_option( self::LOG_OPTION, array(), '', false );
@@ -63,6 +65,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					'admin_bypass'     => 1,
 					'logged_in_bypass' => 0,
 					'exclude_paths'    => "/wp-login.php\n/wp-admin/",
+					'emergency_key'    => '',
 				),
 				'detectors' => array(
 					'shortcuts'            => 1,
@@ -86,16 +89,58 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					'detector_cooldown_ms' => 1800,
 				),
 				'response' => array(
-					'action'          => 'overlay',
-					'message'         => '检测到调试环境。请关闭开发者工具后继续访问。',
-					'detail'          => '本站已启用反调试保护，用于降低批量抓取与恶意分析风险。',
-					'blur_px'         => 16,
-					'content_selector'=> 'article, main, .entry-content, .post-content, .article-content',
-					'redirect_url'    => '',
-					'close_attempt'   => 0,
-					'auto_recover'    => 1,
-					'recover_delay_ms'=> 1800,
-					'escalate_after_ms'=> 5500,
+					'message'          => '检测到调试环境。请关闭开发者工具后继续访问。',
+					'detail'           => '本站已启用反调试保护，用于降低批量抓取与恶意分析风险。',
+					'blur_px'          => 16,
+					'content_selector' => 'article, main, .entry-content, .post-content, .article-content',
+					'redirect_url'     => '',
+					'auto_recover'     => 1,
+					'recover_delay_ms' => 1800,
+					'layers' => array(
+						'level1' => array(
+							'enabled'           => 1,
+							'delay_ms'          => 0,
+							'overlay'           => 1,
+							'blur'              => 1,
+							'block_interaction' => 0,
+							'block_selection'   => 0,
+						),
+						'level2' => array(
+							'enabled'                   => 0,
+							'delay_ms'                  => 2500,
+							'replace_content'           => 1,
+							'clear_console'             => 0,
+							'console_clear_interval_ms' => 500,
+							'history_lock'              => 0,
+							'clipboard_guard'           => 0,
+						),
+						'level3' => array(
+							'enabled'            => 0,
+							'delay_ms'           => 5000,
+							'redirect'           => 0,
+							'reload_loop'        => 0,
+							'reload_interval_ms' => 1200,
+							'close_loop'         => 0,
+							'close_interval_ms'  => 700,
+							'persist_session'    => 0,
+							'persist_minutes'    => 10,
+						),
+						'level4' => array(
+							'enabled'                   => 0,
+							'delay_ms'                  => 8000,
+							'debugger_loop'             => 0,
+							'debugger_interval_ms'      => 250,
+							'clear_console'             => 0,
+							'console_clear_interval_ms' => 250,
+							'reload_loop'               => 0,
+							'reload_interval_ms'        => 800,
+							'close_loop'                => 0,
+							'close_interval_ms'         => 350,
+							'hard_lock'                 => 0,
+							'persist_session'           => 0,
+							'persist_minutes'           => 15,
+						),
+					),
 				),
 				'logging' => array(
 					'enabled'     => 1,
@@ -114,11 +159,27 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				return;
 			}
 			$version = isset( $saved['version'] ) ? (string) $saved['version'] : '0.0.0';
-			if ( version_compare( $version, self::VERSION, '>=' ) ) {
+			$needs_key = empty( $saved['scope']['emergency_key'] );
+			if ( version_compare( $version, self::VERSION, '>=' ) && ! $needs_key ) {
 				return;
 			}
 			$merged = $this->deep_merge( self::defaults(), $saved );
 			$merged['version'] = self::VERSION;
+			if ( $needs_key ) {
+				$merged['scope']['emergency_key'] = wp_generate_password( 18, false, false );
+			}
+			if ( isset( $saved['response']['action'] ) && empty( $saved['response']['layers'] ) ) {
+				$legacy_action = sanitize_key( $saved['response']['action'] );
+				if ( 'observe' === $legacy_action ) {
+					$merged['response']['layers']['level1']['enabled'] = 0;
+				} elseif ( 'replace' === $legacy_action ) {
+					$merged['response']['layers']['level2']['enabled'] = 1;
+				} elseif ( 'redirect' === $legacy_action || 'close' === $legacy_action ) {
+					$merged['response']['layers']['level3']['enabled'] = 1;
+					$merged['response']['layers']['level3'][ 'redirect' === $legacy_action ? 'redirect' : 'close_loop' ] = 1;
+				}
+			}
+			unset( $merged['response']['action'], $merged['response']['close_attempt'], $merged['response']['escalate_after_ms'] );
 			update_option( self::OPTION_NAME, $merged, false );
 		}
 
@@ -211,7 +272,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					<nav class="jlwa-ad-tabs" aria-label="反调试设置分区">
 						<button type="button" class="is-active" data-tab="overview">总体与范围</button>
 						<button type="button" data-tab="detectors">探测器</button>
-						<button type="button" data-tab="decision">判定与处置</button>
+						<button type="button" data-tab="decision">判定与公共设置</button>
+						<button type="button" data-tab="layers">分级防御链</button>
 						<button type="button" data-tab="logs">触发日志</button>
 					</nav>
 
@@ -253,27 +315,92 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 							<?php $this->number_field( 'decision[hit_window_ms]', '确认窗口（ms）', $options['decision']['hit_window_ms'], 1000, 15000, 100 ); ?>
 							<?php $this->number_field( 'decision[score_decay]', '每轮分数衰减', $options['decision']['score_decay'], 1, 50, 1 ); ?>
 						</div>
-						<div class="jlwa-ad-response-grid">
-							<label class="jlwa-ad-field"><span>检测后动作</span><select name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][action]">
-								<option value="observe" <?php selected( $options['response']['action'], 'observe' ); ?>>只记录，不影响页面</option>
-								<option value="overlay" <?php selected( $options['response']['action'], 'overlay' ); ?>>遮罩并模糊正文</option>
-								<option value="replace" <?php selected( $options['response']['action'], 'replace' ); ?>>替换正文区域</option>
-								<option value="redirect" <?php selected( $options['response']['action'], 'redirect' ); ?>>跳转到指定页面</option>
-								<option value="close" <?php selected( $options['response']['action'], 'close' ); ?>>尝试关闭，失败后跳转</option>
-							</select></label>
-							<?php $this->number_field( 'response[blur_px]', '模糊强度（px）', $options['response']['blur_px'], 0, 40, 1 ); ?>
-							<?php $this->number_field( 'response[recover_delay_ms]', '恢复等待（ms）', $options['response']['recover_delay_ms'], 500, 15000, 100 ); ?>
-							<?php $this->number_field( 'response[escalate_after_ms]', '升级处置等待（ms）', $options['response']['escalate_after_ms'], 1000, 30000, 100 ); ?>
-						</div>
 						<label class="jlwa-ad-field"><span>警告标题</span><input type="text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][message]" value="<?php echo esc_attr( $options['response']['message'] ); ?>"></label>
 						<label class="jlwa-ad-field"><span>补充说明</span><textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][detail]" rows="3"><?php echo esc_textarea( $options['response']['detail'] ); ?></textarea></label>
-						<label class="jlwa-ad-field"><span>正文选择器</span><input type="text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][content_selector]" value="<?php echo esc_attr( $options['response']['content_selector'] ); ?>"><small>用逗号分隔。严格模式下只处理这些区域，不直接销毁整个页面。</small></label>
+						<label class="jlwa-ad-field"><span>正文选择器</span><input type="text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][content_selector]" value="<?php echo esc_attr( $options['response']['content_selector'] ); ?>"><small>用于模糊、禁用交互和替换正文。多个选择器用英文逗号分隔。</small></label>
 						<label class="jlwa-ad-field"><span>跳转地址</span><input type="url" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[response][redirect_url]" value="<?php echo esc_attr( $options['response']['redirect_url'] ); ?>" placeholder="https://example.com/copyright/"></label>
+						<div class="jlwa-ad-fields-4">
+							<?php $this->number_field( 'response[blur_px]', '模糊强度（px）', $options['response']['blur_px'], 0, 60, 1 ); ?>
+							<?php $this->number_field( 'response[recover_delay_ms]', '恢复等待（ms）', $options['response']['recover_delay_ms'], 500, 15000, 100 ); ?>
+						</div>
 						<div class="jlwa-ad-grid">
-							<?php $this->checkbox_card( 'response[auto_recover]', '关闭后自动恢复', '检测信号消失并经过恢复等待后解除遮罩。', ! empty( $options['response']['auto_recover'] ) ); ?>
-							<?php $this->checkbox_card( 'response[close_attempt]', '允许关闭尝试', '仅在选择关闭动作时使用；浏览器可能拒绝。', ! empty( $options['response']['close_attempt'] ) ); ?>
+							<?php $this->checkbox_card( 'response[auto_recover]', '信号消失后自动恢复', '未启用会话持久锁时，关闭开发者工具后恢复正文。', ! empty( $options['response']['auto_recover'] ) ); ?>
 							<?php $this->checkbox_card( 'logging[enabled]', '记录触发日志', '只保存时间、原因、页面、浏览器摘要和匿名访客指纹。', ! empty( $options['logging']['enabled'] ) ); ?>
 						</div>
+						<section class="jlwa-ad-emergency">
+							<div><strong>紧急旁路</strong><p>高强度循环启用后，可用下面的地址临时绕过前台反调试。管理员登录状态仍默认自动绕过。</p></div>
+							<label class="jlwa-ad-field"><span>旁路密钥</span><input type="text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[scope][emergency_key]" value="<?php echo esc_attr( $options['scope']['emergency_key'] ); ?>" minlength="8"></label>
+							<code><?php echo esc_html( add_query_arg( 'jlwa_safe', $options['scope']['emergency_key'], home_url( '/' ) ) ); ?></code>
+						</section>
+					</section>
+
+					<section class="jlwa-ad-panel" data-panel="layers">
+						<div class="jlwa-ad-danger-note"><strong>可选高强度防御</strong><p>四个层级按延迟依次执行，每个层级都可单独启停和组合动作。持续 debugger、循环刷新和循环关闭会明显影响访客浏览，仅在确认旁路地址可用后启用。</p></div>
+
+						<section class="jlwa-ad-layer jlwa-ad-layer--1">
+							<header><span>LEVEL 1</span><div><strong>警告与软阻断</strong><p>先提示、模糊和限制操作，不离开当前页面。</p></div></header>
+							<div class="jlwa-ad-fields-4"><?php $this->number_field( 'response[layers][level1][delay_ms]', '触发后延迟（ms）', $options['response']['layers']['level1']['delay_ms'], 0, 30000, 100 ); ?></div>
+							<div class="jlwa-ad-grid">
+								<?php $this->checkbox_card( 'response[layers][level1][enabled]', '启用第一级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level1']['enabled'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level1][overlay]', '警告遮罩', '显示全屏提示卡片。', ! empty( $options['response']['layers']['level1']['overlay'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level1][blur]', '模糊正文', '按正文选择器模糊内容。', ! empty( $options['response']['layers']['level1']['blur'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level1][block_interaction]', '禁用正文交互', '阻止正文区域点击和触摸。', ! empty( $options['response']['layers']['level1']['block_interaction'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level1][block_selection]', '禁用选择', '禁止页面文本选择。', ! empty( $options['response']['layers']['level1']['block_selection'] ) ); ?>
+							</div>
+						</section>
+
+						<section class="jlwa-ad-layer jlwa-ad-layer--2">
+							<header><span>LEVEL 2</span><div><strong>内容与浏览行为锁定</strong><p>替换正文、清空控制台并限制复制和后退。</p></div></header>
+							<div class="jlwa-ad-fields-4">
+								<?php $this->number_field( 'response[layers][level2][delay_ms]', '触发后延迟（ms）', $options['response']['layers']['level2']['delay_ms'], 0, 30000, 100 ); ?>
+								<?php $this->number_field( 'response[layers][level2][console_clear_interval_ms]', '清空控制台间隔（ms）', $options['response']['layers']['level2']['console_clear_interval_ms'], 100, 10000, 50 ); ?>
+							</div>
+							<div class="jlwa-ad-grid">
+								<?php $this->checkbox_card( 'response[layers][level2][enabled]', '启用第二级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level2']['enabled'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level2][replace_content]', '替换正文 DOM', '把匹配的正文替换为保护提示。', ! empty( $options['response']['layers']['level2']['replace_content'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level2][clear_console]', '循环清空 Console', '按设置间隔反复调用 console.clear。', ! empty( $options['response']['layers']['level2']['clear_console'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level2][history_lock]', '锁定后退行为', '触发后持续补回当前历史记录。', ! empty( $options['response']['layers']['level2']['history_lock'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level2][clipboard_guard]', '阻止复制与剪切', '捕获 copy/cut 事件并阻止默认行为。', ! empty( $options['response']['layers']['level2']['clipboard_guard'] ) ); ?>
+							</div>
+						</section>
+
+						<section class="jlwa-ad-layer jlwa-ad-layer--3">
+							<header><span>LEVEL 3</span><div><strong>页面驱离</strong><p>跳转、循环刷新和循环关闭均可独立选择。</p></div></header>
+							<div class="jlwa-ad-fields-4">
+								<?php $this->number_field( 'response[layers][level3][delay_ms]', '触发后延迟（ms）', $options['response']['layers']['level3']['delay_ms'], 0, 60000, 100 ); ?>
+								<?php $this->number_field( 'response[layers][level3][reload_interval_ms]', '循环刷新间隔（ms）', $options['response']['layers']['level3']['reload_interval_ms'], 250, 30000, 50 ); ?>
+								<?php $this->number_field( 'response[layers][level3][close_interval_ms]', '循环关闭间隔（ms）', $options['response']['layers']['level3']['close_interval_ms'], 150, 10000, 50 ); ?>
+								<?php $this->number_field( 'response[layers][level3][persist_minutes]', '会话锁定分钟', $options['response']['layers']['level3']['persist_minutes'], 1, 1440, 1 ); ?>
+							</div>
+							<div class="jlwa-ad-grid">
+								<?php $this->checkbox_card( 'response[layers][level3][enabled]', '启用第三级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level3']['enabled'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][redirect]', '跳转指定地址', '使用公共设置中的跳转地址。', ! empty( $options['response']['layers']['level3']['redirect'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][reload_loop]', '死循环刷新', '写入会话锁并按间隔反复刷新页面。', ! empty( $options['response']['layers']['level3']['reload_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][close_loop]', '循环尝试关闭', '浏览器可能拒绝，但会持续尝试。', ! empty( $options['response']['layers']['level3']['close_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][persist_session]', '持久会话锁', '刷新后继续直接进入防御链。', ! empty( $options['response']['layers']['level3']['persist_session'] ), 'dangerous' ); ?>
+							</div>
+						</section>
+
+						<section class="jlwa-ad-layer jlwa-ad-layer--4">
+							<header><span>LEVEL 4</span><div><strong>极限组合防御</strong><p>持续 debugger、硬锁、刷新与关闭可同时运行。</p></div></header>
+							<div class="jlwa-ad-fields-4">
+								<?php $this->number_field( 'response[layers][level4][delay_ms]', '触发后延迟（ms）', $options['response']['layers']['level4']['delay_ms'], 0, 60000, 100 ); ?>
+								<?php $this->number_field( 'response[layers][level4][debugger_interval_ms]', 'Debugger 循环间隔（ms）', $options['response']['layers']['level4']['debugger_interval_ms'], 80, 5000, 10 ); ?>
+								<?php $this->number_field( 'response[layers][level4][console_clear_interval_ms]', '清空 Console 间隔（ms）', $options['response']['layers']['level4']['console_clear_interval_ms'], 80, 10000, 10 ); ?>
+								<?php $this->number_field( 'response[layers][level4][reload_interval_ms]', '刷新循环间隔（ms）', $options['response']['layers']['level4']['reload_interval_ms'], 250, 30000, 50 ); ?>
+								<?php $this->number_field( 'response[layers][level4][close_interval_ms]', '关闭循环间隔（ms）', $options['response']['layers']['level4']['close_interval_ms'], 150, 10000, 50 ); ?>
+								<?php $this->number_field( 'response[layers][level4][persist_minutes]', '会话锁定分钟', $options['response']['layers']['level4']['persist_minutes'], 1, 1440, 1 ); ?>
+							</div>
+							<div class="jlwa-ad-grid">
+								<?php $this->checkbox_card( 'response[layers][level4][enabled]', '启用第四级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level4']['enabled'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][debugger_loop]', '无限 Debugger 循环', '持续触发 debugger 断点。', ! empty( $options['response']['layers']['level4']['debugger_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][clear_console]', '高速清空 Console', '持续清理控制台输出。', ! empty( $options['response']['layers']['level4']['clear_console'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][reload_loop]', '死循环刷新', '极限层持续刷新并保持会话锁。', ! empty( $options['response']['layers']['level4']['reload_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][close_loop]', '循环关闭页面', '按高频间隔持续尝试关闭窗口。', ! empty( $options['response']['layers']['level4']['close_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][hard_lock]', '页面硬锁', '禁用页面滚动、选择、点击和触摸。', ! empty( $options['response']['layers']['level4']['hard_lock'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][persist_session]', '持久会话锁', '刷新或重进页面后继续直接执行防御。', ! empty( $options['response']['layers']['level4']['persist_session'] ), 'dangerous' ); ?>
+							</div>
+						</section>
 					</section>
 
 					<section class="jlwa-ad-panel" data-panel="logs">
@@ -295,8 +422,10 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 
 		/** @param string $name Field suffix. @param string $title Title. @param string $description Description. @param bool $checked Checked. @param string $detector Detector key. */
 		private function checkbox_card( $name, $title, $description, $checked, $detector = '' ) {
-			$attr = $detector ? ' data-detector="' . esc_attr( $detector ) . '"' : '';
-			echo '<label class="jlwa-ad-option"' . $attr . '><input type="checkbox" name="' . esc_attr( $this->field_name( $name ) ) . '" value="1" ' . checked( $checked, true, false ) . '><span class="jlwa-ad-option__check"></span><span><strong>' . esc_html( $title ) . '</strong><small>' . esc_html( $description ) . '</small></span></label>';
+			$is_dangerous = 'dangerous' === $detector;
+			$attr = $detector && ! $is_dangerous ? ' data-detector="' . esc_attr( $detector ) . '"' : '';
+			$class = 'jlwa-ad-option' . ( $is_dangerous ? ' is-dangerous' : '' );
+			echo '<label class="' . esc_attr( $class ) . '"' . $attr . '><input type="checkbox" name="' . esc_attr( $this->field_name( $name ) ) . '" value="1" ' . checked( $checked, true, false ) . '><span class="jlwa-ad-option__check"></span><span><strong>' . esc_html( $title ) . '</strong><small>' . esc_html( $description ) . '</small></span></label>';
 		}
 
 		/** @param string $name Field suffix. @param string $title Title. @param int|float $value Value. @param int|float $min Min. @param int|float $max Max. @param int|float $step Step. */
@@ -346,6 +475,12 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			}
 			if ( ! empty( $scope['logged_in_bypass'] ) && is_user_logged_in() ) {
 				return false;
+			}
+			if ( ! empty( $scope['emergency_key'] ) && isset( $_GET['jlwa_safe'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$provided = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) wp_unslash( $_GET['jlwa_safe'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				if ( hash_equals( (string) $scope['emergency_key'], (string) $provided ) ) {
+					return false;
+				}
 			}
 			if ( empty( $scope['mobile'] ) && wp_is_mobile() ) {
 				return false;
@@ -438,17 +573,40 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			$out['decision']['hit_window_ms'] = $this->bounded_int( $raw, array( 'decision', 'hit_window_ms' ), 1000, 15000, 4200 );
 			$out['decision']['score_decay'] = $this->bounded_int( $raw, array( 'decision', 'score_decay' ), 1, 50, 12 );
 			$out['decision']['detector_cooldown_ms'] = 1800;
-			$actions = array( 'observe', 'overlay', 'replace', 'redirect', 'close' );
-			$out['response']['action'] = in_array( isset( $raw['response']['action'] ) ? $raw['response']['action'] : '', $actions, true ) ? $raw['response']['action'] : 'overlay';
+			$key = isset( $raw['scope']['emergency_key'] ) ? preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $raw['scope']['emergency_key'] ) : '';
+			$out['scope']['emergency_key'] = strlen( $key ) >= 8 ? substr( $key, 0, 64 ) : wp_generate_password( 18, false, false );
 			$out['response']['message'] = isset( $raw['response']['message'] ) ? sanitize_text_field( $raw['response']['message'] ) : $defaults['response']['message'];
 			$out['response']['detail'] = isset( $raw['response']['detail'] ) ? sanitize_textarea_field( $raw['response']['detail'] ) : $defaults['response']['detail'];
 			$out['response']['content_selector'] = isset( $raw['response']['content_selector'] ) ? sanitize_text_field( $raw['response']['content_selector'] ) : $defaults['response']['content_selector'];
 			$out['response']['redirect_url'] = isset( $raw['response']['redirect_url'] ) ? esc_url_raw( $raw['response']['redirect_url'] ) : '';
-			$out['response']['blur_px'] = $this->bounded_int( $raw, array( 'response', 'blur_px' ), 0, 40, 16 );
+			$out['response']['blur_px'] = $this->bounded_int( $raw, array( 'response', 'blur_px' ), 0, 60, 16 );
 			$out['response']['recover_delay_ms'] = $this->bounded_int( $raw, array( 'response', 'recover_delay_ms' ), 500, 15000, 1800 );
-			$out['response']['escalate_after_ms'] = $this->bounded_int( $raw, array( 'response', 'escalate_after_ms' ), 1000, 30000, 5500 );
 			$out['response']['auto_recover'] = empty( $raw['response']['auto_recover'] ) ? 0 : 1;
-			$out['response']['close_attempt'] = empty( $raw['response']['close_attempt'] ) ? 0 : 1;
+
+			$boolean_layers = array(
+				'level1' => array( 'enabled', 'overlay', 'blur', 'block_interaction', 'block_selection' ),
+				'level2' => array( 'enabled', 'replace_content', 'clear_console', 'history_lock', 'clipboard_guard' ),
+				'level3' => array( 'enabled', 'redirect', 'reload_loop', 'close_loop', 'persist_session' ),
+				'level4' => array( 'enabled', 'debugger_loop', 'clear_console', 'reload_loop', 'close_loop', 'hard_lock', 'persist_session' ),
+			);
+			foreach ( $boolean_layers as $level => $keys ) {
+				foreach ( $keys as $layer_key ) {
+					$out['response']['layers'][ $level ][ $layer_key ] = empty( $raw['response']['layers'][ $level ][ $layer_key ] ) ? 0 : 1;
+				}
+			}
+			$out['response']['layers']['level1']['delay_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level1', 'delay_ms' ), 0, 30000, 0 );
+			$out['response']['layers']['level2']['delay_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level2', 'delay_ms' ), 0, 30000, 2500 );
+			$out['response']['layers']['level2']['console_clear_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level2', 'console_clear_interval_ms' ), 100, 10000, 500 );
+			$out['response']['layers']['level3']['delay_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level3', 'delay_ms' ), 0, 60000, 5000 );
+			$out['response']['layers']['level3']['reload_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level3', 'reload_interval_ms' ), 250, 30000, 1200 );
+			$out['response']['layers']['level3']['close_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level3', 'close_interval_ms' ), 150, 10000, 700 );
+			$out['response']['layers']['level3']['persist_minutes'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level3', 'persist_minutes' ), 1, 1440, 10 );
+			$out['response']['layers']['level4']['delay_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'delay_ms' ), 0, 60000, 8000 );
+			$out['response']['layers']['level4']['debugger_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'debugger_interval_ms' ), 80, 5000, 250 );
+			$out['response']['layers']['level4']['console_clear_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'console_clear_interval_ms' ), 80, 10000, 250 );
+			$out['response']['layers']['level4']['reload_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'reload_interval_ms' ), 250, 30000, 800 );
+			$out['response']['layers']['level4']['close_interval_ms'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'close_interval_ms' ), 150, 10000, 350 );
+			$out['response']['layers']['level4']['persist_minutes'] = $this->bounded_int( $raw, array( 'response', 'layers', 'level4', 'persist_minutes' ), 1, 1440, 15 );
 			$out['logging']['enabled'] = empty( $raw['logging']['enabled'] ) ? 0 : 1;
 			$out['logging']['max_entries'] = $this->bounded_int( $raw, array( 'logging', 'max_entries' ), 20, 500, 100 );
 

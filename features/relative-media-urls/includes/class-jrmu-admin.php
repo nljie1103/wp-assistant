@@ -81,7 +81,7 @@ class JRMU_Admin {
 					<h1><span class="dashicons dashicons-admin-customizer"></span>九流媒体相对地址</h1>
 					<p class="jiuliu-admin-subtitle">WordPress 反向代理与多域名链接助手。默认不启用任何转换；所有永久修改都必须先扫描、预览、勾选并确认。</p>
 				</div>
-				<span class="jiuliu-version-badge">v<?php echo esc_html( JRMU_VERSION ); ?></span>
+				
 			</div>
 			<?php $this->render_notices(); ?>
 			<?php $this->render_tabs( $tab ); ?>

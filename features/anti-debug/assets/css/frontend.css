@@ -118,3 +118,26 @@
   .jlwa-ad-protected-content,
   .jlwa-ad-overlay__status span { transition: none; animation: none; }
 }
+
+.jlwa-ad-no-interaction {
+  pointer-events: none !important;
+}
+
+
+.jlwa-ad-block-selection,
+.jlwa-ad-block-selection body,
+.jlwa-ad-block-selection body * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.jlwa-ad-hard-lock,
+.jlwa-ad-hard-lock body {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+.jlwa-ad-hard-lock body > *:not(.jlwa-ad-overlay) {
+  pointer-events: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
