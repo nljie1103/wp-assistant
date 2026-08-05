@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
     final class JLWA_Page_Effects_Feature {
-        const VERSION     = '1.7.0';
+        const VERSION     = '1.7.1';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';
 
@@ -28,6 +28,12 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
             add_action( 'template_redirect', array( $this, 'maybe_start_buffer_injection' ), 0 );
+            add_filter( 'the_content', array( $this, 'filter_protected_content' ), 999 );
+            add_filter( 'the_content_feed', array( $this, 'filter_protected_feed' ), 999 );
+            add_filter( 'the_excerpt_rss', array( $this, 'filter_protected_feed' ), 999 );
+            add_filter( 'rest_prepare_post', array( $this, 'filter_protected_rest_response' ), 999, 3 );
+            add_filter( 'rest_prepare_page', array( $this, 'filter_protected_rest_response' ), 999, 3 );
+            add_filter( 'wp_robots', array( $this, 'filter_protected_robots' ) );
 
         }
 
@@ -235,6 +241,15 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         'copy_include_link'  => 1,
                         'copy_success_toast' => 1,
                         'copy_toast_message' => '复制成功，请保留文章版权与来源链接。',
+                        'server_mode'        => 'public',
+                        'server_capability'  => 'read',
+                        'server_posts'       => 1,
+                        'server_pages'       => 0,
+                        'server_teaser_words'=> 60,
+                        'server_message'     => '完整内容仅向已授权用户开放，请登录后继续阅读。',
+                        'server_hide_rest'   => 1,
+                        'server_hide_feed'   => 1,
+                        'server_noindex'     => 1,
                     ),
                     'bgmusic' => array(
                         'enabled'  => 0,
@@ -268,7 +283,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'ribbon' => array( 'icon' => '🎀', 'title' => '彩带背景', 'desc' => '点击刷新彩带背景', 'group' => '氛围特效' ),
                 'grayscale' => array( 'icon' => '🕯️', 'title' => '全站灰色', 'desc' => '纪念/悼念模式', 'group' => '特殊模式' ),
                 'contextmenu' => array( 'icon' => '🖱️', 'title' => '右键美化', 'desc' => '自定义右键菜单', 'group' => '交互增强' ),
-                'nosource' => array( 'icon' => '🔒', 'title' => '内容保护与复制版权', 'desc' => '快捷键拦截、禁复制或复制时自动附加版权', 'group' => '内容保护' ),
+                'nosource' => array( 'icon' => '🔒', 'title' => '内容保护与复制版权', 'desc' => '公开页面操作限制、复制署名与服务器权限保护', 'group' => '内容保护' ),
                 'bgmusic' => array( 'icon' => '🎵', 'title' => '背景音乐', 'desc' => '网站背景音乐播放', 'group' => '节日与音乐' ),
                 'welcome' => array( 'icon' => '🎉', 'title' => '节日欢迎弹窗', 'desc' => '节日自动弹窗祝福', 'group' => '节日与音乐' ),
             );
@@ -386,7 +401,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 
             $protection = isset( $effects['nosource'] ) && is_array( $effects['nosource'] ) ? $effects['nosource'] : array();
             $output['effects']['nosource']['message']            = sanitize_text_field( $protection['message'] ?? $defaults['effects']['nosource']['message'] );
-            foreach ( array( 'admin_bypass', 'block_contextmenu', 'block_shortcuts', 'block_copy', 'block_selection', 'block_drag', 'block_print', 'copy_include_link', 'copy_success_toast' ) as $toggle ) {
+            foreach ( array( 'admin_bypass', 'block_contextmenu', 'block_shortcuts', 'block_copy', 'block_selection', 'block_drag', 'block_print', 'copy_include_link', 'copy_success_toast', 'server_posts', 'server_pages', 'server_hide_rest', 'server_hide_feed', 'server_noindex' ) as $toggle ) {
                 $output['effects']['nosource'][ $toggle ] = empty( $protection[ $toggle ] ) ? 0 : 1;
             }
             $copy_mode = isset( $protection['copy_mode'] ) ? sanitize_key( $protection['copy_mode'] ) : 'append';
@@ -395,6 +410,12 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $output['effects']['nosource']['copy_suffix']        = sanitize_textarea_field( $protection['copy_suffix'] ?? $defaults['effects']['nosource']['copy_suffix'] );
             $output['effects']['nosource']['copy_min_chars']     = $this->sanitize_int( $protection['copy_min_chars'] ?? 12, 0, 1000, 12 );
             $output['effects']['nosource']['copy_toast_message'] = sanitize_text_field( $protection['copy_toast_message'] ?? $defaults['effects']['nosource']['copy_toast_message'] );
+            $server_mode = isset( $protection['server_mode'] ) ? sanitize_key( $protection['server_mode'] ) : 'public';
+            $output['effects']['nosource']['server_mode'] = in_array( $server_mode, array( 'public', 'restricted' ), true ) ? $server_mode : 'public';
+            $server_capability = isset( $protection['server_capability'] ) ? sanitize_key( $protection['server_capability'] ) : 'read';
+            $output['effects']['nosource']['server_capability'] = in_array( $server_capability, array( 'read', 'edit_posts', 'manage_options' ), true ) ? $server_capability : 'read';
+            $output['effects']['nosource']['server_teaser_words'] = $this->sanitize_int( $protection['server_teaser_words'] ?? 60, 0, 300, 60 );
+            $output['effects']['nosource']['server_message'] = sanitize_text_field( $protection['server_message'] ?? $defaults['effects']['nosource']['server_message'] );
 
             $output['effects']['bgmusic']['url']      = esc_url_raw( $effects['bgmusic']['url'] ?? '' );
             $output['effects']['bgmusic']['title']    = sanitize_text_field( $effects['bgmusic']['title'] ?? '背景音乐' );
@@ -465,6 +486,110 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 
             wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
             wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
+        }
+
+        private function protection_options() {
+            $options = $this->get_options();
+            if ( empty( $options['effects']['nosource']['enabled'] ) ) {
+                return array();
+            }
+            return isset( $options['effects']['nosource'] ) && is_array( $options['effects']['nosource'] ) ? $options['effects']['nosource'] : array();
+        }
+
+        private function is_protected_post_type( $post_type, $protection ) {
+            if ( 'post' === $post_type ) {
+                return ! empty( $protection['server_posts'] );
+            }
+            if ( 'page' === $post_type ) {
+                return ! empty( $protection['server_pages'] );
+            }
+            return false;
+        }
+
+        private function current_user_can_read_protected( $protection ) {
+            $capability = isset( $protection['server_capability'] ) ? $protection['server_capability'] : 'read';
+            return is_user_logged_in() && current_user_can( $capability );
+        }
+
+        private function protected_notice_html( $protection ) {
+            $message = isset( $protection['server_message'] ) ? $protection['server_message'] : '完整内容仅向已授权用户开放，请登录后继续阅读。';
+            $html = '<div class="xjpe-server-protected" role="note"><strong>🔒 ' . esc_html__( '内容受保护', 'jiuliu-wp-assistant' ) . '</strong><p>' . esc_html( $message ) . '</p>';
+            if ( ! is_user_logged_in() ) {
+                $html .= '<a class="xjpe-server-login" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( '登录后继续阅读', 'jiuliu-wp-assistant' ) . '</a>';
+            }
+            $html .= '</div>';
+            return $html;
+        }
+
+        public function filter_protected_content( $content ) {
+            if ( is_admin() || wp_doing_ajax() || ! is_singular() || ! in_the_loop() || ! is_main_query() ) {
+                return $content;
+            }
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || 'restricted' !== ( $protection['server_mode'] ?? 'public' ) ) {
+                return $content;
+            }
+            $post_type = get_post_type();
+            if ( ! $this->is_protected_post_type( $post_type, $protection ) || $this->current_user_can_read_protected( $protection ) ) {
+                return $content;
+            }
+            $teaser_words = isset( $protection['server_teaser_words'] ) ? (int) $protection['server_teaser_words'] : 60;
+            $teaser = $teaser_words > 0 ? '<div class="xjpe-server-teaser">' . esc_html( wp_trim_words( wp_strip_all_tags( $content ), $teaser_words, '…' ) ) . '</div>' : '';
+            return $teaser . $this->protected_notice_html( $protection );
+        }
+
+        public function filter_protected_feed( $content ) {
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || empty( $protection['server_hide_feed'] ) || $this->current_user_can_read_protected( $protection ) ) {
+                return $content;
+            }
+            $post_type = get_post_type();
+            if ( ! $this->is_protected_post_type( $post_type, $protection ) ) {
+                return $content;
+            }
+            return isset( $protection['server_message'] ) ? $protection['server_message'] : '完整内容仅向已授权用户开放。';
+        }
+
+        public function filter_protected_rest_response( $response, $post, $request ) {
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || empty( $protection['server_hide_rest'] ) || ! $post instanceof WP_Post || $this->current_user_can_read_protected( $protection ) ) {
+                return $response;
+            }
+            if ( ! $this->is_protected_post_type( $post->post_type, $protection ) || ! is_object( $response ) || ! method_exists( $response, 'get_data' ) ) {
+                return $response;
+            }
+            $data = $response->get_data();
+            $message = isset( $protection['server_message'] ) ? $protection['server_message'] : '完整内容仅向已授权用户开放。';
+            if ( isset( $data['content'] ) && is_array( $data['content'] ) ) {
+                $data['content']['rendered'] = '<p>' . esc_html( $message ) . '</p>';
+                if ( isset( $data['content']['raw'] ) ) {
+                    $data['content']['raw'] = '';
+                }
+            }
+            if ( isset( $data['excerpt'] ) && is_array( $data['excerpt'] ) ) {
+                $data['excerpt']['rendered'] = '<p>' . esc_html( $message ) . '</p>';
+                if ( isset( $data['excerpt']['raw'] ) ) {
+                    $data['excerpt']['raw'] = '';
+                }
+            }
+            $response->set_data( $data );
+            return $response;
+        }
+
+        public function filter_protected_robots( $robots ) {
+            if ( is_admin() || ! is_singular() ) {
+                return $robots;
+            }
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || empty( $protection['server_noindex'] ) || 'restricted' !== ( $protection['server_mode'] ?? 'public' ) || $this->current_user_can_read_protected( $protection ) ) {
+                return $robots;
+            }
+            if ( ! $this->is_protected_post_type( get_post_type(), $protection ) ) {
+                return $robots;
+            }
+            $robots['noindex'] = true;
+            $robots['nofollow'] = true;
+            return $robots;
         }
 
         public function enqueue_frontend_assets() {
@@ -869,7 +994,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->text_field( $base, 'message', '拦截提示文字', $effect['message'], '本站已开启内容保护，请尊重原创。' );
                     $this->inline_checkbox( $base, 'admin_bypass', '管理员登录时自动绕过保护', $effect['admin_bypass'] );
                     $this->inline_checkbox( $base, 'block_contextmenu', '禁用浏览器原生右键菜单（启用右键美化时自动保留美化菜单）', $effect['block_contextmenu'] );
-                    $this->inline_checkbox( $base, 'block_shortcuts', '拦截 F12、Ctrl+U、Ctrl+S、开发者工具等常见快捷键', $effect['block_shortcuts'] );
+                    $this->inline_checkbox( $base, 'block_shortcuts', '拦截页面内的 F12、Ctrl/Cmd+U、Ctrl/Cmd+S 与常见开发者快捷键', $effect['block_shortcuts'] );
                     $this->inline_checkbox( $base, 'block_copy', '完全禁止 Ctrl+C 与复制事件', $effect['block_copy'] );
                     $this->inline_checkbox( $base, 'block_selection', '禁止正文文字选择（表单、代码块除外）', $effect['block_selection'] );
                     $this->inline_checkbox( $base, 'block_drag', '禁止拖拽图片和文本', $effect['block_drag'] );
@@ -881,7 +1006,17 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->inline_checkbox( $base, 'copy_include_link', '自动加入当前文章链接，并为 HTML 剪贴板创建可点击链接', $effect['copy_include_link'] );
                     $this->inline_checkbox( $base, 'copy_success_toast', '复制后显示版权提醒弹窗', $effect['copy_success_toast'] );
                     $this->text_field( $base, 'copy_toast_message', '复制成功提示', $effect['copy_toast_message'], '复制成功，请保留文章版权与来源链接。' );
-                    echo '<p class="xjpe-tip"><strong>重要：</strong>浏览器端无法真正阻止开发者工具、查看源代码或专业采集；本功能用于提高普通转载成本、附加来源并提醒版权。手机浏览器对 HTML 剪贴板支持不一致，会自动退化为纯文本。</p>';
+                    echo '<div class="xjpe-tip"><strong>服务器级正文保护</strong><br>只有“限制全文访问”能让未授权访客的页面源码中不出现完整正文。公开网页无法真正禁止浏览器菜单中的开发者工具，也无法阻止手动输入 <code>view-source:</code>。</div>';
+                    $this->select_field( $base, 'server_mode', '正文访问模式', $effect['server_mode'], array( 'public' => '公开展示（快捷键、复制和版权提醒）', 'restricted' => '限制全文访问（服务器仅向授权用户发送正文）' ) );
+                    $this->select_field( $base, 'server_capability', '允许查看全文的用户', $effect['server_capability'], array( 'read' => '所有已登录用户', 'edit_posts' => '作者、编辑和管理员', 'manage_options' => '仅管理员' ) );
+                    $this->inline_checkbox( $base, 'server_posts', '保护文章正文', $effect['server_posts'] );
+                    $this->inline_checkbox( $base, 'server_pages', '保护独立页面正文', $effect['server_pages'] );
+                    $this->number_field( $base, 'server_teaser_words', '未授权访客可见的摘要字数（0 为不显示摘要）', $effect['server_teaser_words'], 0, 300, 5 );
+                    $this->text_field( $base, 'server_message', '服务器保护提示', $effect['server_message'], '完整内容仅向已授权用户开放，请登录后继续阅读。' );
+                    $this->inline_checkbox( $base, 'server_hide_rest', '从 WordPress REST API 隐藏受保护正文', $effect['server_hide_rest'] );
+                    $this->inline_checkbox( $base, 'server_hide_feed', '从 RSS/Atom 订阅隐藏受保护正文', $effect['server_hide_feed'] );
+                    $this->inline_checkbox( $base, 'server_noindex', '未授权访问时输出 noindex/nofollow', $effect['server_noindex'] );
+                    echo '<p class="xjpe-tip"><strong>边界说明：</strong>已获授权并能看到正文的用户，仍可通过开发者工具、截图或网络请求取得内容。公开内容只能提高转载成本，不能做到绝对防复制。</p>';
                     break;
                 case 'bgmusic':
                     $this->url_field( $base, 'url', '音乐文件 URL', $effect['url'], 'https://example.com/music.mp3' );

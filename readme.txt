@@ -4,7 +4,7 @@ Tags: wordpress, ai summary, media urls, effects, preloader
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.1.0
+Stable tag: 2.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,6 +37,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.1.1 =
+* 修正 Ctrl/Cmd+U 等页面内快捷键拦截，增加 keyCode 兼容和捕获阶段双重监听。
+* 打印保护增加打印样式，即使从浏览器菜单打印也不会输出正文。
+* 后台明确说明公开网页无法真正禁止浏览器开发者工具和 view-source:。
+* 新增服务器级正文访问模式：可要求登录用户、作者/编辑或管理员才能取得完整文章/页面正文。
+* 服务器保护可为未授权访客显示有限摘要，并隐藏 REST API、RSS/Atom 正文及输出 noindex/nofollow。
 
 = 2.1.0 =
 * 页面美化新增落叶、气泡、底部波浪与多种鼠标轨迹，并提高雪花/樱花数量上限。

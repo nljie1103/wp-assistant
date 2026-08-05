@@ -454,17 +454,34 @@
     if (e.block_drag) document.addEventListener('dragstart', function (ev) { if (!editableTarget(ev.target)) { ev.preventDefault(); toast(message, 'warning'); } }, true);
     if (e.block_contextmenu && !contextMenuEnabled) document.addEventListener('contextmenu', function (ev) { if (!editableTarget(ev.target)) { ev.preventDefault(); toast(message, 'warning'); } });
 
+    if (e.block_print) document.documentElement.classList.add('xjpe-block-print');
+
     if (e.block_shortcuts || e.block_copy || e.block_print) {
-      document.addEventListener('keydown', function (ev) {
+      var shortcutHandler = function (ev) {
         if (editableTarget(ev.target)) return;
+        var code = ev.keyCode || ev.which || 0;
         var k = String(ev.key || '').toLowerCase();
+        if (!k && code) k = String.fromCharCode(code).toLowerCase();
         var primary = !!(ev.ctrlKey || ev.metaKey);
-        var macDev = !!(ev.metaKey && ev.altKey && ['i', 'j', 'c', 'u'].indexOf(k) >= 0);
-        var dev = e.block_shortcuts && (k === 'f12' || (primary && ['u', 's'].indexOf(k) >= 0) || (primary && ev.shiftKey && ['i', 'j', 'c', 'k'].indexOf(k) >= 0) || macDev);
-        var copying = e.block_copy && (primary && ['c', 'x'].indexOf(k) >= 0);
-        var printing = e.block_print && (primary && k === 'p');
-        if (dev || copying || printing) { ev.preventDefault(); ev.stopPropagation(); toast(message, 'warning'); }
-      }, true);
+        var macDev = !!(ev.metaKey && ev.altKey && (['i', 'j', 'c', 'u'].indexOf(k) >= 0 || [73, 74, 67, 85].indexOf(code) >= 0));
+        var dev = e.block_shortcuts && (
+          k === 'f12' || code === 123 ||
+          (primary && (['u', 's'].indexOf(k) >= 0 || [85, 83].indexOf(code) >= 0)) ||
+          (primary && ev.shiftKey && (['i', 'j', 'c', 'k'].indexOf(k) >= 0 || [73, 74, 67, 75].indexOf(code) >= 0)) ||
+          macDev
+        );
+        var copying = e.block_copy && primary && (['c', 'x'].indexOf(k) >= 0 || [67, 88].indexOf(code) >= 0);
+        var printing = e.block_print && primary && (k === 'p' || code === 80);
+        if (dev || copying || printing) {
+          if (ev.cancelable) ev.preventDefault();
+          ev.stopPropagation();
+          if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+          toast(message, 'warning');
+          return false;
+        }
+      };
+      window.addEventListener('keydown', shortcutHandler, true);
+      document.addEventListener('keydown', shortcutHandler, true);
     }
 
     document.addEventListener('copy', function (ev) {

@@ -290,3 +290,40 @@
   .xjpe-waves { height: min(var(--xjpe-wave-height, 72px), 90px); }
   .xjpe-toast { width: min(88vw, 430px); border-radius: 14px; text-align: center; }
 }
+
+
+/* 1.7.1: honest client-side deterrence plus server-rendered access protection. */
+.xjpe-server-protected {
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid rgba(37, 99, 235, .2);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(239,246,255,.96), rgba(248,250,252,.96));
+  box-shadow: 0 14px 36px rgba(15,23,42,.08);
+  color: #1e293b;
+}
+.xjpe-server-protected strong { display: block; margin-bottom: 8px; font-size: 18px; }
+.xjpe-server-protected p { margin: 0 0 14px; line-height: 1.75; }
+.xjpe-server-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff !important;
+  text-decoration: none !important;
+  font-weight: 600;
+}
+.xjpe-server-teaser { margin-bottom: 18px; line-height: 1.9; }
+@media print {
+  .xjpe-block-print body > * { display: none !important; }
+  .xjpe-block-print body::before {
+    content: '本站内容不提供打印，请尊重原创与版权。';
+    display: block !important;
+    padding: 48px;
+    font: 18px/1.8 sans-serif;
+    color: #111;
+  }
+}
