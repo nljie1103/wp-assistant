@@ -199,16 +199,27 @@
 
 		var state = box.getAttribute( 'data-state' );
 		var delay = parseInt( box.getAttribute( 'data-delay' ), 10 ) || 0;
+		var duration = parseInt( box.getAttribute( 'data-duration' ), 10 ) || 800;
+		var anim = box.getAttribute( 'data-anim' ) || 'none';
+
+		if ( anim !== 'none' && state !== 'waiting' ) {
+			box.classList.add( 'wpaias-anim-prepared' );
+			window.setTimeout( function () {
+				box.classList.remove( 'wpaias-anim-prepared' );
+			}, delay + duration + 1500 );
+		}
 
 		if ( 'ready' === state ) {
-			// 已有缓存，直接动画。
 			setTimeout( function () {
 				playAnimation( box );
 			}, delay );
 			return;
 		}
 
-		// 否则 Ajax 拉取。
+		if ( 'waiting' === state ) {
+			return;
+		}
+
 		fetchSummary( box );
 	}
 

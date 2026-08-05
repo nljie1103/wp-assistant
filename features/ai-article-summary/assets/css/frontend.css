@@ -163,7 +163,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 }
 
 /* 4. 全局淡入 */
-.wpaias-summary.wpaias-anim-fade .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-fade.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: none !important;
 	transition: opacity var( --wpaias-anim-duration, 800ms ) ease !important;
@@ -171,7 +171,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 .wpaias-summary.wpaias-anim-fade.wpaias-anim-active .wpaias-summary__text { opacity: 1 !important; }
 
 /* 5. 由下向上 */
-.wpaias-summary.wpaias-anim-slide-up .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-slide-up.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: translateY( 14px ) !important;
 	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
@@ -182,7 +182,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 }
 
 /* 6. 由上向下 */
-.wpaias-summary.wpaias-anim-slide-down .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-slide-down.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: translateY( -14px ) !important;
 	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
@@ -193,7 +193,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 }
 
 /* 7. 缩放淡入 */
-.wpaias-summary.wpaias-anim-zoom .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-zoom.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: scale( .96 ) !important;
 	transition: opacity var( --wpaias-anim-duration, 800ms ) ease,
@@ -204,7 +204,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 }
 
 /* 8. 弹跳 */
-.wpaias-summary.wpaias-anim-bounce .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-bounce.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: translateY( 8px ) scale( .98 ) !important;
 }
@@ -253,7 +253,7 @@ aside.wpaias-summary .wpaias-summary__placeholder,
 		border-color: #3a5a8c;
 	}
 }
-.wpaias-summary.wpaias-anim-neon .wpaias-summary__text {
+.wpaias-summary.wpaias-anim-neon.wpaias-anim-prepared .wpaias-summary__text {
 	opacity: 0 !important;
 	transform: none !important;
 	transition: opacity var( --wpaias-anim-duration, 800ms ) ease !important;

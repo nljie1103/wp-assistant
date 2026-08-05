@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.5.0
+Stable tag: 2.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.1 =
+* 修复 AI 摘要有调用但前端卡片不显示、页脚拿错文章和动画失败透明问题。
+* 自定义 HTML 正文改为提取可见文字后生成摘要。
+* 恢复科技蓝紫、简洁商务、VIP 资源中心三套完整下载页及横竖图自动识别。
 
 = 2.5.0 =
 * 新增第六功能域“下载页美化”，在统一后台选择科技蓝紫、简洁商务或 VIP 资源中心模板。

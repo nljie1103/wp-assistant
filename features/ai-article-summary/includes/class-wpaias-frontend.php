@@ -25,6 +25,40 @@ class WPAIAS_Frontend {
 	 */
 	protected $rendered = array();
 
+
+	/** Return the queried main post instead of a related-post loop item. */
+	protected function current_post() {
+		$post_id = absint( get_queried_object_id() );
+		if ( $post_id ) {
+			$post = get_post( $post_id );
+			if ( $post ) {
+				return $post;
+			}
+		}
+		return get_post();
+	}
+
+	/** Extract readable text from classic content and custom HTML articles. */
+	protected function extract_source_text( $post, $max_chars ) {
+		$content = $post instanceof WP_Post ? (string) $post->post_content : '';
+		if ( '' === trim( $content ) ) {
+			return '';
+		}
+
+		$content = preg_replace( '#<(script|style|noscript|iframe|svg)\\b[^>]*>.*?</\\1>#is', ' ', $content );
+		$content = strip_shortcodes( $content );
+		$content = preg_replace( '#</(?:p|div|section|article|header|footer|h[1-6]|li|ul|ol|blockquote|pre|table|tr|td|th)>#i', "\\n", $content );
+		$content = preg_replace( '#<br\\s*/?>#i', "\\n", $content );
+		$content = wp_strip_all_tags( $content, true );
+		$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, get_bloginfo( 'charset' ) ?: 'UTF-8' );
+		$content = preg_replace( '/[\\t\\x{00A0} ]+/u', ' ', $content );
+		$content = preg_replace( '/\\n{3,}/u', "\\n\\n", $content );
+		$content = trim( (string) $content );
+
+		$max_chars = max( 2000, min( 100000, (int) $max_chars ) );
+		return function_exists( 'mb_substr' ) ? mb_substr( $content, 0, $max_chars ) : substr( $content, 0, $max_chars );
+	}
+
 	/**
 	 * 注册 hooks。
 	 */
@@ -65,7 +99,7 @@ class WPAIAS_Frontend {
 			return false;
 		}
 
-		$post = get_post();
+		$post = $this->current_post();
 		if ( ! $post ) {
 			return false;
 		}
@@ -105,7 +139,7 @@ class WPAIAS_Frontend {
 			return $content;
 		}
 
-		$post = get_post();
+		$post = $this->current_post();
 		if ( ! $post ) {
 			return $content;
 		}
@@ -157,7 +191,7 @@ class WPAIAS_Frontend {
 		if ( is_feed() ) {
 			return '';
 		}
-		$post = get_post();
+		$post = $this->current_post();
 		if ( ! $post ) {
 			return '';
 		}
@@ -194,7 +228,7 @@ class WPAIAS_Frontend {
 		// content_filter 模式下，如果 the_content 没成功（页面里没找到 .wpaias-summary），JS 也会兜底注入。
 		// 这里始终输出模板，让 JS 自己判断。
 
-		$post = get_post();
+		$post = $this->current_post();
 		if ( ! $post ) {
 			return;
 		}
@@ -231,9 +265,6 @@ class WPAIAS_Frontend {
 	 * @return string
 	 */
 	protected function build_card_html( $post, $summary, $settings ) {
-		if ( '' === $summary && empty( $settings['public_generation'] ) && ! current_user_can( 'edit_posts' ) ) {
-			return '';
-		}
 		$title    = $settings['title'] !== '' ? $settings['title'] : __( 'AI 智能摘要', 'wp-ai-article-summary' );
 		$anim     = $settings['animation'];
 		$duration = (int) $settings['anim_duration'];
@@ -242,7 +273,8 @@ class WPAIAS_Frontend {
 		$cursor   = (int) $settings['cursor_enable'];
 		$color    = $settings['cursor_color'];
 
-		$state = ( '' === $summary ) ? 'loading' : 'ready';
+		$can_generate = ! empty( $settings['public_generation'] ) || current_user_can( 'edit_posts' );
+		$state = ( '' === $summary ) ? ( $can_generate ? 'loading' : 'waiting' ) : 'ready';
 
 		$data_attrs = sprintf(
 			'data-post-id="%d" data-anim="%s" data-duration="%d" data-speed="%d" data-delay="%d" data-cursor="%d" data-color="%s" data-state="%s"',
@@ -300,8 +332,12 @@ class WPAIAS_Frontend {
 			<div class="wpaias-summary__body">
 				<?php if ( '' === $summary ) : ?>
 					<div class="wpaias-summary__placeholder">
-						<span class="wpaias-dot"></span><span class="wpaias-dot"></span><span class="wpaias-dot"></span>
-						<span class="wpaias-summary__loading-text"><?php esc_html_e( 'AI 摘要生成中…', 'wp-ai-article-summary' ); ?></span>
+						<?php if ( $can_generate ) : ?>
+							<span class="wpaias-dot"></span><span class="wpaias-dot"></span><span class="wpaias-dot"></span>
+							<span class="wpaias-summary__loading-text"><?php esc_html_e( 'AI 摘要生成中…', 'wp-ai-article-summary' ); ?></span>
+						<?php else : ?>
+							<span class="wpaias-summary__loading-text"><?php esc_html_e( '摘要暂未生成，管理员生成后会自动显示。', 'wp-ai-article-summary' ); ?></span>
+						<?php endif; ?>
 					</div>
 					<div class="wpaias-summary__text" data-pending="1"></div>
 				<?php else : ?>
@@ -336,14 +372,15 @@ class WPAIAS_Frontend {
 			true
 		);
 
-		$post = get_post();
+		$post = $this->current_post();
 		wp_localize_script(
 			'wpaias-frontend',
 			'WPAIAS_FRONT',
 			array(
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
 				'nonce'    => wp_create_nonce( 'wpaias_front_nonce' ),
-				'post_id'  => $post ? (int) $post->ID : 0,
+				'post_id'       => $post ? (int) $post->ID : 0,
+				'mobile_enable' => ! empty( $settings['mobile_enable'] ),
 			)
 		);
 	}
@@ -450,13 +487,13 @@ class WPAIAS_Frontend {
 			if ( false !== $cached_after_lock ) {
 				$result = array( 'success' => true, 'data' => $cached_after_lock, 'cached' => true );
 			} else {
-				$content   = wp_strip_all_tags( (string) $post->post_content );
 				$max_chars = max( 2000, min( 100000, (int) $settings['max_source_chars'] ) );
-				$content   = function_exists( 'mb_substr' ) ? mb_substr( $content, 0, $max_chars ) : substr( $content, 0, $max_chars );
+				$content   = $this->extract_source_text( $post, $max_chars );
 				$result = WPAIAS_API::generate_summary( $content, $settings );
 				if ( ! empty( $result['success'] ) ) {
 					$ttl = WPAIAS_Cache::ttl_from_key( $settings['cache_ttl'] );
 					WPAIAS_Cache::set( $post_id, $result['data'], $ttl );
+					clean_post_cache( $post_id );
 					$result['cached'] = false;
 				}
 			}
