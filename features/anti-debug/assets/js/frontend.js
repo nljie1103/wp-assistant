@@ -4,7 +4,31 @@
   var cfg = window.JLWA_ANTI_DEBUG || null;
   if (!cfg || !cfg.detectors || !cfg.decision || !cfg.response) return;
 
-  var detectors = cfg.detectors;
+  var runtime = cfg.runtime || {};
+  var ua = String(navigator.userAgent || '');
+  var isIPadDesktop = navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+  var isCoarseSmallScreen = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width || 9999, screen.height || 9999) < 1100);
+  var isMobileRuntime = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua) || isIPadDesktop || isCoarseSmallScreen;
+  var allowMobile = runtime.allow_mobile === true || runtime.allow_mobile === 1 || runtime.allow_mobile === '1';
+  var allowMobileRisky = runtime.allow_mobile_risky === true || runtime.allow_mobile_risky === 1 || runtime.allow_mobile_risky === '1';
+  var storageKey = 'jlwa_ad_lock_v2';
+
+  // Server-side wp_is_mobile() cannot reliably identify iPadOS desktop mode.
+  // Apply a second browser-side gate and clear stale false-positive locks.
+  if (isMobileRuntime && !allowMobile) {
+    try { sessionStorage.removeItem(storageKey); } catch (error) {}
+    return;
+  }
+
+  var detectors = Object.assign({}, cfg.detectors);
+  if (isMobileRuntime && !allowMobileRisky) {
+    detectors.viewport = 0;
+    detectors.debugger_timing = 0;
+    detectors.console_getter = 0;
+    detectors.console_performance = 0;
+    detectors.focus_signal = 0;
+    try { sessionStorage.removeItem(storageKey); } catch (error) {}
+  }
   var decision = cfg.decision;
   var response = cfg.response;
   var layers = response.layers || {};
@@ -32,7 +56,6 @@
   var historyLocked = false;
   var clipboardLocked = false;
   var safeConsole = window.console || { log: function () {}, clear: function () {}, table: function () {} };
-  var storageKey = 'jlwa_ad_lock_v2';
 
   function now() {
     return window.performance && performance.now ? performance.now() : Date.now();

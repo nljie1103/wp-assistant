@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 	final class JLWA_Anti_Debug_Feature {
-		const VERSION     = '1.1.0';
+		const VERSION     = '1.2.0';
 		const OPTION_NAME = 'jlwa_anti_debug_options';
 		const LOG_OPTION  = 'jlwa_anti_debug_logs';
 		const MENU_SLUG   = 'jlwa-anti-debug';
@@ -62,6 +62,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					'archives'         => 0,
 					'home'             => 0,
 					'mobile'           => 0,
+					'mobile_risky_detectors' => 0,
 					'admin_bypass'     => 1,
 					'logged_in_bypass' => 0,
 					'exclude_paths'    => "/wp-login.php\n/wp-admin/",
@@ -165,6 +166,12 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			}
 			$merged = $this->deep_merge( self::defaults(), $saved );
 			$merged['version'] = self::VERSION;
+			// 1.2.0: previous mobile detection could misclassify iOS viewport/address-bar changes.
+			// Disable existing mobile protection once during migration; administrators may opt in again.
+			if ( version_compare( $version, '1.2.0', '<' ) ) {
+				$merged['scope']['mobile'] = 0;
+				$merged['scope']['mobile_risky_detectors'] = 0;
+			}
 			if ( $needs_key ) {
 				$merged['scope']['emergency_key'] = wp_generate_password( 18, false, false );
 			}
@@ -283,7 +290,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 							<?php $this->checkbox_card( 'scope[pages]', '保护独立页面', '适用于下载页、会员页和专题页面。', ! empty( $options['scope']['pages'] ) ); ?>
 							<?php $this->checkbox_card( 'scope[archives]', '保护归档列表', '分类、标签、作者归档等列表页面。', ! empty( $options['scope']['archives'] ) ); ?>
 							<?php $this->checkbox_card( 'scope[home]', '保护首页', '在网站首页和博客首页运行检测。', ! empty( $options['scope']['home'] ) ); ?>
-							<?php $this->checkbox_card( 'scope[mobile]', '移动端启用', '移动浏览器误判风险更高，默认关闭。', ! empty( $options['scope']['mobile'] ) ); ?>
+							<?php $this->checkbox_card( 'scope[mobile]', '移动端实验性保护', '默认关闭。仅检测 eruda、vConsole 等页面调试库；iPhone/iPad 会由浏览器端再次识别。', ! empty( $options['scope']['mobile'] ) ); ?>
+							<?php $this->checkbox_card( 'scope[mobile_risky_detectors]', '移动端高风险探测器', '实验选项：允许在手机和平板运行视口、Debugger、Console 求值/性能与失焦探测，可能误报。', ! empty( $options['scope']['mobile_risky_detectors'] ), 'dangerous' ); ?>
 							<?php $this->checkbox_card( 'scope[admin_bypass]', '管理员自动绕过', '管理员登录后不加载检测脚本。', ! empty( $options['scope']['admin_bypass'] ) ); ?>
 							<?php $this->checkbox_card( 'scope[logged_in_bypass]', '全部登录用户绕过', '适合只防外部访客的网站。', ! empty( $options['scope']['logged_in_bypass'] ) ); ?>
 						</div>
@@ -455,6 +463,10 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				'detectors' => $options['detectors'],
 				'decision'  => $options['decision'],
 				'response'  => $options['response'],
+				'runtime'   => array(
+					'allow_mobile'       => ! empty( $options['scope']['mobile'] ),
+					'allow_mobile_risky' => ! empty( $options['scope']['mobile_risky_detectors'] ),
+				),
 				'logging'   => array(
 					'enabled' => ! empty( $options['logging']['enabled'] ),
 					'url'     => admin_url( 'admin-ajax.php' ),
@@ -556,7 +568,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			$out = $defaults;
 			$out['enabled'] = empty( $raw['enabled'] ) ? 0 : 1;
 			$out['mode'] = in_array( isset( $raw['mode'] ) ? $raw['mode'] : '', array( 'balanced', 'strict', 'custom' ), true ) ? $raw['mode'] : 'balanced';
-			foreach ( array( 'posts', 'pages', 'archives', 'home', 'mobile', 'admin_bypass', 'logged_in_bypass' ) as $key ) {
+			foreach ( array( 'posts', 'pages', 'archives', 'home', 'mobile', 'mobile_risky_detectors', 'admin_bypass', 'logged_in_bypass' ) as $key ) {
 				$out['scope'][ $key ] = empty( $raw['scope'][ $key ] ) ? 0 : 1;
 			}
 			$out['scope']['exclude_paths'] = isset( $raw['scope']['exclude_paths'] ) ? sanitize_textarea_field( $raw['scope']['exclude_paths'] ) : '';

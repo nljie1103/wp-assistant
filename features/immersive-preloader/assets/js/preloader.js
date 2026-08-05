@@ -1,4 +1,4 @@
-/** 九流沉浸式预加载 1.2.0 — first-frame lifecycle and critical-resource completion. */
+/** 九流沉浸式预加载 1.2.1 — safe skip handling and first-frame lifecycle. */
 (function () {
 	'use strict';
 
@@ -73,20 +73,55 @@
 
 	function bindSkip() {
 		if (!ALLOW_SKIP) return;
-		function remove() {
-			document.removeEventListener('click', handler, true);
-			document.removeEventListener('touchstart', handler, true);
-			document.removeEventListener('keydown', handler);
+		var triggered = false;
+		var guardTimer = 0;
+
+		function consume(ev) {
+			if (!ev) return;
+			if (ev.cancelable) ev.preventDefault();
+			ev.stopPropagation();
+			if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
 		}
+
+		function removePrimary() {
+			document.removeEventListener('pointerdown', handler, true);
+			document.removeEventListener('touchstart', handler, true);
+			document.removeEventListener('click', handler, true);
+			document.removeEventListener('keydown', handler, true);
+		}
+
+		function installFollowupGuard() {
+			function guard(ev) { consume(ev); return false; }
+			document.addEventListener('click', guard, true);
+			document.addEventListener('auxclick', guard, true);
+			guardTimer = window.setTimeout(function () {
+				document.removeEventListener('click', guard, true);
+				document.removeEventListener('auxclick', guard, true);
+			}, 900);
+		}
+
 		function handler(ev) {
 			if (ev && ev.type === 'keydown' && ev.key !== 'Escape' && ev.key !== 'Enter' && ev.key !== ' ') return;
-			remove();
-			endWithMinDuration(0);
+			consume(ev);
+			if (triggered) return false;
+			triggered = true;
+			removePrimary();
+			installFollowupGuard();
+			// “跳过”必须立即结束，不再受最小展示时长限制。
+			endPreloader();
+			return false;
 		}
-		document.addEventListener('click', handler, { capture: true });
-		document.addEventListener('touchstart', handler, { capture: true, passive: true });
-		document.addEventListener('keydown', handler);
-		onCleanup(remove);
+
+		document.addEventListener('pointerdown', handler, { capture: true, passive: false });
+		document.addEventListener('touchstart', handler, { capture: true, passive: false });
+		document.addEventListener('click', handler, true);
+		document.addEventListener('keydown', handler, true);
+		onCleanup(function () {
+			removePrimary();
+			// 手动跳过后的短期 click guard 不能在遮罩淡出时提前移除，
+			// 否则移动端合成 click 会落到遮罩下方的链接。
+			if (!triggered && guardTimer) window.clearTimeout(guardTimer);
+		});
 	}
 
 	function initParticlesEffect() {

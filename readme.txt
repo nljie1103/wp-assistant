@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.3.1
+Stable tag: 2.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.3.2 =
+* 修复开屏跳过点击穿透并立即结束动画。
+* 默认关闭并迁移旧移动端反调试设置，避免 iPhone/iPad 误报。
+* 新增浏览器端 iPadOS/触摸设备识别与移动端高风险探测独立开关。
 
 = 2.3.0 =
 * 反调试保护新增四级可组合防御链，每一级可独立设置启用状态、延迟和动作。
