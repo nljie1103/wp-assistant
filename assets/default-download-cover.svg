@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">九流网络资源下载默认封面</title>
+  <desc id="desc">蓝紫渐变背景上的云端下载与文件图标</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#172454"/><stop offset=".52" stop-color="#334d9a"/><stop offset="1" stop-color="#7552d6"/></linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55e4ee"/><stop offset="1" stop-color="#9c83ff"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="18" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="900" rx="64" fill="url(#bg)"/>
+  <circle cx="170" cy="170" r="210" fill="#43dce8" opacity=".12"/>
+  <circle cx="1040" cy="100" r="260" fill="#b17aff" opacity=".16"/>
+  <g fill="none" stroke="url(#line)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <path d="M410 560h380c80 0 130-54 130-122 0-67-48-115-112-120-23-112-119-188-236-176-97 10-171 79-191 170-83 7-146 68-146 148 0 57 30 100 78 122"/>
+    <path d="M600 330v250m0 0-86-86m86 86 86-86"/>
+  </g>
+  <text x="600" y="735" text-anchor="middle" fill="#fff" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="58" font-weight="700" letter-spacing="4">资源下载中心</text>
+  <text x="600" y="796" text-anchor="middle" fill="#cbd8ff" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" letter-spacing="8">JIULIU NETWORK</text>
+</svg>
