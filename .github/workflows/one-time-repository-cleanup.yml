@@ -1,0 +1,161 @@
+name: One-time repository cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-repository-cleanup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove one-time workflow from main
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/one-time-repository-cleanup.yml
+          git commit -m 'chore: finish repository cleanup'
+          git push origin main
+          echo "CLEAN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Delete obsolete branches
+        run: |
+          set -euxo pipefail
+          for branch in \
+            artifact/v2.0.0-export \
+            fix/admin-ui-2.0.1 \
+            legacy-suite-1.x \
+            ops/cleanup-repository \
+            refactor/unified-plugin-2.0 \
+            release/v2.0.1-export \
+            release/2.1.0; do
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+            fi
+          done
+          test "$(git ls-remote --heads origin | wc -l)" = '1'
+          git ls-remote --heads origin | grep -q 'refs/heads/main$'
+
+      - name: Create missing version tags
+        run: |
+          set -euxo pipefail
+          git tag -f -a v2.0.2 b7ff27aa4ed5592979f7babe5627ffcdad3052e5 -m '九流WP助手 2.0.2'
+          git tag -f -a v2.1.0 "$CLEAN_SHA" -m '九流WP助手 2.1.0'
+          git push origin refs/tags/v2.0.2 --force
+          git push origin refs/tags/v2.1.0 --force
+
+      - name: Build release packages
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/jlwa-releases
+          build_package() {
+            version="$1"
+            tag="v${version}"
+            worktree="/tmp/jlwa-${version}"
+            package_root="/tmp/jlwa-package-${version}"
+            rm -rf "$worktree" "$package_root"
+            git worktree add --detach "$worktree" "$tag"
+            mkdir -p "$package_root/wp-assistant"
+            rsync -a \
+              --exclude='.git/' \
+              --exclude='.github/' \
+              --exclude='.release/' \
+              "$worktree/" "$package_root/wp-assistant/"
+            (cd "$package_root" && zip -qr "/tmp/jlwa-releases/jiuliu-wp-assistant-${version}.zip" wp-assistant)
+            sha256sum "/tmp/jlwa-releases/jiuliu-wp-assistant-${version}.zip" > "/tmp/jlwa-releases/jiuliu-wp-assistant-${version}.zip.sha256.txt"
+            unzip -t "/tmp/jlwa-releases/jiuliu-wp-assistant-${version}.zip" >/dev/null
+            git worktree remove --force "$worktree"
+          }
+          build_package 2.0.2
+          build_package 2.1.0
+
+      - name: Normalize GitHub Releases
+        run: |
+          set -euxo pipefail
+          cat > /tmp/notes-2.0.0.md <<'EOF'
+          ## 九流WP助手 2.0.0
+
+          首个真正的单插件版本。
+
+          - 从四插件套件重构为统一单插件架构。
+          - 只保留一个插件头、一个激活入口、一个菜单中心和一个更新源。
+          - 新增中央功能注册表。
+          - 将页面美化、AI 摘要、沉浸式预加载和媒体链接管理迁移为内部功能域。
+          - 保留旧设置键，升级后无需重新配置。
+          EOF
+
+          cat > /tmp/notes-2.0.1.md <<'EOF'
+          ## 九流WP助手 2.0.1
+
+          后台界面与资源加载修复。
+
+          - 修复旧菜单 hook 导致功能正文无样式的问题。
+          - 统一调度四项功能的 CSS、JavaScript、媒体上传器和颜色选择器。
+          - 新增统一内容画布、功能状态卡、卡片、表单、选项卡和响应式布局。
+          - 增加未保存修改提示。
+          EOF
+
+          cat > /tmp/notes-2.0.2.md <<'EOF'
+          ## 九流WP助手 2.0.2
+
+          在线更新热修复。
+
+          - 修复 2.0.0/2.0.1 能检测更新但仍按旧 `modules/` 目录检查，导致无法安装的问题。
+          - 更新器改为验证 2.x `features/` 架构。
+          - 增加无插件头、不会执行的跨架构兼容文件。
+          - 保留完整备份、SHA-256 校验和失败回滚。
+          EOF
+
+          cat > /tmp/notes-2.1.0.md <<'EOF'
+          ## 九流WP助手 2.1.0
+
+          功能、性能和安全性升级。
+
+          - 页面美化新增落叶、气泡、底部波浪、更多鼠标轨迹、分级内容保护和复制版权。
+          - 优化樱花、雪花、粒子等动画调度，支持页面隐藏暂停和移动端自动降载。
+          - AI 摘要新增透明装饰图、访客额度保护、正文成本限制和文章元数据缓存。
+          - 沉浸式预加载改为性能优先的真实完成策略，并完整清理动画资源。
+          - 多域名模块移除任意 Host 信任，增加明确源站和安全诊断。
+          - 更新器优先安装正式 Release，并校验完整 ZIP。
+
+          完整记录见仓库 `CHANGELOG.md`。
+          EOF
+
+          if gh release view v2.0.0 >/dev/null 2>&1; then
+            gh release edit v2.0.0 --title '九流WP助手 v2.0.0' --notes-file /tmp/notes-2.0.0.md
+          fi
+          if gh release view v2.0.1 >/dev/null 2>&1; then
+            gh release edit v2.0.1 --title '九流WP助手 v2.0.1' --notes-file /tmp/notes-2.0.1.md
+          fi
+
+          if gh release view v2.0.2 >/dev/null 2>&1; then
+            gh release edit v2.0.2 --title '九流WP助手 v2.0.2' --notes-file /tmp/notes-2.0.2.md
+          else
+            gh release create v2.0.2 --title '九流WP助手 v2.0.2' --notes-file /tmp/notes-2.0.2.md
+          fi
+          gh release upload v2.0.2 \
+            /tmp/jlwa-releases/jiuliu-wp-assistant-2.0.2.zip \
+            /tmp/jlwa-releases/jiuliu-wp-assistant-2.0.2.zip.sha256.txt \
+            --clobber
+
+          if gh release view v2.1.0 >/dev/null 2>&1; then
+            gh release edit v2.1.0 --title '九流WP助手 v2.1.0' --notes-file /tmp/notes-2.1.0.md --latest
+          else
+            gh release create v2.1.0 --title '九流WP助手 v2.1.0' --notes-file /tmp/notes-2.1.0.md --latest
+          fi
+          gh release upload v2.1.0 \
+            /tmp/jlwa-releases/jiuliu-wp-assistant-2.1.0.zip \
+            /tmp/jlwa-releases/jiuliu-wp-assistant-2.1.0.zip.sha256.txt \
+            --clobber
