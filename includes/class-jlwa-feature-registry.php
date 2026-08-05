@@ -32,7 +32,7 @@ class JLWA_Feature_Registry {
 				'version'     => '1.8.0',
 				'entry_class' => 'JLWA_Page_Effects_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/page-effects/bootstrap.php',
-				'description' => '樱花、雪花、落叶、气泡、页脚波浪、鼠标轨迹、内容保护、复制版权与全站视觉特效。',
+				'description' => '樱花、雪花、落叶、气泡、页脚波浪、光标造型、鼠标拖尾、点击爆炸、内容保护与全站视觉特效。',
 				'eyebrow'     => 'VISUAL EXPERIENCE',
 				'standalone'  => array(
 					'wp-page-effects/wp-page-effects.php',

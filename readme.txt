@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.3.3
+Stable tag: 2.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.4.0 =
+* 新增独立鼠标交互中心：光标造型、鼠标拖尾、点击爆炸可分别启用并同时运行。
+* 内置霓虹箭头、蛛网英雄、像素水管工、猫爪、魔法棒、火箭、幽灵和彩虹光标。
+* 拖尾新增彗星、雪花、音符、彩虹粒子、像素方块、猫爪、蛛网光点等样式。
+* 点击爆炸新增星星、爱心、火花、花瓣、彩纸、气泡、音符、猫爪、蛛网、像素和涟漪。
+* 自动迁移旧鼠标跟随设置并关闭旧渲染器，避免双重拖尾。
 
 = 2.3.3 =
 * 修复会话标记在开屏真正显示前就被写入，导致预加载永久被跳过的问题。
