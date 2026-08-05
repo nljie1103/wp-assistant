@@ -7,6 +7,7 @@ on:
     paths:
       - tools/finalize-2.5.1.py
       - tools/release-2.5.1/**
+      - tools/release-2.5.1-tail/**
       - .github/workflows/release.yml
   workflow_dispatch:
 
@@ -33,7 +34,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cat tools/release-2.5.1-tail/part.* > tools/release-2.5.1/payload.b64.002
+          rm -f tools/release-2.5.1/payload.b64.003 tools/release-2.5.1/payload.b64.004 tools/release-2.5.1/payload.b64.005
           python3 tools/finalize-2.5.1.py
+          rm -rf tools/release-2.5.1-tail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
