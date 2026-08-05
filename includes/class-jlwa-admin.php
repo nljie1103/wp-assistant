@@ -75,6 +75,7 @@ class JLWA_Admin {
 			'ai-summary'   => 'render_ai_summary',
 			'preloader'    => 'render_preloader',
 			'media-urls'   => 'render_media_urls',
+			'download-page' => 'render_download_page',
 		);
 		return array( $this, isset( $map[ $key ] ) ? $map[ $key ] : 'render_dashboard' );
 	}
@@ -152,6 +153,11 @@ class JLWA_Admin {
 					JIP_Admin::instance()->enqueue_assets( $feature_hook );
 				}
 				break;
+			case 'download-page':
+				if ( class_exists( 'JLWA_Download_Page_Feature' ) ) {
+					JLWA_Download_Page_Feature::instance()->enqueue_admin_assets( $feature_hook );
+				}
+				break;
 			case 'media-urls':
 				if ( class_exists( 'JRMU_Admin' ) ) {
 					JRMU_Admin::instance()->enqueue_assets( $feature_hook );
@@ -197,13 +203,13 @@ class JLWA_Admin {
 				++$ready;
 			}
 		}
-		$this->shell_start( 'dashboard', '统一控制台', '一个插件管理五项核心能力，设置、界面与更新全部集中。' );
+		$this->shell_start( 'dashboard', '统一控制台', '一个插件管理六项核心能力，设置、界面与更新全部集中。' );
 		?>
 		<section class="jlwa-hero">
 			<div class="jlwa-hero__copy">
 				<span class="jlwa-kicker">JIULIU WORDPRESS ASSISTANT 2.0</span>
 				<h2>不是功能堆叠，<br>而是一套完整的网站增强系统。</h2>
-				<p>页面体验、反调试保护、加载体验、内容智能和媒体链接共用同一个插件生命周期、同一个后台应用与同一个更新源。</p>
+				<p>页面体验、反调试保护、加载体验、内容智能、媒体链接和下载体验共用同一个插件生命周期、同一个后台应用与同一个更新源。</p>
 				<div class="jlwa-hero__actions">
 					<a class="button button-primary button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-page-effects' ) ); ?>">开始配置</a>
 					<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-update-center' ) ); ?>">系统与更新</a>
@@ -216,7 +222,7 @@ class JLWA_Admin {
 			</div>
 		</section>
 		<div class="jlwa-section-title">
-			<div><span>CORE FEATURES</span><h2>五项能力，一套体验</h2></div>
+			<div><span>CORE FEATURES</span><h2>六项能力，一套体验</h2></div>
 			<p>每个功能都有独立职责，但不再拥有独立插件头、激活流程、菜单树或更新器。</p>
 		</div>
 		<div class="jlwa-feature-grid">
@@ -246,7 +252,7 @@ class JLWA_Admin {
 		</div>
 		<section class="jlwa-architecture-note">
 			<div class="jlwa-architecture-note__icon"><span class="dashicons dashicons-admin-generic"></span></div>
-			<div><span>UNIFIED ARCHITECTURE</span><h2>统一生命周期，功能域内部解耦</h2><p>WordPress 只识别一个“九流WP助手”插件。五项功能由中央注册表启动，后台菜单由统一控制台注册，在线更新只覆盖一个完整发布包。</p></div>
+			<div><span>UNIFIED ARCHITECTURE</span><h2>统一生命周期，功能域内部解耦</h2><p>WordPress 只识别一个“九流WP助手”插件。六项功能由中央注册表启动，后台菜单由统一控制台注册，在线更新只覆盖一个完整发布包。</p></div>
 			<div class="jlwa-checklist"><span><i></i>一个插件头</span><span><i></i>一个激活入口</span><span><i></i>一个菜单中心</span><span><i></i>一个安全更新器</span></div>
 		</section>
 		<?php
@@ -258,6 +264,7 @@ class JLWA_Admin {
 	public function render_ai_summary() { $this->render_feature( 'ai-summary' ); }
 	public function render_preloader() { $this->render_feature( 'preloader' ); }
 	public function render_media_urls() { $this->render_feature( 'media-urls' ); }
+	public function render_download_page() { $this->render_feature( 'download-page' ); }
 
 	/** @param string $key Feature key. */
 	protected function render_feature( $key ) {

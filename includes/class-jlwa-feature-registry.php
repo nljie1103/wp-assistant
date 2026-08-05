@@ -82,6 +82,19 @@ class JLWA_Feature_Registry {
 					'jiuliu-immersive-preloader/jiuliu-immersive-preloader.php',
 				),
 			),
+			'download-page' => array(
+				'label'       => '下载页美化',
+				'short_label' => '下载页美化',
+				'icon'        => 'dashicons-download',
+				'slug'        => 'jlwa-download-page',
+				'version'     => '1.0.0',
+				'entry_class' => 'JLWA_Download_Page_Feature',
+				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/download-page.php',
+				'description' => '三套子比资源下载页模板、五种封面策略、自动回退与插件级模板接管。',
+				'eyebrow'     => 'DOWNLOAD EXPERIENCE',
+				'standalone'  => array(),
+			),
+
 			'media-urls' => array(
 				'label'       => '媒体与链接',
 				'short_label' => '媒体与链接',
@@ -131,6 +144,9 @@ class JLWA_Feature_Registry {
 		if ( ! empty( self::$statuses['preloader']['loaded'] ) && class_exists( 'JLWA_Immersive_Preloader_Feature' ) ) {
 			JLWA_Immersive_Preloader_Feature::instance()->on_activate();
 		}
+		if ( ! empty( self::$statuses['download-page']['loaded'] ) && class_exists( 'JLWA_Download_Page_Feature' ) ) {
+			JLWA_Download_Page_Feature::activate();
+		}
 		if ( ! empty( self::$statuses['media-urls']['loaded'] ) && class_exists( 'JLWA_Media_Urls_Feature' ) ) {
 			JLWA_Media_Urls_Feature::instance()->on_activate();
 		}
@@ -173,6 +189,8 @@ class JLWA_Feature_Registry {
 				return defined( 'WPAIAS_VERSION' ) ? (string) WPAIAS_VERSION : $feature['version'];
 			case 'preloader':
 				return defined( 'JIP_VERSION' ) ? (string) JIP_VERSION : $feature['version'];
+			case 'download-page':
+				return class_exists( 'JLWA_Download_Page_Feature', false ) ? (string) JLWA_Download_Page_Feature::VERSION : $feature['version'];
 			case 'media-urls':
 				return defined( 'JRMU_VERSION' ) ? (string) JRMU_VERSION : $feature['version'];
 			default:
@@ -204,6 +222,11 @@ class JLWA_Feature_Registry {
 			case 'preloader':
 				if ( class_exists( 'JIP_Admin' ) ) {
 					JIP_Admin::instance()->render_settings_page();
+				}
+				break;
+			case 'download-page':
+				if ( class_exists( 'JLWA_Download_Page_Feature' ) ) {
+					JLWA_Download_Page_Feature::instance()->render_admin_page();
 				}
 				break;
 			case 'media-urls':
@@ -238,6 +261,9 @@ class JLWA_Feature_Registry {
 				return ! empty( $options['enabled'] );
 			case 'preloader':
 				$options = get_option( 'jiuliu_immersive_preloader_options', array() );
+				return ! empty( $options['enabled'] );
+			case 'download-page':
+				$options = get_option( 'jlwa_download_page_options', array() );
 				return ! empty( $options['enabled'] );
 			case 'media-urls':
 				$options = get_option( 'jiuliu_relative_media_urls_options', array() );
