@@ -1,12 +1,12 @@
-name: Publish 九流WP助手 2.5.0
+name: Publish 九流WP助手 2.5.1
 
 on:
   push:
     branches:
       - main
     paths:
-      - tools/finalize-2.5.0.py
-      - features/download-page.php
+      - tools/finalize-2.5.1.py
+      - tools/release-2.5.1/**
       - .github/workflows/release.yml
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: jlwa-official-release-2.5.0
+  group: jlwa-official-release-2.5.1
   cancel-in-progress: false
 
 jobs:
@@ -29,20 +29,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Finalize source and update records
+      - name: Apply 2.5.1 source update
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f tools/finalize-2.5.0.py ]; then
-            python3 tools/finalize-2.5.0.py
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "release: 九流WP助手 2.5.0 下载页美化"
-            git push origin HEAD:main
-          else
-            echo "2.5.0 source is already finalized; continuing with validation and release."
-          fi
+          python3 tools/finalize-2.5.1.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: 九流WP助手 2.5.1 修复摘要并恢复完整下载页"
+          git push origin HEAD:main
 
       - name: Resolve version
         id: version
@@ -50,15 +46,21 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(sed -n "s/^ \* Version: \([0-9][0-9.]*\)$/\1/p" jiuliu-wp-assistant.php | head -n1)
-          test "$VERSION" = "2.5.0"
+          test "$VERSION" = "2.5.1"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Validate PHP source
+      - name: Validate changed PHP and JavaScript
         shell: bash
         run: |
           set -euo pipefail
-          find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+          php -l features/download-page.php
+          php -l features/download-page-templates/technology.php
+          php -l features/download-page-templates/business.php
+          php -l features/download-page-templates/vip.php
+          php -l features/ai-article-summary/includes/class-wpaias-frontend.php
+          php -l features/ai-article-summary/bootstrap.php
+          node --check features/ai-article-summary/assets/js/frontend.js
 
       - name: Build installable package
         shell: bash
@@ -79,9 +81,10 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           sha256sum "jiuliu-wp-assistant-$VERSION.zip" > "jiuliu-wp-assistant-$VERSION.zip.sha256.txt"
           unzip -t "jiuliu-wp-assistant-$VERSION.zip"
-          test -f "$ROOT/features/download-page.php"
-          test -f "$ROOT/assets/default-download-cover.svg"
-          grep -q "Version: 2.5.0" "$ROOT/jiuliu-wp-assistant.php"
+          test -f "$ROOT/features/download-page-templates/technology.php"
+          test -f "$ROOT/features/download-page-templates/business.php"
+          test -f "$ROOT/features/download-page-templates/vip.php"
+          grep -q "Version: 2.5.1" "$ROOT/jiuliu-wp-assistant.php"
 
       - name: Create tag and GitHub Release
         env:
@@ -96,6 +99,9 @@ jobs:
           NOTES="RELEASE_NOTES_$VERSION.md"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --tags
+          git checkout main
+          git reset --hard origin/main
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag -a "$TAG" -m "九流WP助手 $VERSION"
             git push origin "$TAG"
@@ -108,9 +114,3 @@ jobs:
               --notes-file "$NOTES" \
               --latest
           fi
-
-      - name: Remove abandoned temporary branch
-        if: always()
-        shell: bash
-        run: |
-          git push origin --delete agent/add-download-page-beautification 2>/dev/null || true
