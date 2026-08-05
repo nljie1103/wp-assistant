@@ -1,11 +1,17 @@
-name: Publish 九流WP助手 2.5.2
+name: Publish 九流WP助手 Release
 
 on:
   push:
     branches:
       - main
     paths:
-      - tools/finalize-2.5.2.py
+      - jiuliu-wp-assistant.php
+      - features/page-effects/admin-save-fix.php
+      - features/ai-article-summary/bootstrap.php
+      - features/ai-article-summary/includes/animation-fix.php
+      - features/ai-article-summary/assets/js/animation-fix.js
+      - features/ai-article-summary/assets/css/animation-fix.css
+      - RELEASE_NOTES_*.md
       - .github/workflows/release.yml
   workflow_dispatch:
 
@@ -13,12 +19,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: jlwa-official-release-2.5.2
+  group: jlwa-official-release
   cancel-in-progress: false
 
 jobs:
   release:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
@@ -26,36 +31,32 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Apply 2.5.2 API Key fix
+      - name: Resolve version
+        id: version
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/finalize-2.5.2.py
-          rm -f tools/finalize-2.5.2.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "fix: release 九流WP助手 2.5.2 API Key 持久化修复"
-          git push origin HEAD:main
+          VERSION=$(sed -n "s/^ \* Version: \([0-9][0-9.]*\)$/\1/p" jiuliu-wp-assistant.php | head -n1)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate changed files
         shell: bash
         run: |
           set -euo pipefail
-          php -l features/ai-article-summary/includes/class-wpaias-admin.php
-          php -l features/ai-article-summary/includes/class-wpaias-plugin.php
+          php -l jiuliu-wp-assistant.php
+          php -l features/page-effects/admin-save-fix.php
           php -l features/ai-article-summary/bootstrap.php
-          php -l includes/class-jlwa-feature-registry.php
-          node --check features/ai-article-summary/assets/js/admin.js
-          grep -q "Version: 2.5.2" jiuliu-wp-assistant.php
+          php -l features/ai-article-summary/includes/animation-fix.php
+          node --check features/ai-article-summary/assets/js/animation-fix.js
 
       - name: Build installable package
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="2.5.2"
+          VERSION="${{ steps.version.outputs.version }}"
           BUILD="$RUNNER_TEMP/jlwa-build"
           ROOT="$BUILD/jiuliu-wp-assistant"
           rm -rf "$BUILD"
@@ -69,7 +70,7 @@ jobs:
           zip -qr "$GITHUB_WORKSPACE/jiuliu-wp-assistant-$VERSION.zip" jiuliu-wp-assistant
           cd "$GITHUB_WORKSPACE"
           sha256sum "jiuliu-wp-assistant-$VERSION.zip" > "jiuliu-wp-assistant-$VERSION.zip.sha256.txt"
-          unzip -t "jiuliu-wp-assistant-$VERSION.zip"
+          unzip -t "jiuliu-wp-assistant-$VERSION.zip" >/dev/null
 
       - name: Create tag and GitHub Release
         env:
@@ -77,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="2.5.2"
+          VERSION="${{ steps.version.outputs.version }}"
           TAG="v$VERSION"
           ZIP="jiuliu-wp-assistant-$VERSION.zip"
           SHA="$ZIP.sha256.txt"
@@ -85,17 +86,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --tags
-          git checkout main
-          git reset --hard origin/main
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-            git tag -a "$TAG" -m "九流WP助手 $VERSION"
+            git tag -a "$TAG" -m "九流WP助手 $VERSION" origin/main
             git push origin "$TAG"
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" "$SHA" --clobber
+          elif test -f "$NOTES"; then
+            gh release create "$TAG" "$ZIP" "$SHA" --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
           else
-            gh release create "$TAG" "$ZIP" "$SHA" \
-              --title "九流WP助手 $VERSION" \
-              --notes-file "$NOTES" \
-              --latest
+            gh release create "$TAG" "$ZIP" "$SHA" --title "九流WP助手 $VERSION" --generate-notes --latest
           fi

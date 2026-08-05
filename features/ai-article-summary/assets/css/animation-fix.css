@@ -1,0 +1,30 @@
+/* 九流WP助手：AI 摘要动画安全兜底 */
+.wpaias-summary[data-jlwa-animation-managed="1"] .wpaias-summary__text {
+	visibility: visible !important;
+}
+
+.wpaias-summary.wpaias-animation-safe .wpaias-summary__text,
+.wpaias-summary.wpaias-animation-safe .jlwa-wpaias-line {
+	opacity: 1 !important;
+	transform: none !important;
+	visibility: visible !important;
+	animation: none !important;
+	transition: none !important;
+}
+
+.wpaias-summary .jlwa-wpaias-line {
+	display: inline;
+	white-space: pre-wrap;
+	will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wpaias-summary[data-jlwa-animation-managed="1"] .wpaias-summary__text,
+	.wpaias-summary[data-jlwa-animation-managed="1"] .jlwa-wpaias-line {
+		opacity: 1 !important;
+		transform: none !important;
+		visibility: visible !important;
+		animation: none !important;
+		transition: none !important;
+	}
+}

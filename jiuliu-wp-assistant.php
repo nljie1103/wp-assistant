@@ -3,7 +3,7 @@
  * Plugin Name: 九流WP助手
  * Plugin URI: https://github.com/nljie1103/wp-assistant
  * Description: 一个统一、完整的 WordPress 增强插件，集成页面美化、反调试保护、沉浸式预加载、媒体与多域名链接管理、AI 文章摘要和子比下载页美化。
- * Version: 2.5.2
+ * Version: 2.5.3
  * Author: 九流
  * Author URI: https://www.jiuliu.org
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JLWA_VERSION', '2.5.2' );
+define( 'JLWA_VERSION', '2.5.3' );
 define( 'JLWA_PLUGIN_FILE', __FILE__ );
 define( 'JLWA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JLWA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -29,6 +29,7 @@ require_once JLWA_PLUGIN_DIR . 'includes/class-jlwa-feature-registry.php';
 require_once JLWA_PLUGIN_DIR . 'includes/class-jlwa-admin.php';
 require_once JLWA_PLUGIN_DIR . 'includes/class-jlwa-updater.php';
 require_once JLWA_PLUGIN_DIR . 'features/page-effects/mouse-interactions.php';
+require_once JLWA_PLUGIN_DIR . 'features/page-effects/admin-save-fix.php';
 
 JLWA_Feature_Registry::boot();
 JLWA_Admin::instance();

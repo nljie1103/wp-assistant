@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPAIAS_VERSION', '1.1.2' );
+define( 'WPAIAS_VERSION', '1.1.3' );
 define( 'WPAIAS_PLUGIN_FILE', __FILE__ );
 define( 'WPAIAS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPAIAS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -21,5 +21,6 @@ require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-api.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-admin.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-frontend.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-plugin.php';
+require_once WPAIAS_PLUGIN_DIR . 'includes/animation-fix.php';
 
 JLWA_AI_Summary_Feature::instance();
