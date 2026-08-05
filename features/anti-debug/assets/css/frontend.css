@@ -1,0 +1,120 @@
+:root {
+  --jlwa-ad-blur: 16px;
+}
+
+.jlwa-ad-protected-content {
+  filter: blur(var(--jlwa-ad-blur)) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  transition: filter .22s ease;
+}
+
+.jlwa-ad-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 12, 24, .42);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .22s ease, visibility .22s ease;
+}
+
+.jlwa-ad-overlay.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.jlwa-ad-overlay__card {
+  width: min(520px, 100%);
+  padding: 34px 32px 30px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 24px;
+  background: rgba(15, 22, 40, .94);
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 32px 100px rgba(0,0,0,.42);
+}
+
+.jlwa-ad-overlay__shield {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #5b8cff, #8b5cf6);
+  font-size: 34px;
+  box-shadow: 0 14px 36px rgba(91,140,255,.32);
+}
+
+.jlwa-ad-overlay h2 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 25px;
+  line-height: 1.35;
+}
+
+.jlwa-ad-overlay p {
+  margin: 0;
+  color: rgba(255,255,255,.72);
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.jlwa-ad-overlay__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  font-size: 13px;
+}
+
+.jlwa-ad-overlay__status span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 7px rgba(245,158,11,.12);
+  animation: jlwaAdPulse 1.2s ease-in-out infinite;
+}
+
+.jlwa-ad-overlay small {
+  display: block;
+  margin-top: 14px;
+  color: rgba(255,255,255,.42);
+  word-break: break-all;
+}
+
+.jlwa-ad-replaced {
+  box-sizing: border-box;
+  min-height: 260px;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  padding: 30px;
+  border: 1px dashed rgba(91,140,255,.55);
+  border-radius: 18px;
+  background: rgba(91,140,255,.06);
+  text-align: center;
+}
+
+.jlwa-ad-replaced strong { font-size: 20px; }
+.jlwa-ad-replaced p { margin: 0; opacity: .7; }
+
+@keyframes jlwaAdPulse {
+  50% { opacity: .45; transform: scale(.78); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jlwa-ad-overlay,
+  .jlwa-ad-protected-content,
+  .jlwa-ad-overlay__status span { transition: none; animation: none; }
+}

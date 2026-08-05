@@ -39,6 +39,19 @@ class JLWA_Feature_Registry {
 					'xiaojie-page-effects/xiaojie-page-effects.php',
 				),
 			),
+
+			'anti-debug' => array(
+				'label'       => '反调试保护',
+				'short_label' => '反调试',
+				'icon'        => 'dashicons-shield-alt',
+				'slug'        => 'jlwa-anti-debug',
+				'version'     => '1.0.0',
+				'entry_class' => 'JLWA_Anti_Debug_Feature',
+				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/anti-debug/bootstrap.php',
+				'description' => '多探测器评分、连续确认、可恢复遮罩、跳转处置与匿名触发日志。',
+				'eyebrow'     => 'ANTI DEBUG & ANALYSIS',
+				'standalone'  => array(),
+			),
 			'ai-summary' => array(
 				'label'       => 'AI 文章摘要',
 				'short_label' => 'AI 摘要',
@@ -104,6 +117,9 @@ class JLWA_Feature_Registry {
 		if ( ! empty( self::$statuses['page-effects']['loaded'] ) && class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 			JLWA_Page_Effects_Feature::activate();
 		}
+		if ( ! empty( self::$statuses['anti-debug']['loaded'] ) && class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
+			JLWA_Anti_Debug_Feature::activate();
+		}
 		if ( ! empty( self::$statuses['ai-summary']['loaded'] ) && class_exists( 'JLWA_AI_Summary_Feature' ) ) {
 			$current  = get_option( WPAIAS_OPTION_KEY, array() );
 			$current  = is_array( $current ) ? $current : array();
@@ -151,6 +167,8 @@ class JLWA_Feature_Registry {
 		switch ( $key ) {
 			case 'page-effects':
 				return class_exists( 'JLWA_Page_Effects_Feature', false ) ? (string) JLWA_Page_Effects_Feature::VERSION : $feature['version'];
+			case 'anti-debug':
+				return class_exists( 'JLWA_Anti_Debug_Feature', false ) ? (string) JLWA_Anti_Debug_Feature::VERSION : $feature['version'];
 			case 'ai-summary':
 				return defined( 'WPAIAS_VERSION' ) ? (string) WPAIAS_VERSION : $feature['version'];
 			case 'preloader':
@@ -168,6 +186,11 @@ class JLWA_Feature_Registry {
 			case 'page-effects':
 				if ( class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 					JLWA_Page_Effects_Feature::instance()->render_admin_page();
+				}
+				break;
+			case 'anti-debug':
+				if ( class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
+					JLWA_Anti_Debug_Feature::instance()->render_admin_page();
 				}
 				break;
 			case 'ai-summary':
@@ -207,6 +230,9 @@ class JLWA_Feature_Registry {
 			case 'page-effects':
 				$options = get_option( 'xjpe_options', array() );
 				return ! empty( $options['global']['enabled'] );
+			case 'anti-debug':
+				$options = get_option( 'jlwa_anti_debug_options', array() );
+				return ! empty( $options['enabled'] );
 			case 'ai-summary':
 				$options = get_option( 'wpaias_settings', array() );
 				return ! empty( $options['enabled'] );
