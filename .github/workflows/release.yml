@@ -94,6 +94,8 @@ jobs:
           ZIP="jiuliu-wp-assistant-$VERSION.zip"
           SHA="$ZIP.sha256.txt"
           NOTES="RELEASE_NOTES_$VERSION.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag -a "$TAG" -m "九流WP助手 $VERSION"
             git push origin "$TAG"
