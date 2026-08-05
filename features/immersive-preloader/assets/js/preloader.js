@@ -1,4 +1,4 @@
-/** 九流沉浸式预加载 1.2.1 — safe skip handling and first-frame lifecycle. */
+/** 九流沉浸式预加载 1.2.2 — reliable session marking, forced preview and safe skip handling. */
 (function () {
 	'use strict';
 

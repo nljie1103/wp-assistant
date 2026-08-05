@@ -104,6 +104,21 @@ class JIP_Admin {
 	}
 
 	/**
+	 * 生成管理员强制预览地址。
+	 *
+	 * @return string
+	 */
+	private function force_preview_url() {
+		return add_query_arg(
+			array(
+				'jip_force_preview' => '1',
+				'_jip_nonce'       => wp_create_nonce( 'jip_force_preview' ),
+			),
+			home_url( '/' )
+		);
+	}
+
+	/**
 	 * 渲染设置页面。
 	 */
 	public function render_settings_page() {
@@ -295,7 +310,11 @@ class JIP_Admin {
 				</div>
 				</div>
 
-				<?php submit_button( '保存设置' ); ?>
+				<div class="jip-actions">
+					<?php submit_button( '保存设置', 'primary', 'submit', false ); ?>
+					<a class="button button-secondary" href="<?php echo esc_url( $this->force_preview_url() ); ?>" target="_blank" rel="noopener">强制预览一次</a>
+					<span class="description">强制预览不受“会话内一次”、减少动态和省流量设置影响。</span>
+				</div>
 			</form>
 
 			<div class="jip-footer">

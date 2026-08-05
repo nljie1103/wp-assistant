@@ -69,6 +69,22 @@ class JIP_Frontend {
 	}
 
 	/**
+	 * 管理员强制预览请求。忽略会话一次、减少动态和省流量跳过规则。
+	 *
+	 * @return bool
+	 */
+	private function is_force_preview_request() {
+		if ( empty( $_GET['jip_force_preview'] ) || '1' !== (string) $_GET['jip_force_preview'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return false;
+		}
+		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+		$nonce = isset( $_GET['_jip_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_jip_nonce'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return (bool) wp_verify_nonce( $nonce, 'jip_force_preview' );
+	}
+
+	/**
 	 * 是否应在当前请求中显示预加载。
 	 *
 	 * @return bool
@@ -91,7 +107,7 @@ class JIP_Frontend {
 		if ( empty( $this->options['enabled'] ) ) {
 			return false;
 		}
-		if ( ! empty( $this->options['home_only'] ) && ! ( is_front_page() || is_home() ) ) {
+		if ( ! $this->is_force_preview_request() && ! empty( $this->options['home_only'] ) && ! ( is_front_page() || is_home() ) ) {
 			return false;
 		}
 		return true;
@@ -202,6 +218,7 @@ class JIP_Frontend {
 		$mobile      = ! empty( $this->options['mobile_enable'] ) ? 'true' : 'false';
 		$reduce      = ! empty( $this->options['reduce_motion'] ) ? 'true' : 'false';
 		$save_data   = ! empty( $this->options['skip_save_data'] ) ? 'true' : 'false';
+		$force       = $this->is_force_preview_request() ? 'true' : 'false';
 		$max_ms      = max( 500, (int) round( floatval( $this->options['max_duration'] ) * 1000 ) );
 		// 将 HTML 编码为 JSON 字符串，安全注入到 JS 字符串字面量中。
 		$html_json = wp_json_encode( $html );
@@ -221,17 +238,21 @@ class JIP_Frontend {
 		var MOBILE = <?php echo $mobile; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var REDUCE = <?php echo $reduce; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var SAVE_DATA = <?php echo $save_data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var FORCE = <?php echo $force; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var isMobile = (window.matchMedia && window.matchMedia('(max-width:782px)').matches) || /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
 		var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-		if ((!MOBILE && isMobile) || (REDUCE && reduceMotion) || (SAVE_DATA && navigator.connection && navigator.connection.saveData)) { window.__JIP_SKIP__ = 1; return; }
-		// 标签会话级跳过：sessionStorage 中已有标记则不再显示
-		if (ONCE && window.sessionStorage) {
-			var key = 'jip_shown_' + (HOME_ONLY ? 'home' : 'all');
-			if (sessionStorage.getItem(key) === '1') {
+		if (!FORCE && ((!MOBILE && isMobile) || (REDUCE && reduceMotion) || (SAVE_DATA && navigator.connection && navigator.connection.saveData))) { window.__JIP_SKIP__ = 1; return; }
+		// 会话标记必须在开屏节点真正插入并渲染后再写入，不能在初始化前抢先标记。
+		var key = 'jip_shown_v122_' + (HOME_ONLY ? 'home' : 'all');
+		window.__JIP_SESSION_KEY__ = key;
+		window.__JIP_ONCE__ = !!ONCE && !FORCE;
+		if (window.sessionStorage) {
+			// 清理 1.2.1 及更早版本留下的无版本标记，避免升级后一直不显示。
+			try { sessionStorage.removeItem('jip_shown_home'); sessionStorage.removeItem('jip_shown_all'); } catch(e) {}
+			if (!FORCE && ONCE && sessionStorage.getItem(key) === '1') {
 				window.__JIP_SKIP__ = 1;
 				return;
 			}
-			sessionStorage.setItem(key, '1');
 		}
 		document.documentElement.classList.add('jip-loading');
 	} catch(e) {
@@ -262,10 +283,16 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 		var existing = document.getElementById('jip-preloader'); if (existing) { inserted = true; prepareNode(existing); return true; }
 		return false;
 	}
+	function markShown(){
+		if (!window.__JIP_ONCE__ || !window.__JIP_SESSION_KEY__ || !window.sessionStorage) return;
+		try { sessionStorage.setItem(window.__JIP_SESSION_KEY__, '1'); } catch(e) {}
+	}
 	function prepareNode(node){
 		if (!node || node.__jipPrepared) return;
 		node.__jipPrepared = true;
-		requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (node && node.classList) node.classList.add('jip-ready'); }); });
+		requestAnimationFrame(function(){ requestAnimationFrame(function(){
+			if (node && node.classList && node.isConnected !== false) { node.classList.add('jip-ready'); markShown(); }
+		}); });
 	}
 	function forceInsert(){
 		if (tryFind()) { prepareNode(document.getElementById('jip-preloader')); return true; }

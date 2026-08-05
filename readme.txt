@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.3.2
+Stable tag: 2.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.3.3 =
+* 修复会话标记在开屏真正显示前就被写入，导致预加载永久被跳过的问题。
+* 会话标记改为版本化，并在开屏节点完成首帧渲染后才写入。
+* 新增管理员“强制预览一次”，不受会话一次、减少动态和省流量规则影响。
 
 = 2.3.2 =
 * 修复开屏跳过点击穿透并立即结束动画。
