@@ -76,8 +76,24 @@ class JLWA_AI_Summary_Feature {
 			$saved = array();
 		}
 		$settings = wp_parse_args( $saved, $defaults );
+		$legacy_key = isset( $settings['api_key'] ) ? str_replace( array( "\r", "\n" ), '', trim( (string) $settings['api_key'] ) ) : '';
 		unset( $settings['api_key'] );
 		$settings['api_keys'] = self::sanitize_api_keys( isset( $settings['api_keys'] ) ? $settings['api_keys'] : array() );
+
+		// 从旧版单一 api_key 自动迁移，避免升级后看似 Key 丢失。
+		if ( '' !== $legacy_key ) {
+			$provider = isset( $settings['provider'] ) ? sanitize_key( $settings['provider'] ) : 'openai';
+			$model = ( 'custom' === $provider && ! empty( $settings['custom_model'] ) ) ? $settings['custom_model'] : ( isset( $settings['model'] ) ? $settings['model'] : '' );
+			$model_slot = self::api_key_slot( $provider, $model );
+			$provider_slot = self::api_key_provider_slot( $provider );
+			if ( '' !== $model_slot && empty( $settings['api_keys'][ $model_slot ] ) ) {
+				$settings['api_keys'][ $model_slot ] = $legacy_key;
+			}
+			if ( '' !== $provider_slot && empty( $settings['api_keys'][ $provider_slot ] ) ) {
+				$settings['api_keys'][ $provider_slot ] = $legacy_key;
+			}
+			update_option( WPAIAS_OPTION_KEY, $settings, false );
+		}
 
 		return $settings;
 	}
@@ -106,6 +122,11 @@ class JLWA_AI_Summary_Feature {
 	 * @param mixed $api_keys API Key 映射。
 	 * @return array
 	 */
+	public static function api_key_provider_slot( $provider ) {
+		$provider = sanitize_key( $provider );
+		return '' === $provider ? '' : $provider . '::__provider__';
+	}
+
 	public static function sanitize_api_keys( $api_keys ) {
 		$out = array();
 
@@ -156,6 +177,11 @@ class JLWA_AI_Summary_Feature {
 		$slot     = self::api_key_slot( $provider, $model );
 		if ( '' !== $slot && isset( $api_keys[ $slot ] ) ) {
 			return $api_keys[ $slot ];
+		}
+
+		$provider_slot = self::api_key_provider_slot( $provider );
+		if ( '' !== $provider_slot && isset( $api_keys[ $provider_slot ] ) ) {
+			return $api_keys[ $provider_slot ];
 		}
 
 		return '';

@@ -236,6 +236,24 @@ class WPAIAS_Admin {
 			if ( isset( $input['api_keys'] ) && is_array( $input['api_keys'] ) ) {
 				$api_keys = array_merge( $api_keys, $input['api_keys'] );
 			}
+			$api_keys = JLWA_AI_Summary_Feature::sanitize_api_keys( $api_keys );
+
+			// API Key 输入框直接参与表单提交，避免后台 JS 未运行时出现‘设置已保存但 Key 丢失’。
+			$current_api_key = isset( $input['api_key_current'] ) ? trim( (string) wp_unslash( $input['api_key_current'] ) ) : '';
+			$current_api_key = str_replace( array( "\r", "\n" ), '', $current_api_key );
+			if ( '' !== $current_api_key ) {
+				$key_provider = isset( $out['provider'] ) ? sanitize_key( $out['provider'] ) : 'openai';
+				$key_model    = ( 'custom' === $key_provider && ! empty( $out['custom_model'] ) ) ? $out['custom_model'] : ( isset( $out['model'] ) ? $out['model'] : '' );
+				$model_slot   = JLWA_AI_Summary_Feature::api_key_slot( $key_provider, $key_model );
+				$provider_slot = JLWA_AI_Summary_Feature::api_key_provider_slot( $key_provider );
+				if ( '' !== $model_slot ) {
+					$api_keys[ $model_slot ] = $current_api_key;
+				}
+				if ( '' !== $provider_slot ) {
+					$api_keys[ $provider_slot ] = $current_api_key;
+				}
+			}
+			// 空输入只表示不修改，绝不再静默删除数据库中的旧 Key。
 			$out['api_keys'] = JLWA_AI_Summary_Feature::sanitize_api_keys( $api_keys );
 			if ( isset( $input['temperature'] ) ) {
 				$out['temperature'] = max( 0, min( 2, (float) $input['temperature'] ) );
@@ -568,10 +586,10 @@ class WPAIAS_Admin {
 							<th><label><?php esc_html_e( 'API Key', 'wp-ai-article-summary' ); ?></label></th>
 							<td>
 								<input type="hidden" id="wpaias-api-keys-json" name="<?php echo esc_attr( $opt ); ?>[api_keys_json]" value="<?php echo esc_attr( $api_keys_json ); ?>">
-								<input type="password" class="regular-text" id="wpaias-api-key" value="<?php echo esc_attr( $current_key ); ?>" autocomplete="off">
+								<input type="password" class="regular-text" id="wpaias-api-key" name="<?php echo esc_attr( $opt ); ?>[api_key_current]" value="<?php echo esc_attr( $current_key ); ?>" autocomplete="new-password">
 								<button type="button" class="button" id="wpaias-toggle-key"><?php esc_html_e( '显示/隐藏', 'wp-ai-article-summary' ); ?></button>
 								<p class="description">
-									<?php esc_html_e( '当前输入框只绑定当前服务商 + 模型；切换模型会自动切换到对应的 API Key。', 'wp-ai-article-summary' ); ?>
+									<?php esc_html_e( 'API Key 会保存到当前服务商，并兼容当前模型的独立绑定；切换同一服务商下的模型不会再要求重复填写。', 'wp-ai-article-summary' ); ?>
 									<span id="wpaias-key-binding-label" class="wpaias-key-binding-label"></span>
 								</p>
 							</td>

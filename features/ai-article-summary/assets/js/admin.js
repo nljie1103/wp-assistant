@@ -214,6 +214,10 @@
 		return providerKey + '::' + rfc3986Encode( modelName );
 	}
 
+	function providerApiKeySlot( providerKey ) {
+		return providerKey ? providerKey + '::__provider__' : '';
+	}
+
 	function syncApiKeysJson() {
 		var $json = $( '#wpaias-api-keys-json' );
 		if ( $json.length ) {
@@ -228,11 +232,14 @@
 		var slot = useCurrentSelection ? apiKeySlot( currentProvider(), currentModel() ) : activeKeySlot;
 		if ( ! slot ) return;
 
-		var value = $key.val() || '';
-		if ( value ) {
-			apiKeys[ slot ] = value;
-		} else {
-			delete apiKeys[ slot ];
+		var value = ( $key.val() || '' ).trim();
+		if ( ! value ) {
+			return;
+		}
+		apiKeys[ slot ] = value;
+		var providerSlot = providerApiKeySlot( currentProvider() );
+		if ( providerSlot ) {
+			apiKeys[ providerSlot ] = value;
 		}
 		syncApiKeysJson();
 	}
@@ -246,8 +253,11 @@
 		var slot = apiKeySlot( providerKey, modelName );
 		activeKeySlot = slot;
 
+		var providerSlot = providerApiKeySlot( providerKey );
 		if ( slot && Object.prototype.hasOwnProperty.call( apiKeys, slot ) ) {
 			$key.val( apiKeys[ slot ] );
+		} else if ( providerSlot && Object.prototype.hasOwnProperty.call( apiKeys, providerSlot ) ) {
+			$key.val( apiKeys[ providerSlot ] );
 		} else {
 			$key.val( '' );
 		}

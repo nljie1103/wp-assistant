@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.5.1
+Stable tag: 2.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.2 =
+* 修复 API Key 显示已保存但实际未写入的问题。
+* API Key 改为服务商级回退，同一服务商切换模型无需重复填写。
+* 空输入不再静默删除旧 Key，并自动迁移旧版单一 api_key。
 
 = 2.5.1 =
 * 修复 AI 摘要有调用但前端卡片不显示、页脚拿错文章和动画失败透明问题。

@@ -57,7 +57,7 @@ class JLWA_Feature_Registry {
 				'short_label' => 'AI 摘要',
 				'icon'        => 'dashicons-welcome-write-blog',
 				'slug'        => 'wpaias-settings',
-				'version'     => '1.1.1',
+				'version'     => '1.1.2',
 				'entry_class' => 'JLWA_AI_Summary_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/ai-article-summary/bootstrap.php',
 				'description' => '多服务商模型、安全摘要生成、文章元数据缓存、装饰图标、动画与额度保护。',
