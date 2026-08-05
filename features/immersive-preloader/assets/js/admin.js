@@ -20,6 +20,12 @@
 		var $cards = $('.jip-effect-card');
 		var $logoCard = $('.jip-logo-card');
 
+		$('.jip-effect-preview img').on('error', function () {
+			var effect = this.getAttribute('data-effect') || 'effect';
+			this.style.display = 'none';
+			$(this).parent().addClass('is-fallback').attr('data-fallback', effect.toUpperCase());
+		});
+
 		function syncEffect() {
 			var current = $('input[name$="[effect]"]:checked').val();
 			$cards.each(function () {

@@ -57,6 +57,15 @@ class JIP_Frontend {
 		add_action( 'wp_head', array( $this, 'output_inline_critical_css' ), 1 );
 		// 在 <body> 起始处注入预加载层骨架（WordPress 5.2+，主路径）。
 		add_action( 'wp_body_open', array( $this, 'output_preloader_markup' ), 1 );
+		add_filter( 'script_loader_tag', array( $this, 'add_defer_attribute' ), 10, 3 );
+	}
+
+	/** Ensure defer also works on WordPress versions older than the script strategy API. */
+	public function add_defer_attribute( $tag, $handle, $src ) {
+		if ( 'jip-preloader' !== $handle || false !== strpos( $tag, ' defer' ) ) {
+			return $tag;
+		}
+		return str_replace( '<script ', '<script defer ', $tag );
 	}
 
 	/**
@@ -193,6 +202,7 @@ class JIP_Frontend {
 		$mobile      = ! empty( $this->options['mobile_enable'] ) ? 'true' : 'false';
 		$reduce      = ! empty( $this->options['reduce_motion'] ) ? 'true' : 'false';
 		$save_data   = ! empty( $this->options['skip_save_data'] ) ? 'true' : 'false';
+		$max_ms      = max( 500, (int) round( floatval( $this->options['max_duration'] ) * 1000 ) );
 		// 将 HTML 编码为 JSON 字符串，安全注入到 JS 字符串字面量中。
 		$html_json = wp_json_encode( $html );
 		if ( false === $html_json ) {
@@ -203,6 +213,8 @@ class JIP_Frontend {
 /* 在所有样式应用前立即决定是否启用预加载，并加 jip-loading 类，
  * 让后面的 critical CSS 一应用即生效（避免白屏闪现）。*/
 (function(){
+	window.__JIP_START__ = Date.now();
+	window.__JIP_MAX_MS__ = <?php echo (int) $max_ms; ?>;
 	try {
 		var ONCE = <?php echo $once; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var HOME_ONLY = <?php echo $home_only; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
@@ -233,8 +245,8 @@ html.jip-loading { background: <?php echo esc_attr( $bg ); ?> !important; overfl
 html.jip-loading body { overflow: hidden !important; }
 html.jip-fade-in, html.jip-fade-in body { overflow: auto !important; }
 /* 正文始终在遮罩后正常解析和绘制，不再通过 visibility:hidden 制造虚假等待。 */
-#jip-preloader{position:fixed;inset:0;width:100%;height:100%;background:<?php echo esc_attr( $bg ); ?>;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity,transform;transition:opacity .55s ease, transform .55s ease;}
-#jip-preloader.jip-hide{opacity:0;transform:scale(1.1);pointer-events:none;}
+#jip-preloader{position:fixed;inset:0;width:100%;height:100%;background:<?php echo esc_attr( $bg ); ?>;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity;transition:opacity .36s ease, transform .36s ease;}
+#jip-preloader.jip-hide{opacity:0;transform:translateY(-6px);pointer-events:none;}
 /* 会话级跳过时，html 不会带 jip-loading 类，立即隐藏 PHP 已输出的预加载层，避免一闪而过 */
 html:not(.jip-loading) #jip-preloader{display:none !important;}
 </style>
@@ -247,11 +259,16 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 	var inserted = false;
 	function tryFind(){
 		if (inserted) return true;
-		if (document.getElementById('jip-preloader')) { inserted = true; return true; }
+		var existing = document.getElementById('jip-preloader'); if (existing) { inserted = true; prepareNode(existing); return true; }
 		return false;
 	}
+	function prepareNode(node){
+		if (!node || node.__jipPrepared) return;
+		node.__jipPrepared = true;
+		requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (node && node.classList) node.classList.add('jip-ready'); }); });
+	}
 	function forceInsert(){
-		if (tryFind()) return true;
+		if (tryFind()) { prepareNode(document.getElementById('jip-preloader')); return true; }
 		if (!document.body) return false;
 		try {
 			var wrap = document.createElement('div');
@@ -260,11 +277,20 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 			if (node) {
 				document.body.insertBefore(node, document.body.firstChild);
 				inserted = true;
+				prepareNode(node);
 				return true;
 			}
 		} catch(e) {}
 		return false;
 	}
+	function emergencyEnd(){
+		var node = document.getElementById('jip-preloader');
+		document.documentElement.classList.remove('jip-loading');
+		if (!node) return;
+		node.classList.add('jip-hide');
+		setTimeout(function(){ if (node && node.parentNode) node.parentNode.removeChild(node); }, 420);
+	}
+	window.__JIP_HARD_TIMER__ = setTimeout(emergencyEnd, Math.max(500, window.__JIP_MAX_MS__ || 3000));
 
 	// 立即尝试一次（body 已存在的极少数情况）
 	if (tryFind()) return;
@@ -324,8 +350,9 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 			JIP_PLUGIN_URL . 'assets/js/preloader.js',
 			array(),
 			JIP_VERSION,
-			true // 页脚加载，避免外部 JS 阻塞 HTML 解析；关键遮罩由内联代码负责。
+			false // 在 head 下载，并通过 defer 并行执行；避免等到主题页脚才开始生命周期。
 		);
+		wp_script_add_data( 'jip-preloader', 'strategy', 'defer' );
 
 		wp_localize_script(
 			'jip-preloader',

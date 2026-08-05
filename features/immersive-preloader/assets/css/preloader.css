@@ -36,8 +36,8 @@
 	text-align: center;
 	opacity: 0;
 	transform: translateY(20px) scale(0.8);
-	transition: opacity .9s cubic-bezier(.2,.7,.2,1) 1.5s,
-				transform .9s cubic-bezier(.2,.7,.2,1) 1.5s;
+	transition: opacity .48s cubic-bezier(.2,.7,.2,1) .12s,
+				transform .48s cubic-bezier(.2,.7,.2,1) .12s;
 	text-shadow: 0 0 20px rgba(255,255,255,0.3);
 }
 
@@ -56,17 +56,17 @@
 	letter-spacing: 0.2em;
 	color: rgba(255,255,255,0.5);
 	opacity: 0;
-	transition: opacity .6s ease 2s;
+	transition: opacity .35s ease .3s;
 }
 
 #jip-preloader.jip-ready .jip-skip-tip { opacity: 1; }
 
-/* 隐藏过渡（淡出 + 微放大） */
+/* 隐藏过渡：只做透明度与轻微位移，避免整屏缩放纹理造成卡顿。 */
 #jip-preloader.jip-hide {
 	opacity: 0;
-	transform: scale(1.1);
+	transform: translateY(-6px);
 	pointer-events: none;
-	transition: opacity 1s cubic-bezier(.4,0,.2,1), transform 1s cubic-bezier(.4,0,.2,1);
+	transition: opacity .36s ease, transform .36s ease;
 }
 
 /* ============== 效果一：立体 Logo（核心，222.mp4 复刻精致版） ============== */
@@ -402,19 +402,19 @@
 .jip-orbit > i:nth-child(2) { inset: 15%; border-color: rgba(190,120,255,.52); animation-duration: 2.4s; animation-direction: reverse; transform: rotateX(64deg); }
 .jip-orbit > i:nth-child(3) { inset: 27%; border-style: dashed; border-color: rgba(255,255,255,.7); animation-duration: 1.8s; }
 .jip-orbit > i::before { content: ''; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; border-radius: 50%; background: #9fd5ff; box-shadow: 0 0 14px currentColor; }
-.jip-orbit > span { width: 35%; height: 35%; display: grid; place-items: center; border-radius: 28%; background: rgba(255,255,255,.08); backdrop-filter: blur(12px); box-shadow: 0 0 55px rgba(90,160,255,.22); }
+.jip-orbit > span { width: 35%; height: 35%; display: grid; place-items: center; border-radius: 28%; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.18), rgba(255,255,255,.06) 58%, rgba(80,120,220,.08)); box-shadow: 0 0 34px rgba(90,160,255,.2); transform: translateZ(0); }
 .jip-orbit img { max-width: 76%; max-height: 76%; object-fit: contain; }
 @keyframes jip-orbit-spin { to { transform: rotate(360deg); } }
 
-.jip-shutter { position: absolute; left: 0; right: 0; height: 51%; z-index: 1; background: linear-gradient(135deg, rgba(20,28,48,.96), rgba(58,44,95,.96)); transition: transform .95s cubic-bezier(.76,0,.24,1); }
+.jip-shutter { position: absolute; left: 0; right: 0; height: 51%; z-index: 1; background: linear-gradient(135deg, rgba(20,28,48,.96), rgba(58,44,95,.96)); transition: transform .56s cubic-bezier(.76,0,.24,1); }
 .jip-shutter-top { top: 0; transform-origin: top; }
 .jip-shutter-bottom { bottom: 0; transform-origin: bottom; }
 #jip-preloader.jip-ready .jip-shutter-top { transform: translateY(-42%); }
 #jip-preloader.jip-ready .jip-shutter-bottom { transform: translateY(42%); }
 .jip-effect-shutters .jip-stage { z-index: 2; }
 
-.jip-ink-cloud { position: absolute; inset: 0; overflow: hidden; filter: blur(18px); opacity: .65; }
-.jip-ink-cloud i { position: absolute; width: 42vw; height: 42vw; min-width: 260px; min-height: 260px; border-radius: 47% 53% 39% 61%; background: radial-gradient(circle at 35% 35%, rgba(92,120,175,.78), rgba(15,20,38,.12) 62%, transparent 70%); animation: jip-ink 4.2s ease-in-out infinite alternate; }
+.jip-ink-cloud { position: absolute; inset: 0; overflow: hidden; opacity: .62; contain: paint; }
+.jip-ink-cloud i { position: absolute; width: 42vw; height: 42vw; min-width: 260px; min-height: 260px; border-radius: 47% 53% 39% 61%; background: radial-gradient(circle at 35% 35%, rgba(105,135,195,.62) 0 20%, rgba(63,83,130,.34) 38%, rgba(15,20,38,.08) 64%, transparent 72%); animation: jip-ink 4.2s ease-in-out infinite alternate; will-change: transform, opacity; }
 .jip-ink-cloud i:nth-child(1) { left: 6%; top: 12%; }
 .jip-ink-cloud i:nth-child(2) { right: 0; bottom: 4%; animation-delay: -1.7s; transform: scale(.82); }
 .jip-ink-cloud i:nth-child(3) { left: 35%; bottom: -20%; animation-delay: -3s; transform: scale(.68); }

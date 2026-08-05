@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.3.0
+Stable tag: 2.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,7 +25,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 1. 页面美化：樱花、雪花、落叶、气泡、仅在页脚上方出现的底部波浪、粒子、鼠标轨迹、右键菜单、内容保护、复制版权、背景音乐和自定义代码。
 2. 反调试保护：多探测器评分、连续确认、四级可组合防御链，以及可选的持续 Debugger、循环刷新、循环关闭、会话锁定和紧急旁路。
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
-4. 沉浸式预加载：八种开屏效果、自定义 Logo、DOM/绘制/完整加载策略、减少动态效果、节省流量跳过和动画资源清理。
+4. 沉浸式预加载：八种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
 
 == Installation ==

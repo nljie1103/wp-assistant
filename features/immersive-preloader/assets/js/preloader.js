@@ -1,4 +1,4 @@
-/** 九流沉浸式预加载 1.1.0 — performance-first lifecycle. */
+/** 九流沉浸式预加载 1.2.0 — first-frame lifecycle and critical-resource completion. */
 (function () {
 	'use strict';
 
@@ -8,11 +8,12 @@
 	var EFFECT = CFG.effect || 'logo3d';
 	var COMPLETION = CFG.completion || 'dom';
 	var ALLOW_SKIP = !!parseInt(CFG.allowSkip, 10);
-	var startTime = Date.now();
+	var startTime = window.__JIP_START__ || Date.now();
 	var ended = false;
 	var cleanupCallbacks = [];
 	var progressTimer = 0;
 	var maxTimer = 0;
+	var criticalTimer = 0;
 
 	function getEl() { return document.getElementById('jip-preloader'); }
 	function onCleanup(fn) { cleanupCallbacks.push(fn); }
@@ -20,6 +21,8 @@
 		cleanupCallbacks.splice(0).forEach(function (fn) { try { fn(); } catch (e) {} });
 		if (progressTimer) { clearInterval(progressTimer); progressTimer = 0; }
 		if (maxTimer) { clearTimeout(maxTimer); maxTimer = 0; }
+		if (criticalTimer) { clearTimeout(criticalTimer); criticalTimer = 0; }
+		if (window.__JIP_HARD_TIMER__) { clearTimeout(window.__JIP_HARD_TIMER__); window.__JIP_HARD_TIMER__ = 0; }
 	}
 
 	function updateProgress(value, label) {
@@ -60,7 +63,7 @@
 			try { window.dispatchEvent(new CustomEvent('jip:ended')); } catch (e) {}
 		}
 		el.addEventListener('transitionend', cleanup, { once: true });
-		setTimeout(cleanup, 750);
+		setTimeout(cleanup, 430);
 	}
 
 	function endWithMinDuration(extra) {
@@ -152,16 +155,45 @@
 		setTimeout(function () { if (!ended) el.classList.add('jip-ready'); }, 100);
 	}
 
+	function waitForCriticalResources(done) {
+		var finished = false;
+		var pending = 0;
+		function finish() { if (finished) return; finished = true; done(); }
+		function oneDone() { pending -= 1; if (pending <= 0) finish(); }
+		var images = Array.prototype.slice.call(document.images || []).filter(function (img) {
+			if (!img || img.closest('#jip-preloader')) return false;
+			var rect = img.getBoundingClientRect();
+			return rect.bottom > 0 && rect.top < (window.innerHeight || 800) * 1.25 && rect.width > 24 && rect.height > 24;
+		}).slice(0, 6);
+		images.forEach(function (img) {
+			if (img.complete && img.naturalWidth > 0) return;
+			pending += 1;
+			var settled = false;
+			function settle() { if (settled) return; settled = true; oneDone(); }
+			img.addEventListener('load', settle, { once: true });
+			img.addEventListener('error', settle, { once: true });
+			if (img.decode) img.decode().then(settle).catch(function () {});
+		});
+		if (document.fonts && document.fonts.ready) {
+			pending += 1;
+			document.fonts.ready.then(oneDone).catch(oneDone);
+		}
+		if (!pending) finish();
+		criticalTimer = setTimeout(finish, Math.min(900, Math.max(180, MAX - (Date.now() - startTime) - 80)));
+	}
+
 	function finishByStrategy() {
 		if (COMPLETION === 'load') {
-			if (document.readyState === 'complete') endWithMinDuration(80);
-			else window.addEventListener('load', function () { endWithMinDuration(80); }, { once: true });
+			if (document.readyState === 'complete') endWithMinDuration(20);
+			else window.addEventListener('load', function () { endWithMinDuration(20); }, { once: true });
 			return;
 		}
 		function afterDom() {
-			if (COMPLETION === 'paint' && window.requestAnimationFrame) {
-				requestAnimationFrame(function () { requestAnimationFrame(function () { endWithMinDuration(40); }); });
-			} else endWithMinDuration(40);
+			if (COMPLETION === 'critical') {
+				requestAnimationFrame(function () { waitForCriticalResources(function () { endWithMinDuration(0); }); });
+			} else if (COMPLETION === 'paint' && window.requestAnimationFrame) {
+				requestAnimationFrame(function () { requestAnimationFrame(function () { endWithMinDuration(0); }); });
+			} else endWithMinDuration(0);
 		}
 		if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', afterDom, { once: true });
 		else afterDom();
@@ -175,10 +207,15 @@
 		if (!getEl()) { document.documentElement.classList.remove('jip-loading'); return; }
 		bindSkip(); animateTitle(); startProgress();
 		if (EFFECT === 'particles') initParticlesEffect();
-		maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, MAX);
+		var remainingMax = Math.max(0, MAX - (Date.now() - startTime));
+		maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, remainingMax);
 		finishByStrategy();
 	}
 
-	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+	if (getEl()) { init(); } else if (window.MutationObserver) {
+		var initObserver = new MutationObserver(function () { if (getEl()) { initObserver.disconnect(); init(); } });
+		initObserver.observe(document.documentElement, { childList: true, subtree: true });
+		setTimeout(function () { initObserver.disconnect(); if (getEl()) init(); else document.documentElement.classList.remove('jip-loading'); }, Math.min(MAX, 1200));
+	} else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 	else init();
 })();

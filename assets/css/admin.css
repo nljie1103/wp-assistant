@@ -14,8 +14,23 @@
 }
 
 body.jlwa-admin-screen { background: var(--jlwa-bg); }
-body.jlwa-admin-screen #wpcontent { padding-left: 20px; }
-.jlwa-app { max-width: 1380px; margin: 18px 20px 40px 0; color: var(--jlwa-text); }
+body.jlwa-admin-screen #wpwrap,
+body.jlwa-admin-screen #wpcontent,
+body.jlwa-admin-screen #wpbody,
+body.jlwa-admin-screen #wpbody-content {
+	min-height: 100%;
+}
+body.jlwa-admin-screen #wpcontent {
+	padding-left: 20px;
+	background-color: #f4f6fb;
+	background-image:
+		radial-gradient(circle at 12% 4%, rgba(99,102,241,.13), transparent 25%),
+		radial-gradient(circle at 88% 10%, rgba(14,165,233,.10), transparent 28%),
+		radial-gradient(circle at 1px 1px, rgba(79,70,229,.055) 1px, transparent 0);
+	background-size: auto, auto, 24px 24px;
+	background-attachment: fixed;
+}
+.jlwa-app { width: calc(100% - 20px); max-width: none; margin: 18px 20px 40px 0; color: var(--jlwa-text); }
 .jlwa-app *, .jlwa-app *::before, .jlwa-app *::after { box-sizing: border-box; }
 
 .jlwa-appbar {
@@ -194,4 +209,15 @@ body.jlwa-admin-screen #wpcontent { padding-left: 20px; }
 @media (max-width: 480px) {
 	.jlwa-brand small, .jlwa-appbar__version { display: none; }
 	.jlwa-checklist, .jlwa-update-protection { grid-template-columns: 1fr; }
+}
+
+
+/* 2.3.1 — use wide admin screens instead of leaving a fixed 1380px blank area. */
+@media (min-width: 1900px) {
+	.jlwa-feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.jlwa-hero { grid-template-columns: minmax(0, 1.55fr) minmax(360px, .45fr); }
+}
+@media (max-width: 782px) {
+	body.jlwa-admin-screen #wpcontent { padding-left: 10px; background-size: auto, auto, 20px 20px; }
+	.jlwa-app { width: calc(100% - 10px); margin-right: 10px; }
 }

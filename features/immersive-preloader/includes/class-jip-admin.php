@@ -176,7 +176,7 @@ class JIP_Admin {
 
 						<tr>
 							<th scope="row">结束时机</th>
-							<td><select name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[completion]"><option value="dom" <?php selected( 'dom', $options['completion'] ); ?>>DOM 可用后结束（推荐）</option><option value="paint" <?php selected( 'paint', $options['completion'] ); ?>>首屏完成两帧绘制后结束</option><option value="load" <?php selected( 'load', $options['completion'] ); ?>>等待全部图片和资源（不推荐）</option></select><p class="description">开屏不是下载进度条。推荐按 DOM/首屏绘制结束，不阻塞图片、广告和第三方脚本。</p></td>
+							<td><select name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[completion]"><option value="dom" <?php selected( 'dom', $options['completion'] ); ?>>DOM 可用后结束（最快）</option><option value="paint" <?php selected( 'paint', $options['completion'] ); ?>>首屏完成两帧绘制后结束</option><option value="critical" <?php selected( 'critical', $options['completion'] ); ?>>首屏关键资源就绪后结束（推荐）</option><option value="load" <?php selected( 'load', $options['completion'] ); ?>>等待全站全部资源（最慢，不推荐）</option></select><p class="description">“首屏关键资源”只等待当前视口内少量图片与字体，并受最大等待时长硬限制；不会等待页面底部图片、广告或第三方统计脚本。</p></td>
 						</tr>
 					</table>
 				</div>
@@ -191,8 +191,8 @@ class JIP_Admin {
 						<?php foreach ( $effects as $key => $info ) : ?>
 							<label class="jip-effect-card <?php echo ( $options['effect'] === $key ) ? 'is-active' : ''; ?>" data-effect="<?php echo esc_attr( $key ); ?>">
 								<input type="radio" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[effect]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['effect'], $key ); ?> />
-								<span class="jip-effect-preview">
-									<img src="<?php echo esc_url( JIP_PLUGIN_URL . $info['preview'] ); ?>" alt="<?php echo esc_attr( $info['label'] ); ?>" width="120" height="80" />
+								<span class="jip-effect-preview jip-effect-preview--<?php echo esc_attr( $key ); ?>">
+									<img src="<?php echo esc_url( JIP_PLUGIN_URL . $info['preview'] ); ?>" alt="<?php echo esc_attr( $info['label'] ); ?>" width="120" height="80" data-effect="<?php echo esc_attr( $key ); ?>" />
 								</span>
 								<span class="jip-effect-label"><?php echo esc_html( $info['label'] ); ?></span>
 								<span class="jip-effect-desc"><?php echo esc_html( $info['description'] ); ?></span>

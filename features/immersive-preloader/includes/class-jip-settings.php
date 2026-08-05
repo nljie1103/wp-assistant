@@ -76,7 +76,7 @@ class JIP_Settings {
 			'enabled'          => 0,
 			'min_duration'     => 0.45,
 			'max_duration'     => 3,
-			'completion'       => 'dom',
+			'completion'       => 'critical',
 			'mobile_enable'    => 1,
 			'reduce_motion'    => 1,
 			'skip_save_data'   => 1,
@@ -126,7 +126,7 @@ class JIP_Settings {
 			$output['max_duration'] = $output['min_duration'] + 0.5;
 		}
 		$completion = isset( $input['completion'] ) ? sanitize_key( $input['completion'] ) : $defaults['completion'];
-		$output['completion']      = in_array( $completion, array( 'dom', 'paint', 'load' ), true ) ? $completion : 'dom';
+		$output['completion']      = in_array( $completion, array( 'dom', 'paint', 'critical', 'load' ), true ) ? $completion : 'dom';
 		$output['mobile_enable']   = ! empty( $input['mobile_enable'] ) ? 1 : 0;
 		$output['reduce_motion']   = ! empty( $input['reduce_motion'] ) ? 1 : 0;
 		$output['skip_save_data']  = ! empty( $input['skip_save_data'] ) ? 1 : 0;

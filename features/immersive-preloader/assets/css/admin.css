@@ -207,3 +207,10 @@
 	color: #888;
 	font-size: 12px;
 }
+
+.jip-effect-preview.is-fallback { display:grid; place-items:center; position:relative; background:linear-gradient(135deg,#111827,#312e81); color:#fff; }
+.jip-effect-preview.is-fallback::after { content:attr(data-fallback); position:absolute; left:0; right:0; bottom:8px; font-size:10px; font-weight:800; letter-spacing:.12em; text-align:center; opacity:.72; }
+.jip-effect-preview--orbit.is-fallback::before { content:""; width:52px; height:52px; border:1px solid #7dd3fc; border-radius:50%; box-shadow:0 0 0 10px rgba(192,132,252,.18),0 0 0 20px rgba(125,211,252,.08); }
+.jip-effect-preview--shutters.is-fallback::before { content:""; width:62px; height:34px; border-top:18px solid #312e81; border-bottom:18px solid #4c1d95; background:#a78bfa; box-sizing:content-box; }
+.jip-effect-preview--ink.is-fallback::before { content:""; width:92px; height:54px; border-radius:48% 52% 44% 56%; background:radial-gradient(circle at 35% 35%,#91a7d7,rgba(56,73,118,.36) 55%,transparent 72%); }
+
