@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - tools/finalize-2.5.0.py
+      - features/download-page.php
+      - .github/workflows/release.yml
   workflow_dispatch:
 
 permissions:
@@ -31,12 +33,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/finalize-2.5.0.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "release: 九流WP助手 2.5.0 下载页美化"
-          git push origin HEAD:main
+          if [ -f tools/finalize-2.5.0.py ]; then
+            python3 tools/finalize-2.5.0.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "release: 九流WP助手 2.5.0 下载页美化"
+            git push origin HEAD:main
+          else
+            echo "2.5.0 source is already finalized; continuing with validation and release."
+          fi
 
       - name: Resolve version
         id: version
@@ -102,6 +108,7 @@ jobs:
           fi
 
       - name: Remove abandoned temporary branch
+        if: always()
         shell: bash
         run: |
           git push origin --delete agent/add-download-page-beautification 2>/dev/null || true

@@ -42,7 +42,7 @@ class JLWA_Download_Page_Feature {
 			'enabled' => empty( $input['enabled'] ) ? 0 : 1,
 			'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
 			'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
-			'default_image_url' => esc_url_raw( $input['default_imae_url'] ?? '' ),
+			'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
 		);
 	}
 
@@ -87,12 +87,12 @@ class JLWA_Download_Page_Feature {
 				foreach ( array( 'data-src', 'data-original', 'data-lazy-src', 'src' ) as $attr ) {
 					if ( preg_match( '/\b' . preg_quote( $attr, '/' ) . '\s*=\s*(["\'])(.*?)\1/i', $tag, $match ) ) {
 						$url = html_entity_decode( trim( $match[2] ), ENT_QUOTES, 'UTF-8' );
-						if ( $url && 0 !== strpos( $url, 'data:' ) ){ break; }
+						if ( $url && 0 !== strpos( $url, 'data:' ) ) { break; }
 					}
 				}
-				if ( ! $url || preg_match( '/(?:avatar|emoji|logo|icon|placeholder|loading|spinner|pixel)/i', wp_basename( (string) wp_parse_url( $url, PHP_URL_PATH ) ) ) { continue; }
-				if ( 0 === strpos( $url, '//' ) ){ $url = ( is_ssl() ? 'https:' : 'http:' ) . $url; }
-				elseif ( 0 === strpos( $url, '/' ) ){ $url = home_url( $url ); }
+				if ( ! $url || preg_match( '/(?:avatar|emoji|logo|icon|placeholder|loading|spinner|pixel)/i', wp_basename( (string) wp_parse_url( $url, PHP_URL_PATH ) ) ) ) { continue; }
+				if ( 0 === strpos( $url, '//' ) ) { $url = ( is_ssl() ? 'https:' : 'http:' ) . $url; }
+				elseif ( 0 === strpos( $url, '/' ) ) { $url = home_url( $url ); }
 				$url = esc_url_raw( set_url_scheme( $url ) );
 				if ( $url ) { $images[] = $url; }
 			}
