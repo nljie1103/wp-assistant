@@ -3,7 +3,7 @@ name: Publish 九流WP助手 2.5.4 Direct
 on:
   workflow_run:
     workflows:
-      - Export wp-assistant v2.0.1
+      - Verify unified plugin PR
     types:
       - completed
   workflow_dispatch:
