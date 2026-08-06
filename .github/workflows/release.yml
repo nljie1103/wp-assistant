@@ -7,6 +7,9 @@ on:
     paths:
       - jiuliu-wp-assistant.php
       - features/page-effects/admin-save-fix.php
+      - features/download-page-cover-fix.php
+      - assets/js/download-page-cover-fix.js
+      - assets/css/download-page-cover-fix.css
       - features/ai-article-summary/bootstrap.php
       - features/ai-article-summary/includes/animation-fix.php
       - features/ai-article-summary/assets/js/animation-fix.js
@@ -48,8 +51,10 @@ jobs:
           set -euo pipefail
           php -l jiuliu-wp-assistant.php
           php -l features/page-effects/admin-save-fix.php
+          php -l features/download-page-cover-fix.php
           php -l features/ai-article-summary/bootstrap.php
           php -l features/ai-article-summary/includes/animation-fix.php
+          node --check assets/js/download-page-cover-fix.js
           node --check features/ai-article-summary/assets/js/animation-fix.js
 
       - name: Build installable package
@@ -92,6 +97,9 @@ jobs:
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" "$SHA" --clobber
+            if test -f "$NOTES"; then
+              gh release edit "$TAG" --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
+            fi
           elif test -f "$NOTES"; then
             gh release create "$TAG" "$ZIP" "$SHA" --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
           else
