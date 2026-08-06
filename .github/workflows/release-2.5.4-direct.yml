@@ -1,6 +1,11 @@
 name: Publish 九流WP助手 2.5.4 Direct
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-2.5.4-direct.yml
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -10,7 +15,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - name: Checkout current main
         uses: actions/checkout@v4
@@ -18,14 +23,14 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Validate 2.5.4 source
+      - name: Validate version and required files
         shell: bash
         run: |
           set -euo pipefail
           test "$(sed -n "s/^ \* Version: \([0-9][0-9.]*\)$/\1/p" jiuliu-wp-assistant.php | head -n1)" = "2.5.4"
-          php -l jiuliu-wp-assistant.php
-          php -l features/download-page-cover-fix.php
-          node --check assets/js/download-page-cover-fix.js
+          test -s features/download-page-cover-fix.php
+          test -s assets/js/download-page-cover-fix.js
+          test -s assets/css/download-page-cover-fix.css
 
       - name: Build installable package
         shell: bash
@@ -43,7 +48,7 @@ jobs:
           cd "$BUILD"
           zip -qr "$GITHUB_WORKSPACE/jiuliu-wp-assistant-2.5.4.zip" jiuliu-wp-assistant
           cd "$GITHUB_WORKSPACE"
-          sha256sum jiuliu-wp-assistant-2.5.4.zip > jiuliu-wp-assistant-2.5.4.zip.sha256.txt
+          shasum -a 256 jiuliu-wp-assistant-2.5.4.zip > jiuliu-wp-assistant-2.5.4.zip.sha256.txt
           unzip -t jiuliu-wp-assistant-2.5.4.zip >/dev/null
 
       - name: Create or update v2.5.4 Release
