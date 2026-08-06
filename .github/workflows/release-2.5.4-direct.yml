@@ -1,18 +1,19 @@
 name: Publish 九流WP助手 2.5.4 Direct
 
 on:
-  issues:
+  workflow_run:
+    workflows:
+      - Export wp-assistant v2.0.1
     types:
-      - opened
+      - completed
   workflow_dispatch:
 
 permissions:
   contents: write
-  issues: read
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == '[release] 九流WP助手 2.5.4'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current main
