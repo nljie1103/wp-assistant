@@ -1,18 +1,18 @@
 name: Publish 九流WP助手 2.5.4 Direct
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - RELEASE_NOTES_2.5.4.md
+  issues:
+    types:
+      - opened
   workflow_dispatch:
 
 permissions:
   contents: write
+  issues: read
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == '[release] 九流WP助手 2.5.4'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current main
