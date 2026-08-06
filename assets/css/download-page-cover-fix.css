@@ -1,0 +1,72 @@
+/* 九流WP助手：下载页封面真实比例与热门资源回退图片。 */
+.jld-page .jld-cover.has-cover {
+  min-height: 0 !important;
+  aspect-ratio: var(--jlwa-cover-ratio, 4 / 3) !important;
+}
+
+.jld-page .jld-cover.has-cover.is-landscape {
+  width: 100% !important;
+  max-width: none !important;
+  aspect-ratio: var(--jlwa-cover-ratio, 4 / 3) !important;
+  justify-self: stretch !important;
+}
+
+.jld-page .jld-cover.has-cover.is-square {
+  width: 100% !important;
+  max-width: 282px !important;
+  aspect-ratio: var(--jlwa-cover-ratio, 1 / 1) !important;
+  justify-self: center !important;
+}
+
+.jld-page .jld-cover.has-cover.is-portrait {
+  width: 100% !important;
+  max-width: 258px !important;
+  aspect-ratio: var(--jlwa-cover-ratio, 4 / 5) !important;
+  justify-self: center !important;
+  align-self: center !important;
+}
+
+.jld-page .jld-cover.has-cover.is-portrait .jld-cover-media,
+.jld-page .jld-cover.has-cover.is-square .jld-cover-media {
+  padding: 8px !important;
+}
+
+.jld-page .jld-cover.has-cover .jld-cover-image {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+.jld-page .jld-hot-thumb img.jlwa-hot-fallback-image {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+.jld-page .jld-hot-thumb img.jlwa-hot-fallback-image[data-jlwa-cover-source="default"] {
+  object-fit: contain !important;
+  padding: 5px !important;
+}
+
+@media (max-width: 820px) {
+  .jld-page .jld-cover.has-cover.is-square {
+    max-width: 320px !important;
+  }
+  .jld-page .jld-cover.has-cover.is-portrait {
+    max-width: 270px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .jld-page .jld-cover.has-cover.is-square {
+    max-width: 300px !important;
+  }
+  .jld-page .jld-cover.has-cover.is-portrait {
+    max-width: 245px !important;
+  }
+}
