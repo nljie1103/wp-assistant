@@ -22,8 +22,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: jlwa-official-release
-  cancel-in-progress: false
+  group: jlwa-official-release-${{ github.sha }}
+  cancel-in-progress: true
 
 jobs:
   release:
