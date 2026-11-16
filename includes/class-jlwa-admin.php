@@ -197,38 +197,63 @@ class JLWA_Admin {
 		}
 		$features = JLWA_Feature_Registry::features();
 		$statuses = JLWA_Feature_Registry::statuses();
-		$ready    = 0;
-		foreach ( $statuses as $status ) {
-			if ( ! empty( $status['loaded'] ) ) {
+		$ready     = 0;
+		$enabled   = 0;
+		$attention = array();
+		$states    = array();
+		foreach ( $features as $key => $feature ) {
+			$states[ $key ] = JLWA_Feature_Registry::state( $key );
+			if ( ! empty( $statuses[ $key ]['loaded'] ) ) {
 				++$ready;
 			}
+			if ( ! empty( $states[ $key ]['enabled'] ) && ! empty( $states[ $key ]['ready'] ) ) {
+				++$enabled;
+			}
+			if ( empty( $states[ $key ]['ready'] ) ) {
+				$attention[ $key ] = $states[ $key ];
+			}
 		}
-		$this->shell_start( 'dashboard', '统一控制台', '一个插件管理六项核心能力，设置、界面与更新全部集中。' );
+		$this->shell_start( 'dashboard', '统一控制台', '查看实际启用情况、依赖检查与快捷配置入口。' );
 		?>
-		<section class="jlwa-hero">
+		<section class="jlwa-hero jlwa-hero--overview">
 			<div class="jlwa-hero__copy">
-				<span class="jlwa-kicker">JIULIU WORDPRESS ASSISTANT 2.0</span>
-				<h2>不是功能堆叠，<br>而是一套完整的网站增强系统。</h2>
-				<p>页面体验、反调试保护、加载体验、内容智能、媒体链接和下载体验共用同一个插件生命周期、同一个后台应用与同一个更新源。</p>
+				<span class="jlwa-kicker">站点功能概况</span>
+				<h2>先看运行状态，再配置功能</h2>
+				<p>这里区分“模块已加载”“功能已启用”和“依赖未满足”，避免只看到绿色状态却不知道前台为什么没生效。</p>
 				<div class="jlwa-hero__actions">
-					<a class="button button-primary button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-page-effects' ) ); ?>">开始配置</a>
-					<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-update-center' ) ); ?>">系统与更新</a>
+					<a class="button button-primary" href="#jlwa-feature-list">查看功能与下一步</a>
+					<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-update-center' ) ); ?>">检查版本与更新</a>
 				</div>
 			</div>
-			<div class="jlwa-hero__stats">
-				<div><strong><?php echo esc_html( $ready ); ?>/<?php echo esc_html( count( $features ) ); ?></strong><span>功能就绪</span></div>
-				<div><strong>1</strong><span>插件入口</span></div>
-				<div><strong>v<?php echo esc_html( JLWA_VERSION ); ?></strong><span>当前版本</span></div>
+			<div class="jlwa-hero__stats" aria-label="站点功能状态统计">
+				<div><strong><?php echo esc_html( $enabled ); ?></strong><span>正常启用</span></div>
+				<div><strong><?php echo esc_html( count( $attention ) ); ?></strong><span>需要关注</span></div>
+				<div><strong><?php echo esc_html( $ready ); ?>/<?php echo esc_html( count( $features ) ); ?></strong><span>模块已加载</span></div>
 			</div>
 		</section>
-		<div class="jlwa-section-title">
-			<div><span>CORE FEATURES</span><h2>六项能力，一套体验</h2></div>
-			<p>每个功能都有独立职责，但不再拥有独立插件头、激活流程、菜单树或更新器。</p>
+		<section class="jlwa-attention" aria-labelledby="jlwa-attention-heading">
+			<div class="jlwa-attention__heading"><div><span class="jlwa-kicker">配置指引</span><h2 id="jlwa-attention-heading">建议优先处理</h2></div><p>检测结果只基于当前配置及依赖，不会主动修改站点。</p></div>
+			<?php if ( $attention ) : ?>
+				<div class="jlwa-attention__items">
+					<?php foreach ( $attention as $key => $state ) : ?>
+						<?php $feature = $features[ $key ]; ?>
+						<a class="jlwa-attention__item" href="<?php echo esc_url( $this->feature_url( $key, $feature ) ); ?>">
+							<span class="dashicons dashicons-warning"></span><span><strong><?php echo esc_html( $feature['label'] . ' · ' . $state['label'] ); ?></strong><small><?php echo esc_html( $state['hint'] ); ?></small></span><span class="dashicons dashicons-arrow-right-alt2"></span>
+						</a>
+					<?php endforeach; ?>
+				</div>
+			<?php else : ?>
+				<p class="jlwa-attention__clear">没有发现阻断性配置问题。未启用的功能会保留关闭状态，可按需要逐个开启。</p>
+			<?php endif; ?>
+		</section>
+		<div class="jlwa-section-title" id="jlwa-feature-list">
+			<div><span>功能与下一步</span><h2>六项功能，逐项配置</h2></div>
+			<p>查看当前实际启用情况，点击对应入口进入设置；不会因为模块已加载就标记为已启用。</p>
 		</div>
 		<div class="jlwa-feature-grid">
 			<?php foreach ( $features as $key => $feature ) : ?>
 				<?php
-				$state  = JLWA_Feature_Registry::state( $key );
+				$state  = $states[ $key ];
 				$status = isset( $statuses[ $key ] ) ? $statuses[ $key ] : array();
 				?>
 				<article class="jlwa-feature-card jlwa-feature-card--<?php echo esc_attr( $key ); ?>">
@@ -239,10 +264,11 @@ class JLWA_Admin {
 					<span class="jlwa-feature-eyebrow"><?php echo esc_html( $feature['eyebrow'] ); ?></span>
 					<h3><?php echo esc_html( $feature['label'] ); ?></h3>
 					<p><?php echo esc_html( $feature['description'] ); ?></p>
+					<p class="jlwa-feature-card__next"><strong>下一步：</strong><?php echo esc_html( $this->feature_tip( $key, $state ) ); ?></p>
 					<div class="jlwa-feature-card__footer">
-						<span>统一随九流WP助手主版本更新</span>
+						<span><?php echo esc_html( ! empty( $state['enabled'] ) ? '设置已开启' : '按需启用，不影响其它功能' ); ?></span>
 						<?php if ( ! empty( $status['loaded'] ) ) : ?>
-							<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $feature['slug'] ) ); ?>">管理功能</a>
+							<a class="button button-primary" href="<?php echo esc_url( $this->feature_url( $key, $feature ) ); ?>"><?php echo esc_html( empty( $state['ready'] ) ? '检查配置' : ( ! empty( $state['enabled'] ) ? '调整设置' : '启用或设置' ) ); ?></a>
 						<?php else : ?>
 							<a class="button" href="<?php echo esc_url( admin_url( 'plugins.php' ) ); ?>">处理冲突</a>
 						<?php endif; ?>
@@ -250,13 +276,36 @@ class JLWA_Admin {
 				</article>
 			<?php endforeach; ?>
 		</div>
-		<section class="jlwa-architecture-note">
-			<div class="jlwa-architecture-note__icon"><span class="dashicons dashicons-admin-generic"></span></div>
-			<div><span>UNIFIED ARCHITECTURE</span><h2>统一生命周期，功能域内部解耦</h2><p>WordPress 只识别一个“九流WP助手”插件。六项功能由中央注册表启动，后台菜单由统一控制台注册，在线更新只覆盖一个完整发布包。</p></div>
-			<div class="jlwa-checklist"><span><i></i>一个插件头</span><span><i></i>一个激活入口</span><span><i></i>一个菜单中心</span><span><i></i>一个安全更新器</span></div>
-		</section>
 		<?php
 		$this->shell_end();
+	}
+
+	/** Help text reflects the actual state rather than marketing descriptions. */
+	protected function feature_tip( $key, $state ) {
+		if ( empty( $state['ready'] ) && ! empty( $state['hint'] ) ) {
+			return $state['hint'];
+		}
+		$steps = array(
+			'page-effects' => '先挑选一种效果，保存后用访客窗口查看效果。',
+			'anti-debug' => '先检查保护范围和管理员绕过，再用未登录窗口验证。',
+			'ai-summary' => '选择服务商并测试连接，再检查文章摘要的展示范围。',
+			'preloader' => '选择开屏动画，注意移动端和减少动态效果设置。',
+			'download-page' => '确认子比下载接口兼容，再选择资源页模板。',
+			'media-urls' => '先运行诊断和扫描预览，确认后再执行永久修改。',
+		);
+		return isset( $steps[ $key ] ) ? $steps[ $key ] : '打开设置并检查前端效果。';
+	}
+
+	/** Direct a broken feature to the tab that can actually fix it. */
+	protected function feature_url( $key, $feature ) {
+		$url = admin_url( 'admin.php?page=' . $feature['slug'] );
+		if ( 'ai-summary' === $key ) {
+			$state = JLWA_Feature_Registry::state( $key );
+			if ( '待配置密钥' === $state['label'] ) {
+				$url = add_query_arg( 'tab', 'api', $url );
+			}
+		}
+		return $url;
 	}
 
 	public function render_page_effects() { $this->render_feature( 'page-effects' ); }
@@ -315,8 +364,9 @@ class JLWA_Admin {
 			<aside class="jlwa-system-side">
 				<h2>统一版本管理</h2>
 				<div class="jlwa-system-version"><span class="dashicons dashicons-admin-plugins"></span><div><strong>九流WP助手</strong><span>v<?php echo esc_html( JLWA_VERSION ); ?></span></div></div>
-				<div class="jlwa-system-tip"><strong>功能域策略</strong><p>五项功能不再对外显示独立版本号，全部跟随九流WP助手主版本一起安装、更新和回滚。</p></div>
-				<div class="jlwa-system-tip"><strong>数据策略</strong><p>更新插件不会删除现有设置、AI 缓存、媒体扫描记录或文章数据。</p></div>
+				<div class="jlwa-system-tip"><strong>功能域策略</strong><p>六项功能共用主插件版本，安装、更新与恢复均按完整插件包进行。</p></div>
+				<div class="jlwa-system-tip"><strong>数据策略</strong><p>插件升级设计为保留设置、文章和 AI 缓存；正式站点操作前仍建议备份，失败恢复也依赖服务器文件系统状态。</p></div>
+				<div class="jlwa-system-tip"><strong>无法在线检查版本？</strong><p>请检查服务器到 <code>api.github.com</code> 的 DNS、HTTPS 与代理设置；也可从 <a href="https://github.com/nljie1103/wp-assistant/releases" target="_blank" rel="noopener noreferrer">GitHub 官方发布页</a> 获取经过校验的 ZIP。</p></div>
 			</aside>
 		</div>
 		<?php
@@ -348,7 +398,7 @@ class JLWA_Admin {
 	/** @param string $key Key. @param string $slug Slug. @param string $label Label. @param string $icon Icon. @param string $active Active. */
 	protected function render_nav_item( $key, $slug, $label, $icon, $active ) {
 		$class = 'jlwa-appnav__item' . ( $key === $active ? ' is-active' : '' );
-		echo '<a class="' . esc_attr( $class ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '"><span class="dashicons ' . esc_attr( $icon ) . '"></span><span>' . esc_html( $label ) . '</span></a>';
+		echo '<a class="' . esc_attr( $class ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '" title="' . esc_attr( $label ) . '"' . ( $key === $active ? ' aria-current="page"' : '' ) . '><span class="dashicons ' . esc_attr( $icon ) . '" aria-hidden="true"></span><span>' . esc_html( $label ) . '</span></a>';
 	}
 
 	/** @return string */

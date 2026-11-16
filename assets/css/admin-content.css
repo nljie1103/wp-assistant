@@ -386,3 +386,14 @@
 	.jlwa-feature-intro__meta { grid-column: auto; }
 	.jlwa-feature-host--ai-summary .wpaias-cats { grid-template-columns: 1fr; }
 }
+
+/* 2.5.7 — keep long settings tabs and controls usable on narrow screens. */
+@media (max-width: 782px) {
+  .jlwa-feature-host .nav-tab-wrapper { flex-wrap: nowrap !important; overflow-x: auto !important; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+  .jlwa-feature-host .nav-tab { flex: 0 0 auto !important; white-space: nowrap; }
+  .jlwa-feature-host select { min-width: 0; max-width: 100%; }
+  .jlwa-feature-host input[type="text"], .jlwa-feature-host input[type="password"],
+  .jlwa-feature-host input[type="url"], .jlwa-feature-host input[type="number"],
+  .jlwa-feature-host textarea { max-width: 100%; }
+  .jlwa-feature-host .widefat { display: block; max-width: 100%; overflow-x: auto; }
+}

@@ -241,10 +241,19 @@ class JLWA_Feature_Registry {
 	public static function state( $key ) {
 		$status = isset( self::$statuses[ $key ] ) ? self::$statuses[ $key ] : array();
 		if ( empty( $status['loaded'] ) ) {
-			return array( 'ready' => false, 'label' => '需要处理', 'tone' => 'danger' );
+			return array( 'ready' => false, 'enabled' => false, 'label' => '需处理冲突', 'tone' => 'danger', 'hint' => isset( $status['message'] ) ? $status['message'] : '模块未成功加载。' );
 		}
 		$enabled = self::is_enabled( $key );
-		return array( 'ready' => true, 'label' => $enabled ? '已启用' : '可用', 'tone' => $enabled ? 'success' : 'neutral' );
+		if ( 'download-page' === $key && ( ! class_exists( 'JLWA_Download_Page_Feature' ) || ! JLWA_Download_Page_Feature::is_compatible() ) ) {
+			return array( 'ready' => false, 'enabled' => $enabled, 'label' => '需子比主题', 'tone' => 'warning', 'hint' => '当前缺少子比下载/付费接口，即使开启设置，前台也不会接管下载页。' );
+		}
+		if ( 'ai-summary' === $key && $enabled && class_exists( 'JLWA_AI_Summary_Feature' ) ) {
+			$settings = JLWA_AI_Summary_Feature::get_settings();
+			if ( '' === JLWA_AI_Summary_Feature::get_api_key_for_model( $settings ) ) {
+				return array( 'ready' => false, 'enabled' => true, 'label' => '待配置密钥', 'tone' => 'warning', 'hint' => '摘要功能已开启，但尚未配置当前模型的 API Key。' );
+			}
+		}
+		return array( 'ready' => true, 'enabled' => $enabled, 'label' => $enabled ? '已启用' : '未启用', 'tone' => $enabled ? 'success' : 'neutral', 'hint' => '' );
 	}
 
 	/** @param string $key Feature key. @return bool */

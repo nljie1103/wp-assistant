@@ -63,12 +63,15 @@ class JLWA_Download_Page_Feature {
         wp_enqueue_style( 'jlwa-download-page-admin', JLWA_PLUGIN_URL . 'assets/css/download-page-admin.css', array(), JLWA_VERSION );
     }
 
-    private function compatible() {
+    /** Read-only compatibility check used by the dashboard and download runtime. */
+    public static function is_compatible() {
         foreach ( array( 'zibpay_is_paid', 'zibpay_get_post_down_buts', 'zibpay_get_post_down_array', 'zib_get_page_content_style' ) as $function ) {
             if ( ! function_exists( $function ) ) { return false; }
         }
         return true;
     }
+
+    private function compatible() { return self::is_compatible(); }
 
     private function target_request() {
         if ( is_admin() || wp_doing_ajax() || empty( $_GET['post'] ) ) { return false; } // phpcs:ignore WordPress.Security.NonceVerification.Recommended
