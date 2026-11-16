@@ -96,6 +96,11 @@ jobs:
               exit 1
             fi
           fi
+      - name: Enforce decimal carry against historical tags
+        run: |
+          set -euo pipefail
+          git fetch origin --tags
+          python3 tools/version-policy.py verify-history
       - name: Build exact-commit installable ZIP
         shell: bash
         run: |

@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Legacy internal module/schema identifier, NOT the public plugin release.
 define( 'JIP_VERSION', '1.2.2' );
 define( 'JIP_PLUGIN_FILE', __FILE__ );
 define( 'JIP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Legacy internal module/schema identifier, NOT the public plugin release.
 define( 'JRMU_VERSION', '4.2.0' );
 define( 'JRMU_PLUGIN_FILE', __FILE__ );
 define( 'JRMU_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
