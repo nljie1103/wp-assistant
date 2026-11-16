@@ -13,6 +13,8 @@ final class AntiDebugScopeTest extends TestCase {
 
     private function enabledFor( $settings ) {
         $method = new ReflectionMethod('JLWA_Anti_Debug_Feature', 'should_load');
+        // Required on PHP 7.4; PHP 8.1+ allows private reflection invocation by default.
+        $method->setAccessible(true);
         $instance = JLWA_Anti_Debug_Feature::instance();
         return $method->invoke($instance, $settings);
     }
