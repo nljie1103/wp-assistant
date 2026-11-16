@@ -82,6 +82,19 @@ class WPAIAS_Frontend {
 	}
 
 	/**
+	 * Permission gate shared by all frontend entry points. Never expose a
+	 * protected post's cached or generated summary to an unauthorised visitor.
+	 * A valid password cookie or the ability to edit this specific post grants access.
+	 *
+	 * @param WP_Post $post Current article.
+	 * @return bool
+	 */
+	protected function may_read_summary( $post ) {
+		return $post instanceof WP_Post
+			&& ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) );
+	}
+
+	/**
 	 * 是否应该展示。
 	 *
 	 * @return bool
@@ -100,7 +113,7 @@ class WPAIAS_Frontend {
 		}
 
 		$post = $this->current_post();
-		if ( ! $post ) {
+		if ( ! $this->may_read_summary( $post ) ) {
 			return false;
 		}
 
@@ -192,7 +205,7 @@ class WPAIAS_Frontend {
 			return '';
 		}
 		$post = $this->current_post();
-		if ( ! $post ) {
+		if ( ! $this->may_read_summary( $post ) ) {
 			return '';
 		}
 
@@ -356,6 +369,7 @@ class WPAIAS_Frontend {
 		if ( ! $this->should_show() ) {
 			return;
 		}
+		$settings = JLWA_AI_Summary_Feature::get_settings();
 
 		wp_enqueue_style(
 			'wpaias-frontend',
@@ -418,18 +432,14 @@ class WPAIAS_Frontend {
 		if ( ! $post || 'publish' !== $post->post_status ) {
 			wp_send_json_error( array( 'message' => __( '文章不存在或未发布。', 'wp-ai-article-summary' ) ), 404 );
 		}
-
-		$cached = WPAIAS_Cache::get( $post_id );
-		if ( false !== $cached ) {
-			wp_send_json_success( array( 'summary' => $cached, 'cached' => true ) );
+		if ( ! $this->may_read_summary( $post ) ) {
+			wp_send_json_error( array( 'message' => __( '该文章受访问保护。', 'wp-ai-article-summary' ) ), 403 );
 		}
 
+		// Check feature and per-post visibility before reading even a cached summary.
 		$settings = JLWA_AI_Summary_Feature::get_settings();
 		if ( empty( $settings['enabled'] ) ) {
 			wp_send_json_error( array( 'message' => __( '插件未开启。', 'wp-ai-article-summary' ) ), 403 );
-		}
-		if ( empty( $settings['public_generation'] ) && ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( '本站未开放访客实时生成摘要。', 'wp-ai-article-summary' ) ), 403 );
 		}
 		if ( ! in_array( $post->post_type, (array) $settings['post_types'], true ) ) {
 			wp_send_json_error( array( 'message' => __( '该文章类型未启用摘要。', 'wp-ai-article-summary' ) ), 403 );
@@ -444,6 +454,14 @@ class WPAIAS_Frontend {
 			if ( array_intersect( array_map( 'intval', $categories ), array_map( 'intval', (array) $settings['exclude_categories'] ) ) ) {
 				wp_send_json_error( array( 'message' => __( '该文章分类已被排除。', 'wp-ai-article-summary' ) ), 403 );
 			}
+		}
+
+		$cached = WPAIAS_Cache::get( $post_id );
+		if ( false !== $cached ) {
+			wp_send_json_success( array( 'summary' => $cached, 'cached' => true ) );
+		}
+		if ( empty( $settings['public_generation'] ) && ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( '本站未开放访客实时生成摘要。', 'wp-ai-article-summary' ) ), 403 );
 		}
 
 		$is_privileged = current_user_can( 'edit_posts' );

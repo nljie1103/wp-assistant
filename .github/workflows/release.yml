@@ -2,62 +2,92 @@ name: Publish 九流WP助手 Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - jiuliu-wp-assistant.php
-      - features/page-effects/admin-save-fix.php
-      - features/download-page-cover-fix.php
-      - assets/js/download-page-cover-fix.js
-      - assets/css/download-page-cover-fix.css
-      - features/ai-article-summary/bootstrap.php
-      - features/ai-article-summary/includes/animation-fix.php
-      - features/ai-article-summary/assets/js/animation-fix.js
-      - features/ai-article-summary/assets/css/animation-fix.css
-      - RELEASE_NOTES_*.md
-      - .github/workflows/release.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: jlwa-official-release-${{ github.sha }}
-  cancel-in-progress: true
+  group: jlwa-official-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Full release gate on PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: phpunit:9.6
+          extensions: mbstring, dom, xml
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: bash tools/check.sh
+
   release:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout exact commit
         uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
-
-      - name: Resolve version
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: phpunit:9.6
+          extensions: mbstring, dom, xml
+          coverage: none
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify code quality before publishing
+        run: bash tools/check.sh
+      - name: Resolve and cross-check release version
         id: version
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(sed -n "s/^ \* Version: \([0-9][0-9.]*\)$/\1/p" jiuliu-wp-assistant.php | head -n1)
           test -n "$VERSION"
+          grep -Fq "define( 'JLWA_VERSION', '$VERSION' );" jiuliu-wp-assistant.php
+          grep -Fxq "Stable tag: $VERSION" readme.txt
+          test -f "RELEASE_NOTES_$VERSION.md"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Validate changed files
+      - name: Enforce immutable version and Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
-          php -l jiuliu-wp-assistant.php
-          php -l features/page-effects/admin-save-fix.php
-          php -l features/download-page-cover-fix.php
-          php -l features/ai-article-summary/bootstrap.php
-          php -l features/ai-article-summary/includes/animation-fix.php
-          node --check assets/js/download-page-cover-fix.js
-          node --check features/ai-article-summary/assets/js/animation-fix.js
-
-      - name: Build installable package
+          git fetch origin --tags
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists. Published assets are immutable; increment the version."
+            exit 1
+          fi
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            PREVIOUS_COMMIT=$(git rev-list -n1 "$TAG")
+            if [ "$PREVIOUS_COMMIT" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $TAG points to a different commit. Never replace an existing version."
+              exit 1
+            fi
+          fi
+      - name: Build exact-commit installable ZIP
         shell: bash
         run: |
           set -euo pipefail
@@ -70,38 +100,31 @@ jobs:
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'tools/' \
+            --exclude 'tests/' \
+            --exclude 'phpunit.xml.dist' \
             --exclude 'RELEASE_NOTES_*.md'
           cd "$BUILD"
           zip -qr "$GITHUB_WORKSPACE/jiuliu-wp-assistant-$VERSION.zip" jiuliu-wp-assistant
           cd "$GITHUB_WORKSPACE"
           sha256sum "jiuliu-wp-assistant-$VERSION.zip" > "jiuliu-wp-assistant-$VERSION.zip.sha256.txt"
           unzip -t "jiuliu-wp-assistant-$VERSION.zip" >/dev/null
-
-      - name: Create tag and GitHub Release
+          unzip -Z1 "jiuliu-wp-assistant-$VERSION.zip" | grep -Fxq 'jiuliu-wp-assistant/jiuliu-wp-assistant.php'
+      - name: Publish tagged immutable release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="v$VERSION"
           ZIP="jiuliu-wp-assistant-$VERSION.zip"
           SHA="$ZIP.sha256.txt"
           NOTES="RELEASE_NOTES_$VERSION.md"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main --tags
-          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-            git tag -a "$TAG" -m "九流WP助手 $VERSION" origin/main
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git show-ref --verify --quiet "refs/tags/$TAG"; then
+            git tag -a "$TAG" -m "九流WP助手 $VERSION" "$GITHUB_SHA"
             git push origin "$TAG"
           fi
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP" "$SHA" --clobber
-            if test -f "$NOTES"; then
-              gh release edit "$TAG" --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
-            fi
-          elif test -f "$NOTES"; then
-            gh release create "$TAG" "$ZIP" "$SHA" --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
-          else
-            gh release create "$TAG" "$ZIP" "$SHA" --title "九流WP助手 $VERSION" --generate-notes --latest
-          fi
+          gh release create "$TAG" "$ZIP" "$SHA" \
+            --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest

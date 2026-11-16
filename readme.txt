@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.5.2
+Stable tag: 2.5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,12 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.5 =
+* 修复密码保护文章的摘要缓存及前端请求访问控制。
+* 修复移动端摘要配置未传递导致摘要被错误隐藏。
+* 安装器采用完整暂存与保留旧目录后切换，并只接受带 SHA-256 的正式 Release。
+* 新增 PHPUnit 回归测试、全量语法检查和不可覆盖的发布流程。
 
 = 2.5.2 =
 * 修复 API Key 显示已保存但实际未写入的问题。

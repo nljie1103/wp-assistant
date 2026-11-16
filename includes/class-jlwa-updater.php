@@ -101,12 +101,9 @@ class JLWA_Updater {
 			}
 		}
 
-		// 优先使用经过发布流程构建并附带 SHA-256 的正式 Release。
+		// Fail closed: branch ZIPs have no matching authenticated Release checksum.
+		// Do not silently install unverified main when the Release API is unavailable.
 		$info = $this->get_release_info();
-		if ( is_wp_error( $info ) ) {
-			// Release API 不可用时，保留主分支回退，避免 GitHub API 限流导致完全无法更新。
-			$info = $this->get_branch_info();
-		}
 		if ( ! is_wp_error( $info ) ) {
 			set_transient( self::INFO_CACHE, $info, self::CACHE_TTL );
 		}
@@ -197,60 +194,6 @@ class JLWA_Updater {
 		);
 	}
 
-	/** @return array<string,string>|WP_Error */
-	protected function get_branch_info() {
-		$response = wp_safe_remote_get(
-			self::raw_main_url(),
-			array(
-				'timeout'     => 20,
-				'redirection' => 5,
-				'user-agent'  => 'Jiuliu-WP-Assistant-Updater/' . JLWA_VERSION,
-			)
-		);
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
-			return new WP_Error( 'jlwa_remote_http', '远程版本请求返回 HTTP ' . (int) wp_remote_retrieve_response_code( $response ) . '。' );
-		}
-		$body = wp_remote_retrieve_body( $response );
-		if ( ! is_string( $body ) || '' === $body ) {
-			return new WP_Error( 'jlwa_remote_empty', '远程主文件为空。' );
-		}
-		$version = $this->parse_version_from_string( $body );
-		if ( '' === $version ) {
-			return new WP_Error( 'jlwa_remote_version', '未能解析远程版本号。' );
-		}
-		return array(
-			'latest_version' => $version,
-			'main_sha256'    => hash( 'sha256', $body ),
-			'package_sha256' => '',
-			'download_url'   => self::zip_url(),
-			'changelog'      => $this->get_remote_changelog(),
-			'source'         => 'branch-fallback',
-		);
-	}
-
-	/** @return string */
-	protected function get_remote_changelog() {
-		$response = wp_safe_remote_get(
-			self::raw_readme_url(),
-			array(
-				'timeout'     => 20,
-				'redirection' => 5,
-				'user-agent'  => 'Jiuliu-WP-Assistant-Updater/' . JLWA_VERSION,
-			)
-		);
-		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
-			return '';
-		}
-		$body = wp_remote_retrieve_body( $response );
-		if ( preg_match( '/=\s*([0-9.]+)\s*=\s*(.*?)(?=\n=\s*[0-9.]|\z)/s', (string) $body, $matches ) ) {
-			return trim( $matches[0] );
-		}
-		return '';
-	}
-
 	/**
 	 * Download, validate, back up and atomically replace the plugin directory.
 	 *
@@ -258,6 +201,13 @@ class JLWA_Updater {
 	 * @return array<string,string>|WP_Error
 	 */
 	protected function perform_update( $info ) {
+		if (
+			empty( $info['download_url'] ) ||
+			empty( $info['package_sha256'] ) ||
+			! isset( $info['source'] ) || 'release' !== $info['source']
+		) {
+			return new WP_Error( 'jlwa_unsigned_package', '仅允许安装带 SHA-256 校验的正式 GitHub Release。' );
+		}
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		if ( ! WP_Filesystem() ) {
 			return new WP_Error( 'jlwa_filesystem', '初始化 WP_Filesystem 失败，请检查目录写入权限。' );
@@ -278,7 +228,7 @@ class JLWA_Updater {
 			return new WP_Error( 'jlwa_work_dir', '无法创建更新临时目录。' );
 		}
 
-		$download_url = ! empty( $info['download_url'] ) ? $info['download_url'] : self::zip_url();
+		$download_url = $info['download_url'];
 		$zip_path = download_url( $download_url, 60 );
 		if ( is_wp_error( $zip_path ) ) {
 			$this->cleanup( $work_dir );
@@ -325,10 +275,17 @@ class JLWA_Updater {
 
 		$install = $this->install_package( $source_dir, $plugin_dir );
 		if ( is_wp_error( $install ) ) {
-			$rollback = $this->rollback( $backup_dir, $plugin_dir );
-			$this->cleanup( $work_dir );
+			// Staging failures and failed first moves leave the live plugin unchanged.
+			// Only a failed restoration needs the additional full-backup recovery path.
+			$needs_restore = 'jlwa_restore_failed' === $install->get_error_code();
+			$rollback = $needs_restore ? $this->rollback( $backup_dir, $plugin_dir ) : true;
+			if ( ! is_wp_error( $rollback ) ) {
+				$this->cleanup( $work_dir );
+			}
 			$message = '安装失败：' . $install->get_error_message();
-			$message .= is_wp_error( $rollback ) ? '；自动回滚也失败：' . $rollback->get_error_message() : '；已自动恢复旧版本。';
+			$message .= is_wp_error( $rollback )
+				? '；自动回滚失败：' . $rollback->get_error_message() . '；已保留工作备份：' . $backup_dir
+				: ( $needs_restore ? '；已从工作备份恢复旧版本。' : '；旧版本未受影响或已恢复。' );
 			return new WP_Error( 'jlwa_install', $message );
 		}
 
@@ -336,13 +293,19 @@ class JLWA_Updater {
 		$installed_version = $this->parse_version_from_file( $installed_main );
 		$installed_hash    = file_exists( $installed_main ) ? hash_file( 'sha256', $installed_main ) : '';
 		if ( $installed_version !== $info['latest_version'] || ( ! empty( $info['main_sha256'] ) && ( ! is_string( $installed_hash ) || ! hash_equals( $info['main_sha256'], $installed_hash ) ) ) ) {
-			$rollback = $this->rollback( $backup_dir, $plugin_dir );
-			$this->cleanup( $work_dir );
+			$rollback = $this->restore_previous( $install['previous_dir'], $plugin_dir, $backup_dir );
+			if ( ! is_wp_error( $rollback ) ) {
+				$this->cleanup( $work_dir );
+			}
 			$message = '安装后的版本或哈希校验失败。';
-			$message .= is_wp_error( $rollback ) ? ' 自动回滚也失败：' . $rollback->get_error_message() : ' 已自动恢复旧版本。';
+			$message .= is_wp_error( $rollback )
+				? ' 自动回滚失败：' . $rollback->get_error_message() . '；已保留工作备份：' . $backup_dir
+				: ' 已自动恢复旧版本。';
 			return new WP_Error( 'jlwa_post_validate', $message );
 		}
 
+		// Preserve the old directory until the installed main file passes validation.
+		$wp_filesystem->delete( $install['previous_dir'], true );
 		$this->cleanup( $work_dir );
 		delete_transient( self::INFO_CACHE );
 		return array(
@@ -352,17 +315,59 @@ class JLWA_Updater {
 		);
 	}
 
-	/** @param string $source Source. @param string $destination Destination. */
+	/**
+	 * Stage the complete package before touching the live plugin directory.
+	 * A directory rename narrows the exposure window compared with delete/copy.
+	 * WP_Filesystem backends are not guaranteed to provide atomic rename semantics.
+	 *
+	 * @return array{previous_dir:string}|WP_Error
+	 */
 	protected function install_package( $source, $destination ) {
 		global $wp_filesystem;
-		if ( ! $wp_filesystem->delete( $destination, true ) ) {
-			return new WP_Error( 'jlwa_delete_old', '无法清理旧插件目录。' );
+		$parent   = trailingslashit( dirname( $destination ) );
+		$suffix   = wp_generate_uuid4();
+		$staging  = $parent . '.jlwa-stage-' . $suffix;
+		$previous = $parent . '.jlwa-previous-' . $suffix;
+
+		if ( ! $wp_filesystem->is_dir( $destination ) ) {
+			return new WP_Error( 'jlwa_missing_destination', '当前插件目录不存在，已取消更新。' );
 		}
-		if ( ! $wp_filesystem->mkdir( $destination, FS_CHMOD_DIR ) && ! $wp_filesystem->is_dir( $destination ) ) {
-			return new WP_Error( 'jlwa_recreate', '无法重新创建插件目录。' );
+		$copy = copy_dir( $source, $staging );
+		if ( is_wp_error( $copy ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_stage', '新版本暂存失败，旧版本保持不变：' . $copy->get_error_message() );
 		}
-		$result = copy_dir( $source, $destination );
-		return is_wp_error( $result ) ? $result : true;
+		if ( ! $wp_filesystem->exists( trailingslashit( $staging ) . self::MAIN_FILE ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_stage_incomplete', '暂存目录不完整，未修改当前插件。' );
+		}
+		if ( ! $wp_filesystem->move( $destination, $previous ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_swap_old', '无法保存运行中的插件目录，已取消更新。' );
+		}
+		if ( ! $wp_filesystem->move( $staging, $destination ) ) {
+			$restored = $wp_filesystem->move( $previous, $destination );
+			$this->cleanup( $staging );
+			if ( ! $restored ) {
+				return new WP_Error( 'jlwa_restore_failed', '切换新版本失败，旧目录保留在：' . $previous );
+			}
+			return new WP_Error( 'jlwa_swap_new', '切换新版本失败，旧目录已恢复。' );
+		}
+		return array( 'previous_dir' => $previous );
+	}
+
+	/** Restore from the preserved old directory, with a full backup fallback. */
+	protected function restore_previous( $previous, $destination, $backup_dir ) {
+		global $wp_filesystem;
+		$failed = trailingslashit( dirname( $destination ) ) . '.jlwa-rejected-' . wp_generate_uuid4();
+		if ( $wp_filesystem->exists( $previous ) && $wp_filesystem->move( $destination, $failed ) ) {
+			if ( $wp_filesystem->move( $previous, $destination ) ) {
+				$wp_filesystem->delete( $failed, true );
+				return true;
+			}
+			$wp_filesystem->move( $failed, $destination );
+		}
+		return $this->rollback( $backup_dir, $destination );
 	}
 
 	/** @param string $backup Backup. @param string $destination Destination. */
@@ -481,11 +486,5 @@ class JLWA_Updater {
 		return sprintf( 'https://api.github.com/repos/%s/%s/releases/latest', self::REPO_OWNER, self::REPO_NAME );
 	}
 
-	protected static function raw_readme_url() {
-		return sprintf( 'https://raw.githubusercontent.com/%s/%s/%s/readme.txt', self::REPO_OWNER, self::REPO_NAME, self::BRANCH );
-	}
 
-	protected static function zip_url() {
-		return sprintf( 'https://codeload.github.com/%s/%s/zip/refs/heads/%s', self::REPO_OWNER, self::REPO_NAME, self::BRANCH );
-	}
 }
