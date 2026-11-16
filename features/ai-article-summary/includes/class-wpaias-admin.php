@@ -28,6 +28,7 @@ class WPAIAS_Admin {
 
 		// Ajax。
 		add_action( 'wp_ajax_wpaias_test_connection', array( $this, 'ajax_test_connection' ) );
+		add_action( 'wp_ajax_wpaias_reveal_saved_key', array( $this, 'ajax_reveal_saved_key' ) );
 		add_action( 'wp_ajax_wpaias_generate_summary', array( $this, 'ajax_generate_summary' ) );
 		add_action( 'wp_ajax_wpaias_clear_post_cache', array( $this, 'ajax_clear_post_cache' ) );
 		add_action( 'wp_ajax_wpaias_clear_all_cache', array( $this, 'ajax_clear_all_cache' ) );
@@ -241,7 +242,9 @@ class WPAIAS_Admin {
 			if ( isset( $input['api_keys_json'] ) && is_string( $input['api_keys_json'] ) ) {
 				$decoded = json_decode( wp_unslash( $input['api_keys_json'] ), true );
 				if ( is_array( $decoded ) ) {
-					$api_keys = $decoded;
+					// The hidden field contains ONLY unsaved drafts. An empty JSON object
+					// must not erase unrelated saved providers or model keys.
+					$api_keys = array_merge( $api_keys, $decoded );
 				}
 			}
 			if ( isset( $input['api_keys'] ) && is_array( $input['api_keys'] ) ) {
@@ -597,9 +600,9 @@ class WPAIAS_Admin {
 							<td>
 								<input type="hidden" id="wpaias-api-keys-json" name="<?php echo esc_attr( $opt ); ?>[api_keys_json]" value="{}">
 								<input type="password" class="regular-text" id="wpaias-api-key" name="<?php echo esc_attr( $opt ); ?>[api_key_current]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $has_current_key ? '已保存密钥；留空表示保留' : '填写新的 API Key' ); ?>">
-								<button type="button" class="button" id="wpaias-toggle-key"><?php esc_html_e( '显示/隐藏', 'wp-ai-article-summary' ); ?></button>
+								<button type="button" class="button" id="wpaias-toggle-key" aria-pressed="false" aria-controls="wpaias-api-key"><?php esc_html_e( '显示密钥', 'wp-ai-article-summary' ); ?></button>
 								<p class="description">
-									<?php esc_html_e( '不会在后台页面回显已保存的密钥；留空保留原密钥，输入新值才会更新当前服务商或模型。', 'wp-ai-article-summary' ); ?>
+									<?php esc_html_e( '密钥默认隐藏；点击“显示密钥”可按需查看已保存的密钥，隐藏后立即清除页面中的已显示值。留空保存不会改变原密钥。', 'wp-ai-article-summary' ); ?>
 									<span id="wpaias-key-binding-label" class="wpaias-key-binding-label"></span>
 								</p>
 							</td>
@@ -846,6 +849,30 @@ class WPAIAS_Admin {
 	/**
 	 * Ajax：测试接口连通性。
 	 */
+	/** Reveal a persisted API key only after an explicit administrator click. Never localize it. */
+	public function ajax_reveal_saved_key() {
+		check_ajax_referer( 'wpaias_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => '权限不足。' ), 403 );
+		}
+		// Prevent shared browser/proxy caching of the response.
+		nocache_headers();
+		$provider = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( $_POST['provider'] ) ) : '';
+		$model = isset( $_POST['model'] ) ? sanitize_text_field( wp_unslash( $_POST['model'] ) ) : '';
+		if ( ! $provider || ! isset( WPAIAS_Providers::all()[ $provider ] ) ) {
+			wp_send_json_error( array( 'message' => '未知服务商。' ), 400 );
+		}
+		if ( 'custom' === $provider && '' === $model ) {
+			wp_send_json_error( array( 'message' => '请先填写自定义模型名称。' ), 400 );
+		}
+		$settings = JLWA_AI_Summary_Feature::get_settings();
+		$key = JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $provider, $model );
+		if ( '' === $key ) {
+			wp_send_json_error( array( 'message' => '当前服务商或模型没有已保存的密钥。' ), 404 );
+		}
+		wp_send_json_success( array( 'key' => $key ) );
+	}
+
 	public function ajax_test_connection() {
 		check_ajax_referer( 'wpaias_admin_nonce', 'nonce' );
 		if ( ! current_user_can( 'manage_options' ) ) {

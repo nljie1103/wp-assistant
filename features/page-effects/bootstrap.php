@@ -125,7 +125,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'global' => array(
                     'enabled'               => 1,
                     'mobile_enabled'        => 1,
-                    'respect_reduce_motion' => 0,
+                    'respect_reduce_motion' => 1,
                     'z_index'               => 999999,
                     'custom_css'            => '',
                     'custom_js'             => '',
@@ -173,6 +173,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         'wind'    => 0.18,
                         'sway'    => 0.8,
                     ),
+                    'fireflies' => array( 'enabled' => 0, 'count' => 18, 'speed' => 1, 'opacity' => 0.7 ),
+                    'meteors' => array( 'enabled' => 0, 'count' => 7, 'speed' => 1, 'opacity' => 0.8 ),
                     'lantern' => array(
                         'enabled'  => 0,
                         'size'     => 82,
@@ -277,6 +279,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'snow' => array( 'icon' => '❄️', 'title' => '全屏雪花', 'desc' => '多层雪花飘屏，可调风向与摆动', 'group' => '氛围特效' ),
                 'leaves' => array( 'icon' => '🍂', 'title' => '秋叶飘落', 'desc' => '多形态秋叶旋转飘落', 'group' => '氛围特效' ),
                 'bubbles' => array( 'icon' => '🫧', 'title' => '梦幻气泡', 'desc' => '透明气泡从底部缓慢上升', 'group' => '氛围特效' ),
+                'fireflies' => array( 'icon' => '💫', 'title' => '星光流萤', 'desc' => '柔和光点缓慢浮动、呼吸闪烁，纯 CSS 轻量氛围', 'group' => '氛围特效' ),
+                'meteors' => array( 'icon' => '🌠', 'title' => '微光流星', 'desc' => '夜空中偶尔划过的柔光流星，不遮挡正文', 'group' => '氛围特效' ),
                 'lantern' => array( 'icon' => '🏮', 'title' => '节日灯笼', 'desc' => '页面顶部悬挂灯笼', 'group' => '氛围特效' ),
                 'particles' => array( 'icon' => '✨', 'title' => '粒子背景', 'desc' => '动态粒子连线效果', 'group' => '氛围特效' ),
                 'cursor' => array( 'icon' => '🌟', 'title' => '鼠标跟随', 'desc' => '星星、爱心、萤火、花瓣、气泡或自定义拖尾', 'group' => '交互增强' ),
@@ -360,6 +364,13 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 $output['effects'][ $falling_key ]['opacity'] = $this->sanitize_float( $effects[ $falling_key ]['opacity'] ?? $falling_defaults['opacity'], 0.05, 1, $falling_defaults['opacity'] );
                 $output['effects'][ $falling_key ]['wind']    = $this->sanitize_float( $effects[ $falling_key ]['wind'] ?? $falling_defaults['wind'], -3, 3, $falling_defaults['wind'] );
                 $output['effects'][ $falling_key ]['sway']    = $this->sanitize_float( $effects[ $falling_key ]['sway'] ?? $falling_defaults['sway'], 0, 4, $falling_defaults['sway'] );
+            }
+
+            foreach ( array( 'fireflies', 'meteors' ) as $ambient_key ) {
+                $ambient_default = $defaults['effects'][ $ambient_key ];
+                $output['effects'][ $ambient_key ]['count'] = $this->sanitize_int( $effects[ $ambient_key ]['count'] ?? $ambient_default['count'], 1, 40, $ambient_default['count'] );
+                $output['effects'][ $ambient_key ]['speed'] = $this->sanitize_float( $effects[ $ambient_key ]['speed'] ?? $ambient_default['speed'], 0.2, 3, $ambient_default['speed'] );
+                $output['effects'][ $ambient_key ]['opacity'] = $this->sanitize_float( $effects[ $ambient_key ]['opacity'] ?? $ambient_default['opacity'], 0.1, 1, $ambient_default['opacity'] );
             }
 
             $output['effects']['lantern']['size']     = $this->sanitize_int( $effects['lantern']['size'] ?? 82, 36, 180, 82 );
@@ -486,7 +497,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 return;
             }
 
-            wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
+            wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION );
             wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
         }
 
@@ -612,7 +623,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             }
 
             $config = $this->frontend_config( $options );
-            wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), self::VERSION );
+            wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION );
 
             $in_footer = isset( $options['compat']['load_location'] ) && 'footer' === $options['compat']['load_location'];
             wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, $in_footer );
@@ -689,9 +700,9 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             $css_url     = plugins_url( 'assets/css/frontend.css', __FILE__ );
             $js_url      = plugins_url( 'assets/js/frontend.js', __FILE__ );
             $html        = "\n<!-- 九流WP助手：页面美化 -->\n";
-            $html       .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', self::VERSION, $css_url ) ) . '" media="all">' . "\n";
+            $html       .= '<link rel="stylesheet" id="xjpe-frontend-css" href="' . esc_url( add_query_arg( 'ver', defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION, $css_url ) ) . '" media="all">' . "\n";
             $html       .= '<script id="xjpe-config-js">window.XJPE_CONFIG=' . $config_json . ';</script>' . "\n";
-            $html       .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
+            $html       .= '<script id="xjpe-frontend-js" src="' . esc_url( add_query_arg( 'ver', defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION, $js_url ) ) . '" defer></script>' . "\n";
             if ( ! empty( $options['global']['custom_js'] ) ) {
                 $html .= '<script id="xjpe-custom-js">' . $this->custom_js_wrapper( $options['global']['custom_js'] ) . '</script>' . "\n";
             }
@@ -716,7 +727,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 $options['global']['enabled'] = 1;
                 $options['global']['mobile_enabled'] = 1;
                 $options['global']['respect_reduce_motion'] = 0;
-                foreach ( array( 'sakura', 'snow', 'leaves', 'bubbles', 'lantern', 'cursor', 'waves', 'welcome' ) as $preview_effect ) {
+                foreach ( array( 'sakura', 'snow', 'leaves', 'bubbles', 'fireflies', 'meteors', 'lantern', 'cursor', 'waves', 'welcome' ) as $preview_effect ) {
                     if ( isset( $options['effects'][ $preview_effect ] ) ) {
                         $options['effects'][ $preview_effect ]['enabled'] = 1;
                     }
@@ -726,6 +737,11 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 $options['effects']['welcome']['message'] = '如果你看到樱花、雪花、灯笼或这个弹窗，说明前台注入链路正常。';
             }
 
+            // Ship only enabled configurations to visitors. Inactive effects do
+            // not need defaults or tuning values in every HTML response.
+            $active_effects = array_filter( $options['effects'], static function ( $effect ) {
+                return ! empty( $effect['enabled'] );
+            } );
             $config = array(
                 'version' => self::VERSION,
                 'global'  => array(
@@ -739,7 +755,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     'siteName'            => get_bloginfo( 'name' ),
                 ),
                 'compat'  => $options['compat'],
-                'effects' => $options['effects'],
+                'effects' => $active_effects,
             );
             return $config;
         }
@@ -948,6 +964,13 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->number_field( $base, 'wind', '横向风力（可为负数）', $effect['wind'], -3, 3, 0.05 );
                     $this->number_field( $base, 'sway', '摆动幅度', $effect['sway'], 0, 4, 0.1 );
                     echo '<p class="xjpe-tip">移动端、减少动态效果或省流量模式会自动降低数量，避免动画拖慢页面。</p>';
+                    break;
+                case 'fireflies':
+                case 'meteors':
+                    $this->number_field( $base, 'count', '数量（自动按设备限制）', $effect['count'], 1, 40, 1 );
+                    $this->number_field( $base, 'speed', '动画速度', $effect['speed'], 0.2, 3, 0.1 );
+                    $this->number_field( $base, 'opacity', '光效透明度', $effect['opacity'], 0.1, 1, 0.05 );
+                    echo '<p class="xjpe-tip">默认关闭，启用后使用合成层 CSS 动画；尊重减少动态效果偏好，移动端限制数量。</p>';
                     break;
                 case 'lantern':
                     $this->number_field( $base, 'size', '灯笼大小', $effect['size'], 36, 180, 1 );

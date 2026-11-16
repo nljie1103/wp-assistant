@@ -182,6 +182,18 @@ class JIP_Frontend {
 			<div class="jip-glass-box" aria-hidden="true"><div class="jip-glass-inner"></div></div>
 			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?>
 		</div>
+	<?php elseif ( 'aurora' === $effect ) : ?>
+		<div class="jip-aurora-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+		<div class="jip-stage jip-brand-stage">
+			<div class="jip-brand-emblem"><img class="jip-brand-logo" src="<?php echo esc_url( $logo_url ); ?>" alt="" loading="eager"></div>
+			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?>
+		</div>
+	<?php elseif ( 'minimal' === $effect ) : ?>
+		<div class="jip-stage jip-brand-stage jip-minimal-stage">
+			<div class="jip-brand-emblem"><img class="jip-brand-logo" src="<?php echo esc_url( $logo_url ); ?>" alt="" loading="eager"></div>
+			<div class="jip-minimal-rule" aria-hidden="true"></div>
+			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?>
+		</div>
 	<?php elseif ( 'orbit' === $effect ) : ?>
 		<div class="jip-stage"><div class="jip-orbit" aria-hidden="true"><i></i><i></i><i></i><span><img src="<?php echo esc_url( $logo_url ); ?>" alt=""></span></div><?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?></div>
 	<?php elseif ( 'shutters' === $effect ) : ?>
@@ -211,7 +223,7 @@ class JIP_Frontend {
 		if ( ! $this->should_display() ) {
 			return;
 		}
-		$bg          = $this->options['bg_color'];
+		$bg          = 'minimal' === $this->options['effect'] ? '#fbfaf7' : ( 'aurora' === $this->options['effect'] ? '#060c1b' : $this->options['bg_color'] );
 		$html        = $this->get_preloader_html();
 		$once        = ! empty( $this->options['once_per_session'] ) ? 'true' : 'false';
 		$home_only   = ! empty( $this->options['home_only'] ) ? 'true' : 'false';
@@ -369,14 +381,14 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 			'jip-preloader',
 			JIP_PLUGIN_URL . 'assets/css/preloader.css',
 			array(),
-			JIP_VERSION
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JIP_VERSION
 		);
 
 		wp_enqueue_script(
 			'jip-preloader',
 			JIP_PLUGIN_URL . 'assets/js/preloader.js',
 			array(),
-			JIP_VERSION,
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JIP_VERSION,
 			false // 在 head 下载，并通过 defer 并行执行；避免等到主题页脚才开始生命周期。
 		);
 		wp_script_add_data( 'jip-preloader', 'strategy', 'defer' );

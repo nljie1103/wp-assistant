@@ -1104,6 +1104,13 @@ body.fps-accelerat .jld-page .jld-cover-mark{
 @media (prefers-reduced-motion:reduce){.jld-hot-item,.jld-quota-progress span{transition:none!important}.jld-hot-item:hover{transform:none}}
 
 </style>
+<?php
+// New appearance presets share the existing purchase / entitlement implementation.
+$jlwa_skin = isset($jlwa_download_page_options['template']) ? (string) $jlwa_download_page_options['template'] : '';
+$jlwa_skin = in_array($jlwa_skin, array('aurora', 'editorial', 'midnight'), true) ? $jlwa_skin : '';
+if ($jlwa_skin && defined('JLWA_PLUGIN_URL')) : ?>
+<link rel="stylesheet" href="<?php echo esc_url(add_query_arg('ver', JLWA_VERSION, JLWA_PLUGIN_URL . 'assets/css/download-page-themes.css')); ?>" media="all">
+<?php endif; ?>
 <main class="<?php echo esc_attr($container_class); ?> jld-shell <?php echo $keep_theme_sidebar ? 'jld-keep-theme-sidebar' : 'jld-no-theme-sidebar'; ?>">
     <div class="content-wrap">
         <div class="content-layout">
@@ -1113,7 +1120,7 @@ body.fps-accelerat .jld-page .jld-cover-mark{
 
             <?php if ('not' !== $content_style) : ?>
                 <article class="article page-article main-bg theme-box main-shadow jld-article">
-                    <div id="jl-download-page" class="jld-page jld-tech <?php echo esc_attr($access_class); ?>">
+                    <div id="jl-download-page" class="jld-page jld-tech <?php echo esc_attr($jlwa_skin ? 'jld-skin-' . $jlwa_skin : ''); ?> <?php echo esc_attr($access_class); ?>">
                         <section class="jld-hero">
                             <div class="jld-decoration jld-decoration-one"></div>
                             <div class="jld-decoration jld-decoration-two"></div>

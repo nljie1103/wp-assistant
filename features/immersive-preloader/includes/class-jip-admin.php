@@ -81,14 +81,14 @@ class JIP_Admin {
 			'jip-admin',
 			JIP_PLUGIN_URL . 'assets/css/admin.css',
 			array(),
-			JIP_VERSION
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JIP_VERSION
 		);
 
 		wp_enqueue_script(
 			'jip-admin',
 			JIP_PLUGIN_URL . 'assets/js/admin.js',
 			array( 'jquery', 'wp-color-picker' ),
-			JIP_VERSION,
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JIP_VERSION,
 			true
 		);
 
@@ -219,9 +219,9 @@ class JIP_Admin {
 
 				<div class="jip-tab-panel <?php echo 'logo' === $tab ? 'is-active' : ''; ?>">
 				<!-- 3. 自定义 Logo 设置（仅核心效果显示） -->
-				<div class="jip-card jip-logo-card" data-show-when-effect="logo3d" style="<?php echo ( defined( 'JLWA_IS_SUITE' ) || 'logo3d' === $options['effect'] ) ? '' : 'display:none;'; ?>">
+				<div class="jip-card jip-logo-card">
 					<h2 class="jip-card-title">自定义 Logo 设置</h2>
-					<p class="description">仅核心效果（立体 Logo 开场）使用此 Logo。</p>
+					<p class="description">所有使用 Logo 的开屏效果都可以使用此图片；渐变文字等无 Logo 动画不显示图片。</p>
 					<table class="form-table" role="presentation">
 						<tr>
 							<th scope="row">中心 Logo 图</th>

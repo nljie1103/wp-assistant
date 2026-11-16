@@ -48,6 +48,16 @@ class JIP_Settings {
 				'description' => '毛玻璃质感方块边框 360° 旋转。',
 				'preview'     => 'assets/previews/preview-glass.svg',
 			),
+			'aurora' => array(
+				'label' => '极光光幕 · 柔光品牌开场',
+				'description' => '深海蓝与青绿极光缓慢交汇，中央 Logo 和站点名清晰呈现。',
+				'preview' => 'assets/previews/preview-aurora.svg',
+			),
+			'minimal' => array(
+				'label' => '极简聚焦 · 高级留白',
+				'description' => '品牌标识与细线缓入，无多余元素，适合内容型及商务网站。',
+				'preview' => 'assets/previews/preview-minimal.svg',
+			),
 			'orbit'     => array(
 				'label'       => '星轨环绕沉浸开场',
 				'description' => '多层轨道环绕 Logo，纯 CSS 动画，性能开销低。',
