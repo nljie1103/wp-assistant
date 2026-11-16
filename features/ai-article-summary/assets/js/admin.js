@@ -14,6 +14,8 @@
 	var apiKeys = {};
 	var activeKeySlot = '';
 	var activeProviderKey = '';
+	var showingSavedKey = false;
+	var revealRequestId = 0;
 
 	function init() {
 		bindProviderChange();
@@ -229,7 +231,19 @@
 		}
 	}
 
+	function hideSavedKey() {
+		revealRequestId++;
+		var $key = $( '#wpaias-api-key' );
+		if ( showingSavedKey ) {
+			$key.val( '' );
+			showingSavedKey = false;
+		}
+		$key.prop( 'readOnly', false ).attr( 'type', 'password' );
+		$( '#wpaias-toggle-key' ).prop( 'disabled', false ).attr( 'aria-pressed', 'false' ).text( '显示密钥' );
+	}
+
 	function storeCurrentApiKey( useCurrentSelection ) {
+		if ( showingSavedKey ) return;
 		var $key = $( '#wpaias-api-key' );
 		if ( ! $key.length ) return;
 
@@ -257,6 +271,7 @@
 	}
 
 	function loadApiKeyForCurrentSelection() {
+		hideSavedKey();
 		var $key = $( '#wpaias-api-key' );
 		if ( ! $key.length ) return;
 
@@ -281,11 +296,13 @@
 
 	function bindApiKeyActions() {
 		$( document ).on( 'change', '#wpaias-model', function () {
+			hideSavedKey();
 			storeCurrentApiKey( false );
 			loadApiKeyForCurrentSelection();
 		} );
 
 		$( document ).on( 'change blur', '#wpaias-custom-model', function () {
+			hideSavedKey();
 			storeCurrentApiKey( false );
 			loadApiKeyForCurrentSelection();
 		} );
@@ -295,12 +312,14 @@
 		} );
 
 		$( document ).on( 'submit', '#wpaias-form', function () {
+			hideSavedKey();
 			storeCurrentApiKey( true );
 		} );
 	}
 
 	function bindProviderChange() {
 		$( document ).on( 'change', '#wpaias-provider', function () {
+			hideSavedKey();
 			storeCurrentApiKey( false );
 			var key = $( this ).val();
 			loadModelOptions( key, false );
@@ -312,8 +331,35 @@
 	function bindToggleKey() {
 		$( document ).on( 'click', '#wpaias-toggle-key', function ( e ) {
 			e.preventDefault();
-			var $i = $( '#wpaias-api-key' );
-			$i.attr( 'type', $i.attr( 'type' ) === 'password' ? 'text' : 'password' );
+			var $key = $( '#wpaias-api-key' );
+			var $btn = $( this );
+			if ( showingSavedKey || $key.attr( 'type' ) === 'text' ) {
+				hideSavedKey();
+				// An unsaved draft is not a saved key; preserve it when hiding.
+				if ( !showingSavedKey ) loadApiKeyForCurrentSelection();
+				return;
+			}
+			if ( $key.val() ) {
+				$key.attr( 'type', 'text' );
+				$btn.attr( 'aria-pressed', 'true' ).text( '隐藏密钥' );
+				return;
+			}
+			var requestId = ++revealRequestId;
+			var provider = currentProvider(), model = currentModel();
+			$btn.prop( 'disabled', true ).text( '读取中…' );
+			$.post( WPAIAS.ajax_url, { action: 'wpaias_reveal_saved_key', nonce: WPAIAS.nonce, provider: provider, model: model } )
+				.done( function ( response ) {
+					if ( requestId !== revealRequestId || provider !== currentProvider() || model !== currentModel() ) return;
+					if ( !response || !response.success || !response.data || typeof response.data.key !== 'string' ) {
+						window.alert( response && response.data && response.data.message ? response.data.message : '没有已保存的密钥。' );
+						return;
+					}
+					showingSavedKey = true;
+					$key.val( response.data.key ).prop( 'readOnly', true ).attr( 'type', 'text' );
+					$btn.attr( 'aria-pressed', 'true' ).text( '隐藏密钥' );
+				} )
+				.fail( function () { if ( requestId === revealRequestId ) window.alert( '读取密钥失败，请确认管理员会话有效后重试。' ); } )
+				.always( function () { if ( requestId === revealRequestId && !showingSavedKey ) $btn.prop( 'disabled', false ).text( '显示密钥' ); else if ( requestId === revealRequestId ) $btn.prop( 'disabled', false ); } );
 		} );
 	}
 
@@ -325,6 +371,7 @@
 
 			$res.removeClass( 'ok fail' ).text( i18n.testing || '...' );
 			$btn.prop( 'disabled', true );
+			hideSavedKey();
 			storeCurrentApiKey( true );
 
 			var data = {

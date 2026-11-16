@@ -42,7 +42,7 @@
 			if (ended) return;
 			value = Math.min(88, value + Math.max(1, (88 - value) * 0.08));
 			updateProgress(value);
-		}, 120);
+		}, 200);
 	}
 
 	function endPreloader() {

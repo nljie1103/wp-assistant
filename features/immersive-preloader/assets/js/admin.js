@@ -32,13 +32,8 @@
 				var $c = $(this);
 				$c.toggleClass('is-active', $c.data('effect') === current);
 			});
-			if ($logoCard.length) {
-				if (current === $logoCard.data('show-when-effect')) {
-					$logoCard.slideDown(180);
-				} else {
-					$logoCard.slideUp(180);
-				}
-			}
+			// Keep Logo configuration available for all Logo-capable effects.
+
 		}
 
 		$cards.on('click', function () {

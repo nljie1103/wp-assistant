@@ -48,7 +48,7 @@ class JLWA_Download_Page_Feature {
 
     public function sanitize( $input ) {
         $input = is_array( $input ) ? $input : array();
-        $templates = array( 'technology', 'business', 'vip' );
+        $templates = array( 'technology', 'business', 'vip', 'aurora', 'editorial', 'midnight' );
         $modes = array( 'auto', 'featured', 'first', 'random', 'default' );
         return array(
             'enabled' => empty( $input['enabled'] ) ? 0 : 1,
@@ -91,6 +91,10 @@ class JLWA_Download_Page_Feature {
             'technology' => JLWA_PLUGIN_DIR . 'features/download-page-templates/technology.php',
             'business' => JLWA_PLUGIN_DIR . 'features/download-page-templates/business.php',
             'vip' => JLWA_PLUGIN_DIR . 'features/download-page-templates/vip.php',
+            // Three new CSS skins reuse the audited core renderer; no cloned payment logic.
+            'aurora' => JLWA_PLUGIN_DIR . 'features/download-page-templates/technology.php',
+            'editorial' => JLWA_PLUGIN_DIR . 'features/download-page-templates/technology.php',
+            'midnight' => JLWA_PLUGIN_DIR . 'features/download-page-templates/technology.php',
         );
         $selected = isset( $templates[ $options['template'] ] ) ? $templates[ $options['template'] ] : $templates['technology'];
         if ( ! is_readable( $selected ) ) { return; }
@@ -106,6 +110,9 @@ class JLWA_Download_Page_Feature {
             'technology' => array( '科技蓝紫版', '完整资源中心布局，蓝紫科技视觉。' ),
             'business' => array( '简洁商务版', '完整信息布局，浅色商务与深色适配。' ),
             'vip' => array( 'VIP 资源中心版', '完整会员资源布局，象牙金与深海金视觉。' ),
+            'aurora' => array( '流光极光版', '深蓝青绿光幕，适合科技及创意资源。' ),
+            'editorial' => array( '杂志留白版', '暖白纸张与深墨标题，适合文字与素材资源。' ),
+            'midnight' => array( '曜石夜幕版', '石墨黑与冷金细节，适合高端付费资源。' ),
         );
         $modes = array(
             'auto' => '自动模式：特色图 → 正文首图 → 稳定随机图 → 默认图',
@@ -116,9 +123,9 @@ class JLWA_Download_Page_Feature {
         );
         ?>
         <div class="jlwa-download-admin"><form action="options.php" method="post"><?php settings_fields( 'jlwa_download_page' ); ?>
-            <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>加载原三套完整资源中心模板，不修改子比支付、权限与下载逻辑。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
+            <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，新增主题不复制支付代码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
             <div class="jlwa-download-section"><h3>选择完整页面模板</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
-            <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>三套模板都会自动识别横图、方图和竖图，并切换对应容器比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>
+            <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>六种视觉方案都自动识别横图、方图和竖图，并适配封面比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>
             <?php submit_button( '保存下载页设置' ); ?>
         </form></div>
         <script>jQuery(function($){var frame;$('#jlwa-select-cover').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'选择默认封面',button:{text:'使用这张图片'},multiple:false,library:{type:'image'}});frame.on('select',function(){$('#jlwa-default-cover').val(frame.state().get('selection').first().toJSON().url);});frame.open();});});</script>

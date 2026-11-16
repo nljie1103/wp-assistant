@@ -13,7 +13,7 @@
   var initialized = false;
   var mobile = isMobileDevice();
   var saveData = !!(navigator.connection && navigator.connection.saveData);
-  var fallingBudget = (mobile || saveData) ? 180 : 600;
+  var fallingBudget = (mobile || saveData) ? 90 : 240;
   var fallingAllocated = 0;
 
   function emitReady(disabled) {
@@ -167,7 +167,7 @@
   function falling(name, characters, className, defaults, upward) {
     var e = effects[name] || {};
     var requested = Math.max(1, int(e.count, defaults.count));
-    var count = Math.min(performanceCount(requested, 360, 120), Math.max(0, fallingBudget - fallingAllocated));
+    var count = Math.min(performanceCount(requested, 160, 70), Math.max(0, fallingBudget - fallingAllocated));
     if (count < 1) return;
     fallingAllocated += count;
     var size = clamp(int(e.size, defaults.size), 4, 72);
@@ -177,6 +177,7 @@
     var sway = clamp(num(e.sway, defaults.sway || 1), 0, 4);
     var wrap = layer('xjpe-layer xjpe-' + name + '-layer', 1);
     var items = [];
+    var fragment = document.createDocumentFragment();
     var chars = Array.isArray(characters) ? characters : [characters];
 
     for (var i = 0; i < count; i++) {
@@ -185,7 +186,7 @@
       el.textContent = chars[Math.floor(Math.random() * chars.length)];
       el.style.fontSize = (size * (0.52 + Math.random() * 1.05)) + 'px';
       el.style.opacity = String(opacity * (0.42 + Math.random() * 0.58));
-      wrap.appendChild(el);
+      fragment.appendChild(el);
       var h = window.innerHeight;
       items.push({
         el: el,
@@ -201,6 +202,7 @@
       });
     }
 
+    wrap.appendChild(fragment);
     createRafLoop(function () {
       var w = window.innerWidth;
       var h = window.innerHeight;
@@ -216,6 +218,30 @@
         p.el.style.transform = 'translate3d(' + p.x + 'px,' + p.y + 'px,0) rotate(' + p.rot + 'deg) scale(' + p.scale + ')';
       }
     });
+  }
+
+  // CSS-only ambient layers: no canvas repaint or per-element JS animation loop.
+  function initAmbient(name) {
+    var e = effects[name] || {};
+    var isMeteor = name === 'meteors';
+    var count = performanceCount(clamp(int(e.count, isMeteor ? 7 : 18), 1, 40), isMeteor ? 12 : 26, isMeteor ? 4 : 10);
+    var speed = clamp(num(e.speed, 1), 0.2, 3);
+    var opacity = clamp(num(e.opacity, 0.7), 0.1, 1);
+    var wrap = layer('xjpe-layer xjpe-ambient xjpe-' + name + '-layer', -2);
+    wrap.setAttribute('aria-hidden', 'true');
+    var fragment = document.createDocumentFragment();
+    for (var i = 0; i < count; i++) {
+      var node = document.createElement('i');
+      node.className = isMeteor ? 'xjpe-meteor' : 'xjpe-firefly';
+      node.style.left = (Math.random() * 95) + '%';
+      node.style.top = (Math.random() * (isMeteor ? 45 : 85)) + '%';
+      node.style.opacity = String(opacity);
+      node.style.setProperty('--xjpe-ambient-duration', ((isMeteor ? 9 : 5) / speed + Math.random() * (isMeteor ? 9 : 6)).toFixed(2) + 's');
+      node.style.animationDelay = (-Math.random() * 14).toFixed(2) + 's';
+      node.style.setProperty('--xjpe-drift', Math.round(-45 + Math.random() * 90) + 'px');
+      fragment.appendChild(node);
+    }
+    wrap.appendChild(fragment);
   }
 
   function initLantern() {
@@ -589,6 +615,8 @@
       if (enabled('snow')) safeInit('snow', function () { falling('snow', ['❄', '❅', '•'], 'xjpe-snowflake', { count: 72, size: 13, speed: 1, opacity: 0.9, wind: 0.35, sway: 1 }, false); });
       if (enabled('leaves')) safeInit('leaves', function () { falling('leaves', ['🍂', '🍁', '❧'], 'xjpe-leaf', { count: 44, size: 18, speed: 0.85, opacity: 0.88, wind: 0.65, sway: 1.4 }, false); });
       if (enabled('bubbles')) safeInit('bubbles', function () { falling('bubbles', ['○', '◯', '◌'], 'xjpe-bubble', { count: 30, size: 18, speed: 0.65, opacity: 0.5, wind: 0.18, sway: 0.8 }, true); });
+      if (enabled('fireflies')) safeInit('fireflies', function () { initAmbient('fireflies'); });
+      if (enabled('meteors')) safeInit('meteors', function () { initAmbient('meteors'); });
       if (enabled('lantern')) safeInit('lantern', initLantern);
       if (enabled('cursor')) safeInit('cursor', initCursor);
       if (enabled('waves')) safeInit('waves', initWaves);

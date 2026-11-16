@@ -427,3 +427,38 @@
 @media (prefers-reduced-motion: reduce) {
   #jip-preloader *, #jip-preloader *::before, #jip-preloader *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .15s !important; }
 }
+
+/* 2.5.8 visual refresh: restrained branding, low-cost transform animations. */
+#jip-preloader.jip-effect-aurora { background: radial-gradient(ellipse at 50% 90%,#142b49,#060c1b 75%) !important; }
+#jip-preloader.jip-effect-aurora .jip-aurora-ambient { position: absolute; inset: -15%; overflow: hidden; contain: paint; pointer-events: none; }
+#jip-preloader.jip-effect-aurora .jip-aurora-ambient i { position: absolute; width: 75vw; height: 75vw; min-width: 390px; min-height: 390px; border-radius: 46% 54% 59% 41%; filter: blur(42px); opacity: .34; animation: jip-aurora-drift 5.5s ease-in-out infinite alternate; background: radial-gradient(circle,rgba(33,209,180,.5),transparent 65%); }
+#jip-preloader.jip-effect-aurora .jip-aurora-ambient i:nth-child(1) { top:-35%; left:-15%; }
+#jip-preloader.jip-effect-aurora .jip-aurora-ambient i:nth-child(2) { right:-24%; top:15%; background:radial-gradient(circle,rgba(92,110,248,.53),transparent 68%); animation-delay:-1.8s; }
+#jip-preloader.jip-effect-aurora .jip-aurora-ambient i:nth-child(3) { left:20%; bottom:-55%; background:radial-gradient(circle,rgba(20,165,202,.38),transparent 68%); animation-delay:-3.3s; }
+@keyframes jip-aurora-drift { from {transform:translate3d(-5%,6%,0) rotate(-8deg) scale(.89)} to {transform:translate3d(7%,-6%,0) rotate(12deg) scale(1.07)} }
+#jip-preloader .jip-brand-stage { position: relative; z-index: 2; gap: 20px; width: min(78vw,400px); animation: jip-brand-rise .8s cubic-bezier(.16,1,.3,1) both; }
+#jip-preloader .jip-brand-emblem { display: grid; place-items: center; width: 124px; height: 124px; border: 1px solid rgba(255,255,255,.22); border-radius: 32px; background: linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.025)); box-shadow: inset 0 1px rgba(255,255,255,.25),0 22px 70px rgba(0,0,0,.26); }
+#jip-preloader .jip-brand-logo { display:block; width: 74%; height: 74%; object-fit: contain; filter: drop-shadow(0 5px 9px rgba(0,0,0,.15)); }
+#jip-preloader .jip-brand-stage .jip-site-title { font-size: clamp(19px,3.2vw,30px); font-weight: 650; letter-spacing: .12em; transform: translateY(12px); text-shadow: 0 4px 28px rgba(0,0,0,.18); }
+#jip-preloader .jip-brand-stage .jip-site-title.jip-in { transform:translateY(0); }
+@keyframes jip-brand-rise { from {opacity:0;transform:translate3d(0,18px,0) scale(.95)} to {opacity:1;transform:translate3d(0,0,0) scale(1)} }
+#jip-preloader.jip-effect-minimal { color:#1e293b; background:linear-gradient(145deg,#fbfaf7,#e9f0f2) !important; }
+#jip-preloader.jip-effect-minimal .jip-brand-emblem { width:110px;height:110px;border-radius:28px;border-color:rgba(148,163,184,.28);background:#fff;box-shadow:0 12px 38px rgba(30,58,95,.12); }
+#jip-preloader.jip-effect-minimal .jip-minimal-stage { gap:20px; }
+#jip-preloader.jip-effect-minimal .jip-minimal-rule { width:62px;height:2px;border-radius:3px;background:linear-gradient(90deg,#94a3b8,#0f766e,#94a3b8);animation:jip-rule-open .8s ease-out both; }
+@keyframes jip-rule-open { from {transform:scaleX(0)} to {transform:scaleX(1)} }
+#jip-preloader.jip-effect-minimal .jip-site-title { color:#243449;text-shadow:none;font-weight:600;letter-spacing:.11em; }
+#jip-preloader.jip-effect-minimal .jip-progress { background:rgba(30,58,95,.12); }
+#jip-preloader.jip-effect-minimal .jip-progress>span { background:linear-gradient(90deg,#0d9488,#64748b);box-shadow:none; }
+#jip-preloader.jip-effect-minimal .jip-progress em,#jip-preloader.jip-effect-minimal .jip-skip-tip { color:rgba(36,52,73,.6); }
+/* Improve existing effects without changing saved style keys. */
+#jip-preloader.jip-effect-glass .jip-glass-box { border-radius:30px;animation:jip-glass-breathe 2.8s ease-in-out infinite alternate;box-shadow:0 18px 60px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.3); }
+#jip-preloader.jip-effect-glass .jip-glass-inner { border-radius:22px;animation:none; }
+@keyframes jip-glass-breathe { from { transform:scale(.96) rotate(-3deg);opacity:.78 } to { transform:scale(1.03) rotate(3deg);opacity:1 } }
+#jip-preloader.jip-effect-orbit .jip-orbit > i { border-width:1px;opacity:.72;animation-duration:6s; }
+#jip-preloader.jip-effect-orbit .jip-orbit > i:nth-child(2) { animation-duration:4.7s; }
+#jip-preloader.jip-effect-orbit .jip-orbit > i:nth-child(3) { animation-duration:8s; }
+#jip-preloader.jip-effect-gradient .jip-gradient-layer { opacity:.6; }
+#jip-preloader.jip-effect-logo3d .jip-frame { max-width: min(70vw,280px);max-height:min(70vw,280px); }
+@media (max-width:480px){#jip-preloader .jip-brand-emblem{width:100px;height:100px;border-radius:26px}#jip-preloader.jip-effect-aurora .jip-aurora-ambient i{filter:blur(24px)}}
+@media (prefers-reduced-motion:reduce){#jip-preloader .jip-aurora-ambient i,#jip-preloader .jip-brand-stage,#jip-preloader .jip-minimal-rule{animation:none!important;}}
