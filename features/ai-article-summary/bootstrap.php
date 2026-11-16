@@ -17,6 +17,7 @@ define( 'WPAIAS_META_KEY', '_wpaias_has_summary' );
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-providers.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-styles.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-cache.php';
+require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-endpoint-policy.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-api.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-admin.php';
 require_once WPAIAS_PLUGIN_DIR . 'includes/class-wpaias-frontend.php';

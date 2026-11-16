@@ -77,20 +77,31 @@ class WPAIAS_Admin {
 			'wpaias-admin',
 			WPAIAS_PLUGIN_URL . 'assets/css/admin.css',
 			array(),
-			WPAIAS_VERSION
+			JLWA_VERSION
 		);
 
 		wp_register_script(
 			'wpaias-admin',
 			WPAIAS_PLUGIN_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
-			WPAIAS_VERSION,
+			JLWA_VERSION,
 			true
 		);
 
 		if ( $is_settings_page || $is_post_edit ) {
 			wp_enqueue_style( 'wpaias-admin' );
 			wp_enqueue_script( 'wpaias-admin' );
+
+			// Expose only whether a key exists, never previously saved secrets.
+			$key_status = array();
+			if ( $is_settings_page ) {
+				$settings = JLWA_AI_Summary_Feature::get_settings();
+				foreach ( (array) $settings['api_keys'] as $slot => $value ) {
+					if ( '' !== (string) $value ) {
+						$key_status[ $slot ] = true;
+					}
+				}
+			}
 
 			wp_localize_script(
 				'wpaias-admin',
@@ -99,7 +110,7 @@ class WPAIAS_Admin {
 					'ajax_url'   => admin_url( 'admin-ajax.php' ),
 					'nonce'      => wp_create_nonce( 'wpaias_admin_nonce' ),
 					'providers'  => WPAIAS_Providers::js_map(),
-					'api_keys'   => $is_settings_page ? JLWA_AI_Summary_Feature::get_settings()['api_keys'] : array(),
+					'api_key_status' => $key_status,
 					'i18n'       => array(
 						'testing'    => __( '正在测试…', 'wp-ai-article-summary' ),
 						'test_ok'    => __( '连通成功！', 'wp-ai-article-summary' ),
@@ -367,8 +378,7 @@ class WPAIAS_Admin {
 		$cache_count = WPAIAS_Cache::count();
 		$providers   = WPAIAS_Providers::all();
 		$key_model   = ( 'custom' === $settings['provider'] && ! empty( $settings['custom_model'] ) ) ? $settings['custom_model'] : $settings['model'];
-		$current_key = JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $settings['provider'], $key_model );
-		$api_keys_json = wp_json_encode( isset( $settings['api_keys'] ) ? $settings['api_keys'] : array() );
+		$has_current_key = '' !== JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $settings['provider'], $key_model );
 		?>
 		<div class="wrap wpaias-wrap">
 			<div class="jiuliu-admin-header">
@@ -585,11 +595,11 @@ class WPAIAS_Admin {
 						<tr>
 							<th><label><?php esc_html_e( 'API Key', 'wp-ai-article-summary' ); ?></label></th>
 							<td>
-								<input type="hidden" id="wpaias-api-keys-json" name="<?php echo esc_attr( $opt ); ?>[api_keys_json]" value="<?php echo esc_attr( $api_keys_json ); ?>">
-								<input type="password" class="regular-text" id="wpaias-api-key" name="<?php echo esc_attr( $opt ); ?>[api_key_current]" value="<?php echo esc_attr( $current_key ); ?>" autocomplete="new-password">
+								<input type="hidden" id="wpaias-api-keys-json" name="<?php echo esc_attr( $opt ); ?>[api_keys_json]" value="{}">
+								<input type="password" class="regular-text" id="wpaias-api-key" name="<?php echo esc_attr( $opt ); ?>[api_key_current]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $has_current_key ? '已保存密钥；留空表示保留' : '填写新的 API Key' ); ?>">
 								<button type="button" class="button" id="wpaias-toggle-key"><?php esc_html_e( '显示/隐藏', 'wp-ai-article-summary' ); ?></button>
 								<p class="description">
-									<?php esc_html_e( 'API Key 会保存到当前服务商，并兼容当前模型的独立绑定；切换同一服务商下的模型不会再要求重复填写。', 'wp-ai-article-summary' ); ?>
+									<?php esc_html_e( '不会在后台页面回显已保存的密钥；留空保留原密钥，输入新值才会更新当前服务商或模型。', 'wp-ai-article-summary' ); ?>
 									<span id="wpaias-key-binding-label" class="wpaias-key-binding-label"></span>
 								</p>
 							</td>
@@ -852,14 +862,20 @@ class WPAIAS_Admin {
 		}
 
 		$overrides = array(
-			'provider'        => $test_provider,
-			'model'           => $test_model,
-			'current_api_key' => isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : JLWA_AI_Summary_Feature::get_api_key_for_model( $settings, $test_provider, $test_model ),
-			'endpoint'        => isset( $_POST['endpoint'] ) ? esc_url_raw( wp_unslash( $_POST['endpoint'] ) ) : $settings['custom_endpoint'],
-			'temperature'     => isset( $_POST['temperature'] ) ? (float) wp_unslash( $_POST['temperature'] ) : $settings['temperature'],
-			'max_tokens'      => 32,
-			'prompt'          => '请回复"ok"两个字符，用于连通性测试。',
+			'provider'    => $test_provider,
+			'model'       => $test_model,
+			'temperature' => isset( $_POST['temperature'] ) ? (float) wp_unslash( $_POST['temperature'] ) : $settings['temperature'],
+			'max_tokens'  => 32,
+			'prompt'      => '请回复"ok"两个字符，用于连通性测试。',
 		);
+		// Blank input means "use the saved key"; never override it with ''.
+		$typed_key = isset( $_POST['current_api_key'] ) ? trim( (string) wp_unslash( $_POST['current_api_key'] ) ) : '';
+		if ( '' !== $typed_key ) {
+			$overrides['current_api_key'] = $typed_key;
+		}
+		if ( 'custom' === $test_provider && isset( $_POST['endpoint'] ) ) {
+			$overrides['endpoint'] = esc_url_raw( wp_unslash( $_POST['endpoint'] ) );
+		}
 
 		$result = WPAIAS_API::generate_summary( '这是一段用于连通性测试的内容。', $settings, $overrides );
 

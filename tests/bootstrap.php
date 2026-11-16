@@ -53,10 +53,10 @@ function sanitize_html_class( $value ) { return preg_replace( '/[^a-zA-Z0-9_-]/'
 function absint( $value ) { return abs( (int) $value ); }
 function get_queried_object_id() { return $GLOBALS['test_post']->ID; }
 function get_post( $id = null ) { return $GLOBALS['test_post']; }
-function is_admin() { return false; }
+function is_admin() { return ! empty( $GLOBALS['test_is_admin'] ); }
 function is_feed() { return false; }
 function is_search() { return false; }
-function is_singular() { return true; }
+function is_singular( $post_type = null ) { return ! array_key_exists('test_is_singular', $GLOBALS) || ! empty($GLOBALS['test_is_singular']); }
 function post_password_required( $post ) { return '' !== $post->post_password && empty( $GLOBALS['test_password_valid'] ); }
 function current_user_can( $capability, ...$args ) { return ! empty( $GLOBALS['test_user_can_edit'] ); }
 function wp_get_post_categories( $post_id ) { return array(); }
@@ -133,3 +133,19 @@ class Test_FileSystem {
 }
 
 require_once dirname( __DIR__ ) . '/includes/class-jlwa-updater.php';
+
+require_once dirname( __DIR__ ) . '/features/ai-article-summary/includes/class-wpaias-endpoint-policy.php';
+
+function wp_doing_ajax() { return false; }
+function wp_doing_cron() { return false; }
+function is_robots() { return false; }
+function is_user_logged_in() { return ! empty( $GLOBALS['test_logged_in'] ); }
+function wp_is_mobile() { return ! empty( $GLOBALS['test_mobile'] ); }
+function wp_unslash( $v ) { return $v; }
+function wp_parse_url( $v, $component = -1 ) { return parse_url( $v, $component ); }
+function is_page() { return ! empty( $GLOBALS['test_is_page'] ); }
+function is_front_page() { return ! empty( $GLOBALS['test_is_front_page'] ); }
+function is_home() { return ! empty( $GLOBALS['test_is_home'] ); }
+function is_archive() { return false; }
+
+require_once dirname( __DIR__ ) . '/features/anti-debug/bootstrap.php';

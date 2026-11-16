@@ -15,3 +15,4 @@ while IFS= read -r -d '' file; do
 done < <(find . -name '*.js' -type f -not -path './vendor/*' -not -path './.git/*' -print0)
 printf 'JavaScript syntax: %s files OK\n' "$count_js"
 phpunit --configuration phpunit.xml.dist --no-coverage
+node --test tests/js/*.test.js

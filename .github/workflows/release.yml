@@ -1,4 +1,4 @@
-name: Publish 九流WP助手 Release
+name: 九流 WP 助手｜正式发布
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Full release gate on PHP ${{ matrix.php }}
+    name: 发布前验证 PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -123,8 +123,8 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if ! git show-ref --verify --quiet "refs/tags/$TAG"; then
-            git tag -a "$TAG" -m "九流WP助手 $VERSION" "$GITHUB_SHA"
+            git tag -a "$TAG" -m "九流 WP 助手 v$VERSION 发布" "$GITHUB_SHA"
             git push origin "$TAG"
           fi
           gh release create "$TAG" "$ZIP" "$SHA" \
-            --title "九流WP助手 $VERSION" --notes-file "$NOTES" --latest
+            --title "九流 WP 助手 v$VERSION" --notes-file "$NOTES" --latest
