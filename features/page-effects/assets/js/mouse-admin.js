@@ -32,24 +32,22 @@
     return '<label class="xjpe-inline-check"><input type="checkbox" name="' + esc(fieldName(section, key)) + '" value="1"' + checked(value) + '><span>' + esc(label) + '</span></label>';
   }
   function card(section, icon, title, desc, enabled, body) {
-    return '<article class="xjpe-card jlwa-mouse-card' + (enabled ? ' is-enabled' : '') + '" data-xjpe-card>' +
-      '<label class="xjpe-card-head"><input type="checkbox" class="xjpe-toggle" name="' + esc(fieldName(section, 'enabled')) + '" value="1"' + checked(enabled) + '>' +
-      '<span class="xjpe-icon">' + icon + '</span><span class="xjpe-card-text"><strong>' + esc(title) + '</strong><small>' + esc(desc) + '</small><em class="xjpe-status">' + (enabled ? '● 已启用' : '○ 未启用') + '</em></span></label>' +
-      '<div class="xjpe-card-body">' + body + '</div></article>';
+    var id = 'xjpe-mouse-' + section;
+    return '<article class="xjpe-card jlwa-mouse-card' + (enabled ? ' is-enabled' : '') + '" data-xjpe-card data-group="交互增强">' +
+      '<div class="xjpe-card-head"><span class="xjpe-icon" aria-hidden="true">' + icon + '</span>' +
+      '<span class="xjpe-card-text"><strong>' + esc(title) + '</strong><small>' + esc(desc) + '</small></span>' +
+      '<label class="xjpe-card-switch"><input type="checkbox" class="xjpe-toggle" aria-label="启用' + esc(title) + '" name="' + esc(fieldName(section, 'enabled')) + '" value="1"' + checked(enabled) + '>' +
+      '<span class="xjpe-status">' + (enabled ? '已启用' : '未启用') + '</span></label></div>' +
+      '<div class="xjpe-card-footer"><span>交互增强</span><button type="button" class="button xjpe-config-trigger" aria-expanded="false" aria-controls="' + id + '">配置 <span aria-hidden="true">⌄</span></button></div>' +
+      '<div class="xjpe-card-body" id="' + id + '" hidden>' + body + '</div></article>';
   }
 
   function build() {
     var grid = document.querySelector('.xjpe-effects-grid');
-    if (!grid || document.getElementById('jlwa-mouse-center-heading')) return;
+    if (!grid || grid.querySelector('.jlwa-mouse-card')) return;
 
     var oldCursor = grid.querySelector('input[name="xjpe_options[effects][cursor][enabled]"]');
     if (oldCursor && oldCursor.closest('.xjpe-card')) oldCursor.closest('.xjpe-card').remove();
-
-    var heading = document.createElement('div');
-    heading.id = 'jlwa-mouse-center-heading';
-    heading.className = 'jlwa-mouse-center-heading';
-    heading.innerHTML = '<div><strong>🖱️ 鼠标交互中心</strong><span>光标造型、移动拖尾和点击爆炸互相独立，可同时启用。</span></div><em>电脑端光标与拖尾；点击爆炸可单独允许手机端。</em>';
-    grid.parentNode.insertBefore(heading, grid);
 
     var shape = opts.cursor_shape || {};
     var trail = opts.trail || {};
@@ -73,18 +71,7 @@
       card('click_burst', '💥', '点击爆炸', '点击页面任意位置喷发星星、火花、花瓣等粒子', burst.enabled, burstBody)
     );
 
-    grid.querySelectorAll('.jlwa-mouse-card').forEach(function (mouseCard) {
-      var checkbox = mouseCard.querySelector('.xjpe-toggle');
-      var status = mouseCard.querySelector('.xjpe-status');
-      if (!checkbox || checkbox.__jlwaMouseBound) return;
-      checkbox.__jlwaMouseBound = true;
-      function syncCard() {
-        mouseCard.classList.toggle('is-enabled', checkbox.checked);
-        if (status) status.textContent = checkbox.checked ? '● 已启用' : '○ 未启用';
-      }
-      checkbox.addEventListener('change', syncCard);
-      syncCard();
-    });
+    document.dispatchEvent(new CustomEvent('xjpe:cards-added'));
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build, { once: true });

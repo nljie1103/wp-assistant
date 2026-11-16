@@ -26,6 +26,7 @@
 		if (maxTimer) { clearTimeout(maxTimer); maxTimer = 0; }
 		if (criticalTimer) { clearTimeout(criticalTimer); criticalTimer = 0; }
 		if (window.__JIP_HARD_TIMER__) { clearTimeout(window.__JIP_HARD_TIMER__); window.__JIP_HARD_TIMER__ = 0; }
+		window.__JIP_END__ = null;
 	}
 
 	// An arbitrary percentage cannot describe a WordPress page: the full total
@@ -64,7 +65,18 @@
 	}
 
 	function endWithMinDuration(extra) {
-		var remain = Math.max(0, MIN - (Date.now() - startTime));
+		if (ended) return;
+		// DOM readiness often fires before the effect has actually painted.
+		// Wait for the first visible frame, not a fixed delay from navigation.
+		if (!window.__JIP_VISUAL_START__) {
+			window.addEventListener('jip:visible', function () { endWithMinDuration(extra); }, { once: true });
+			return;
+		}
+		var intro = MIN === 0 ? 0 : ((EFFECT === 'editorial' || EFFECT === 'aperture') ? 700 : 340);
+		var visualMinimum = Math.max(MIN, intro);
+		var remain = Math.max(0, visualMinimum - (Date.now() - window.__JIP_VISUAL_START__));
+		// Never exceed the global fail-safe, even on a frozen/slow page.
+		remain = Math.min(remain, Math.max(0, MAX + 650 - (Date.now() - startTime)));
 		if (endDelay) clearTimeout(endDelay);
 		endDelay = setTimeout(endPreloader, remain + (extra || 0));
 	}
@@ -249,8 +261,12 @@
 			if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) getEl().classList.add('jip-particles-ready');
 			else initParticlesEffect();
 		}
-		var remainingMax = Math.max(0, MAX - (Date.now() - startTime));
-		maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, remainingMax);
+		window.__JIP_END__ = endPreloader;
+		// The critical-head timer is the single source of truth for timeout.
+		// Only install a fallback if the critical script was unavailable.
+		if (!window.__JIP_HARD_TIMER__) {
+			maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, Math.max(0, MAX - (Date.now() - startTime)));
+		}
 		finishByStrategy();
 	}
 

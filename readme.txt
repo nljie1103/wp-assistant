@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.9
+Stable tag: 2.5.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.10 =
+* 重构页面美化管理：紧凑等高卡片、按需展开参数、按分组或已启用筛选，鼠标交互三项也纳入统一管理，保留既有设置。
+* 重绘底部波浪为两条连续、无拼接缝的 SVG 柔和曲线；灯笼改为细描纸艺造型和轻摆动效，降低动画干扰。
+* 预加载按真实首帧计算入场展示时间，内容就绪与动效展示分开，安全上限最多附加 0.65 秒入场缓冲，0 秒最短等待时仍可立即退出。
+* 反调试修复仅一次信号被后台定时器重复计为二次确认的问题，降低误报；访客日志移除 URL 查询参数和外部地址，紧急旁路禁缓存、禁 Referer。
+* 服务器级限制全文模式自动遮蔽 REST/RSS/公开摘要，单篇内容发送禁缓存头；后台新增客户端阻碍与服务器授权能力自检。
+* 清理 5 个未被执行的旧模块占位文件和 10 份历史 Release Notes（历史说明仍可通过 Git 标签与 GitHub Releases 查阅），保持项目根目录清爽。
+
 
 = 2.5.9 =
 * 深度审查媒体与链接：修复媒体路径前缀误匹配、恢复错误前缀、永久改写目标校验，禁止 HTTP_HOST 任意加入诊断白名单；HEAD 优先检查响应头，必要时使用限制响应大小的 GET。

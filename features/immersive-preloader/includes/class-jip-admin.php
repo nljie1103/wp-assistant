@@ -178,14 +178,14 @@ class JIP_Admin {
 							<th scope="row"><label for="jip_min_duration">最小展示时长</label></th>
 							<td>
 								<input type="number" id="jip_min_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[min_duration]" value="<?php echo esc_attr( $options['min_duration'] ); ?>" min="0" step="0.1" class="small-text" /> 秒
-								<p class="description">即使页面加载完成，也至少让动画播放这么长时间。推荐值：0～0.15 秒，页面就绪即离开，不人为拖延。内容会在遮罩后方正常渲染，不再人为隐藏正文。</p>
+								<p class="description">页面就绪后仍至少展示这么长时间；设为 0 表示优先立即退出。非 0 时会从真实首帧开始计算，并给有入场动画的效果一段有限展示时间（排版/幕布约 0.7 秒），不会从网络请求开始就提前算完。</p>
 							</td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="jip_max_duration">最大等待时长</label></th>
 							<td>
 								<input type="number" id="jip_max_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[max_duration]" value="<?php echo esc_attr( $options['max_duration'] ); ?>" min="0.1" step="0.1" class="small-text" /> 秒
-								<p class="description">超过这个时间页面还没加载完，自动结束预加载。推荐值：1.5～2 秒；极慢页面也应让用户尽快操作。超过后强制结束，避免开屏遮挡真实内容。</p>
+								<p class="description">这是<strong>防止无限遮挡的安全上限</strong>，不是“到秒强制剪断特效”。页面就绪后等待动效实际首帧及简短入场再退出；极慢网络最多额外容许 0.65 秒入场缓冲，超时仍自动放行。推荐 1.5～2 秒。</p>
 							</td>
 						</tr>
 

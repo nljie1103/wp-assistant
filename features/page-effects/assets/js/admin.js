@@ -10,18 +10,74 @@
   }
 
   ready(function () {
-    document.querySelectorAll('[data-xjpe-card]').forEach(function (card) {
+    var cards = [];
+    var activeFilter = 'all';
+    var currentOpen = null;
+    var counter = document.querySelector('.xjpe-effect-count');
+    function closeCard(card) {
+      if (!card) return;
+      card.classList.remove('is-expanded');
+      var body = card.querySelector('.xjpe-card-body');
+      var button = card.querySelector('.xjpe-config-trigger');
+      if (body) body.hidden = true;
+      if (button) button.setAttribute('aria-expanded', 'false');
+      if (currentOpen === card) currentOpen = null;
+    }
+    function applyFilter() {
+      var visible = 0;
+      var enabled = 0;
+      cards.forEach(function (card) {
+        var cb = card.querySelector('.xjpe-toggle');
+        if (cb && cb.checked) enabled++;
+        var show = activeFilter === 'all' || (activeFilter === 'enabled' && cb && cb.checked) || card.dataset.group === activeFilter;
+        card.hidden = !show;
+        if (!show && currentOpen === card) closeCard(card);
+        if (show) visible++;
+      });
+      if (counter) counter.textContent = '显示 ' + visible + ' 项 · 已启用 ' + enabled + ' 项';
+    }
+    function attachCard(card) {
+      if (card.__xjpeBound) return;
+      card.__xjpeBound = true;
+      cards.push(card);
       var cb = card.querySelector('.xjpe-toggle');
       var st = card.querySelector('.xjpe-status');
+      var trigger = card.querySelector('.xjpe-config-trigger');
       if (!cb) return;
-
       function sync() {
         card.classList.toggle('is-enabled', cb.checked);
         if (st) st.textContent = cb.checked ? '已启用' : '未启用';
+        applyFilter();
       }
-
       cb.addEventListener('change', sync);
+      if (trigger) trigger.addEventListener('click', function () {
+        var expanding = currentOpen !== card;
+        closeCard(currentOpen);
+        if (expanding) {
+          var body = card.querySelector('.xjpe-card-body');
+          if (body) body.hidden = false;
+          trigger.setAttribute('aria-expanded', 'true');
+          card.classList.add('is-expanded');
+          currentOpen = card;
+        }
+      });
       sync();
+    }
+    document.querySelectorAll('[data-xjpe-card]').forEach(attachCard);
+    document.addEventListener('xjpe:cards-added', function () {
+      document.querySelectorAll('[data-xjpe-card]').forEach(attachCard);
+      applyFilter();
+    });
+    document.querySelectorAll('[data-xjpe-filter]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        activeFilter = button.getAttribute('data-xjpe-filter');
+        document.querySelectorAll('[data-xjpe-filter]').forEach(function (item) {
+          var selected = item === button;
+          item.classList.toggle('is-active', selected);
+          item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+        applyFilter();
+      });
     });
 
     var enableAll = document.querySelector('[data-xjpe-enable-all]');

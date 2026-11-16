@@ -328,7 +328,20 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 		if (!node || node.__jipPrepared) return;
 		node.__jipPrepared = true;
 		requestAnimationFrame(function(){ requestAnimationFrame(function(){
-			if (node && node.classList && node.isConnected !== false) { node.classList.add('jip-ready'); markShown(); }
+			if (node && node.classList && node.isConnected !== false) {
+				node.classList.add('jip-ready'); markShown();
+				// The visual start is the first painted frame, NOT the <head> timestamp.
+				window.__JIP_VISUAL_START__ = Date.now();
+				// Bounded entrance grace: don't truncate the opening because resources
+				// arrived late, but never trap visitors behind an animation forever.
+				if (window.__JIP_HARD_TIMER__) {
+					clearTimeout(window.__JIP_HARD_TIMER__);
+					var elapsed = Date.now() - window.__JIP_START__;
+					var deadline = Math.min(window.__JIP_MAX_MS__ + 650, Math.max(window.__JIP_MAX_MS__, elapsed + 650));
+					window.__JIP_HARD_TIMER__ = setTimeout(emergencyEnd, Math.max(0, deadline - elapsed));
+				}
+				try { window.dispatchEvent(new CustomEvent('jip:visible')); } catch(e) {}
+			}
 		}); });
 	}
 	function forceInsert(){
@@ -348,6 +361,8 @@ html:not(.jip-loading) #jip-preloader{display:none !important;}
 		return false;
 	}
 	function emergencyEnd(){
+		// If the main controller has started, let it release timers and canvas.
+		if (typeof window.__JIP_END__ === 'function') { window.__JIP_END__(); return; }
 		var node = document.getElementById('jip-preloader');
 		document.documentElement.classList.remove('jip-loading');
 		if (!node) return;

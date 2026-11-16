@@ -87,6 +87,9 @@
     score = clamp(score + points, 0, 500);
     reasons[name] = time;
     lastSuspiciousAt = time;
+    // A confirmation must represent a NEW detector signal. Previously the
+    // periodic tick() could repeatedly count one shortcut as two detections.
+    if (score >= int(decision.threshold, 85)) thresholdHits.push(time);
     evaluate(time);
   }
 
@@ -101,9 +104,8 @@
     var threshold = int(decision.threshold, 85);
     var windowMs = int(decision.hit_window_ms, 4200);
     thresholdHits = thresholdHits.filter(function (stamp) { return time - stamp <= windowMs; });
-    if (score >= threshold) {
-      if (!thresholdHits.length || time - thresholdHits[thresholdHits.length - 1] > 250) thresholdHits.push(time);
-      if (thresholdHits.length >= int(decision.confirm_hits, 2)) activate(recentReasons(time), false);
+    if (score >= threshold && thresholdHits.length >= int(decision.confirm_hits, 2)) {
+      activate(recentReasons(time), false);
     }
   }
 
@@ -376,7 +378,8 @@
     form.append('action', 'jlwa_anti_debug_event');
     form.append('nonce', cfg.logging.nonce || '');
     form.append('score', String(Math.round(score)));
-    form.append('url', window.location.href);
+    // Never send query strings: reset links, passwords and bypass keys often live there.
+    form.append('url', window.location.pathname || '/');
     triggerReasons.slice(0, 8).forEach(function (reason) { form.append('reasons[]', reason); });
     try {
       if (navigator.sendBeacon) {

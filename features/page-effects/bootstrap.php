@@ -29,6 +29,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
             add_action( 'template_redirect', array( $this, 'maybe_start_buffer_injection' ), 0 );
             add_filter( 'the_content', array( $this, 'filter_protected_content' ), 999 );
+            add_filter( 'get_the_excerpt', array( $this, 'filter_protected_excerpt' ), 999, 2 );
+            add_action( 'template_redirect', array( $this, 'protect_restricted_page_cache' ), 1 );
             add_filter( 'the_content_feed', array( $this, 'filter_protected_feed' ), 999 );
             add_filter( 'the_excerpt_rss', array( $this, 'filter_protected_feed' ), 999 );
             add_filter( 'rest_prepare_post', array( $this, 'filter_protected_rest_response' ), 999, 3 );
@@ -281,10 +283,10 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                 'bubbles' => array( 'icon' => '🫧', 'title' => '梦幻气泡', 'desc' => '透明气泡从底部缓慢上升', 'group' => '氛围特效' ),
                 'fireflies' => array( 'icon' => '💫', 'title' => '星光流萤', 'desc' => '柔和光点缓慢浮动、呼吸闪烁，纯 CSS 轻量氛围', 'group' => '氛围特效' ),
                 'meteors' => array( 'icon' => '🌠', 'title' => '微光流星', 'desc' => '夜空中偶尔划过的柔光流星，不遮挡正文', 'group' => '氛围特效' ),
-                'lantern' => array( 'icon' => '🏮', 'title' => '节日灯笼', 'desc' => '页面顶部悬挂灯笼', 'group' => '氛围特效' ),
+                'lantern' => array( 'icon' => '🏮', 'title' => '节日灯笼', 'desc' => '柔和纸灯与流苏，悬挂轻摆', 'group' => '氛围特效' ),
                 'particles' => array( 'icon' => '✨', 'title' => '粒子背景', 'desc' => '动态粒子连线效果', 'group' => '氛围特效' ),
                 'cursor' => array( 'icon' => '🌟', 'title' => '鼠标跟随', 'desc' => '星星、爱心、萤火、花瓣、气泡或自定义拖尾', 'group' => '交互增强' ),
-                'waves' => array( 'icon' => '🌊', 'title' => '底部波浪', 'desc' => '只在滚动到页面底部时出现，位于子比页脚与友情链接区域上方', 'group' => '氛围特效' ),
+                'waves' => array( 'icon' => '🌊', 'title' => '底部波浪', 'desc' => '页脚上方的柔和叠层曲线', 'group' => '氛围特效' ),
                 'ribbon' => array( 'icon' => '🎀', 'title' => '彩带背景', 'desc' => '点击刷新彩带背景', 'group' => '氛围特效' ),
                 'grayscale' => array( 'icon' => '🕯️', 'title' => '全站灰色', 'desc' => '纪念/悼念模式', 'group' => '特殊模式' ),
                 'contextmenu' => array( 'icon' => '🖱️', 'title' => '右键美化', 'desc' => '自定义右键菜单', 'group' => '交互增强' ),
@@ -534,6 +536,21 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             return $html;
         }
 
+        /** Never cache role-dependent protected HTML as public CDN content. */
+        public function protect_restricted_page_cache() {
+            if ( ! is_singular() ) {
+                return;
+            }
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || 'restricted' !== ( $protection['server_mode'] ?? 'public' ) || ! $this->is_protected_post_type( get_post_type(), $protection ) ) {
+                return;
+            }
+            nocache_headers();
+            if ( ! headers_sent() ) {
+                header( 'Vary: Cookie', false );
+            }
+        }
+
         public function filter_protected_content( $content ) {
             if ( is_admin() || wp_doing_ajax() || ! is_singular() || ! in_the_loop() || ! is_main_query() ) {
                 return $content;
@@ -551,9 +568,22 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             return $teaser . $this->protected_notice_html( $protection );
         }
 
+        /** Avoid leaking manually written excerpts in archives and widgets. */
+        public function filter_protected_excerpt( $excerpt, $post = null ) {
+            if ( is_admin() ) {
+                return $excerpt;
+            }
+            $protection = $this->protection_options();
+            if ( empty( $protection ) || 'restricted' !== ( $protection['server_mode'] ?? 'public' ) || $this->current_user_can_read_protected( $protection ) ) {
+                return $excerpt;
+            }
+            $post_type = $post instanceof WP_Post ? $post->post_type : get_post_type();
+            return $this->is_protected_post_type( $post_type, $protection ) ? ( $protection['server_message'] ?? '内容仅向已授权用户开放。' ) : $excerpt;
+        }
+
         public function filter_protected_feed( $content ) {
             $protection = $this->protection_options();
-            if ( empty( $protection ) || empty( $protection['server_hide_feed'] ) || $this->current_user_can_read_protected( $protection ) ) {
+            if ( empty( $protection ) || ( empty( $protection['server_hide_feed'] ) && 'restricted' !== ( $protection['server_mode'] ?? 'public' ) ) || $this->current_user_can_read_protected( $protection ) ) {
                 return $content;
             }
             $post_type = get_post_type();
@@ -565,7 +595,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
 
         public function filter_protected_rest_response( $response, $post, $request ) {
             $protection = $this->protection_options();
-            if ( empty( $protection ) || empty( $protection['server_hide_rest'] ) || ! $post instanceof WP_Post || $this->current_user_can_read_protected( $protection ) ) {
+            if ( empty( $protection ) || ( empty( $protection['server_hide_rest'] ) && 'restricted' !== ( $protection['server_mode'] ?? 'public' ) ) || ! $post instanceof WP_Post || $this->current_user_can_read_protected( $protection ) ) {
                 return $response;
             }
             if ( ! $this->is_protected_post_type( $post->post_type, $protection ) || ! is_object( $response ) || ! method_exists( $response, 'get_data' ) ) {
@@ -889,20 +919,33 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                             <a class="button" href="<?php echo esc_url( $preview_url ); ?>" target="_blank" rel="noopener">打开前台预览</a>
                         </div>
 
+                        <div class="xjpe-effect-filters" role="group" aria-label="筛选特效">
+                            <button type="button" class="button is-active" data-xjpe-filter="all" aria-pressed="true">全部</button>
+                            <button type="button" class="button" data-xjpe-filter="enabled" aria-pressed="false">已启用</button>
+                            <?php foreach ( array_unique( array_column( $defs, 'group' ) ) as $group_label ) : ?>
+                                <button type="button" class="button" data-xjpe-filter="<?php echo esc_attr( $group_label ); ?>" aria-pressed="false"><?php echo esc_html( $group_label ); ?></button>
+                            <?php endforeach; ?>
+                            <span class="xjpe-effect-count" aria-live="polite"></span>
+                        </div>
+                        <p class="xjpe-effect-help">先用卡片开关快速启用；只有点击「配置」才展开参数。同一时间只展开一个特效，参数仍会完整保存。</p>
                         <section class="xjpe-effects-grid">
                             <?php foreach ( $defs as $key => $def ) : ?>
                                 <?php $effect = $options['effects'][ $key ]; ?>
-                                <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card>
-                                    <label class="xjpe-card-head">
-                                        <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?>>
-                                        <span class="xjpe-icon"><?php echo esc_html( $def['icon'] ); ?></span>
+                                <?php $body_id = 'xjpe-config-' . $key; ?>
+                                <article class="xjpe-card <?php echo ! empty( $effect['enabled'] ) ? 'is-enabled' : ''; ?>" data-xjpe-card data-group="<?php echo esc_attr( $def['group'] ); ?>">
+                                    <div class="xjpe-card-head">
+                                        <span class="xjpe-icon" aria-hidden="true"><?php echo esc_html( $def['icon'] ); ?></span>
                                         <span class="xjpe-card-text">
                                             <strong><?php echo esc_html( $def['title'] ); ?></strong>
                                             <small><?php echo esc_html( $def['desc'] ); ?></small>
-                                            <em class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '● 已启用' : '○ 未启用'; ?></em>
                                         </span>
-                                    </label>
-                                    <div class="xjpe-card-body">
+                                        <label class="xjpe-card-switch" title="启用或关闭此特效">
+                                            <input type="checkbox" class="xjpe-toggle" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[effects][<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( ! empty( $effect['enabled'] ) ); ?> aria-label="启用<?php echo esc_attr( $def['title'] ); ?>">
+                                            <span class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '已启用' : '未启用'; ?></span>
+                                        </label>
+                                    </div>
+                                    <div class="xjpe-card-footer"><span><?php echo esc_html( $def['group'] ); ?></span><button type="button" class="button xjpe-config-trigger" aria-expanded="false" aria-controls="<?php echo esc_attr( $body_id ); ?>">配置 <span aria-hidden="true">⌄</span></button></div>
+                                    <div class="xjpe-card-body" id="<?php echo esc_attr( $body_id ); ?>" hidden>
                                         <?php $this->render_effect_fields( $key, $effect ); ?>
                                     </div>
                                 </article>
@@ -1039,10 +1082,10 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                     $this->inline_checkbox( $base, 'server_pages', '保护独立页面正文', $effect['server_pages'] );
                     $this->number_field( $base, 'server_teaser_words', '未授权访客可见的摘要字数（0 为不显示摘要）', $effect['server_teaser_words'], 0, 300, 5 );
                     $this->text_field( $base, 'server_message', '服务器保护提示', $effect['server_message'], '完整内容仅向已授权用户开放，请登录后继续阅读。' );
-                    $this->inline_checkbox( $base, 'server_hide_rest', '从 WordPress REST API 隐藏受保护正文', $effect['server_hide_rest'] );
-                    $this->inline_checkbox( $base, 'server_hide_feed', '从 RSS/Atom 订阅隐藏受保护正文', $effect['server_hide_feed'] );
+                    $this->inline_checkbox( $base, 'server_hide_rest', '从 WordPress REST API 隐藏受保护正文（限制全文模式始终隐藏）', $effect['server_hide_rest'] );
+                    $this->inline_checkbox( $base, 'server_hide_feed', '从 RSS/Atom 订阅隐藏受保护正文（限制全文模式始终隐藏）', $effect['server_hide_feed'] );
                     $this->inline_checkbox( $base, 'server_noindex', '未授权访问时输出 noindex/nofollow', $effect['server_noindex'] );
-                    echo '<p class="xjpe-tip"><strong>边界说明：</strong>已获授权并能看到正文的用户，仍可通过开发者工具、截图或网络请求取得内容。公开内容只能提高转载成本，不能做到绝对防复制。</p>';
+                    echo '<p class="xjpe-tip"><strong>边界说明：</strong>限制全文模式会对受保护的单篇页面发送禁缓存响应，并默认遮蔽 REST、RSS 和公开摘要。使用 Cloudflare/CDN 时仍须确认缓存规则不会缓存登录态网页；其他主题或插件自定义 API 也需单独审计。已授权用户仍可复制已显示内容，公开网页不能彻底禁止开发者工具。</p>';
                     break;
                 case 'bgmusic':
                     $this->url_field( $base, 'url', '音乐文件 URL', $effect['url'], 'https://example.com/music.mp3' );
