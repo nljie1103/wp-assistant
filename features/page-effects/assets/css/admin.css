@@ -36,3 +36,34 @@
 .xjpe-code-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
 .xjpe-code-field textarea { font-family:Consolas, Monaco, monospace; }
 @media (max-width: 782px){ .xjpe-global-panel { grid-template-columns:1fr; } }
+
+/* 2.5.10 — compact, consistent feature catalog. Hidden forms still submit settings. */
+.xjpe-effect-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 10px}
+.xjpe-effect-filters .button{border-radius:999px;min-height:34px;padding:2px 14px}
+.xjpe-effect-filters .button.is-active{color:#174a77;background:#e7f1fa;border-color:#86bce5;font-weight:650}
+.xjpe-effect-count{margin-left:auto;color:#667085;font-size:12px}
+.xjpe-effect-help{color:#64748b;margin:0 0 14px;font-size:13px}
+.xjpe-effects-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:12px;align-items:start}
+.xjpe-card{display:flex;flex-direction:column;min-width:0;min-height:154px;border-radius:13px;box-shadow:0 2px 11px rgba(20,30,50,.035);transition:border-color .15s ease,box-shadow .15s ease}
+.xjpe-card.is-enabled{border-color:#8eb6d5;box-shadow:0 0 0 1px rgba(34,113,177,.12)}
+.xjpe-card[hidden],.xjpe-card-body[hidden]{display:none!important}
+.xjpe-card-head{cursor:default;border:0;display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:start;padding:16px 15px 8px;min-height:76px}
+.xjpe-icon{font-size:25px;line-height:35px;text-align:center}
+.xjpe-card-text{min-width:0;gap:5px}
+.xjpe-card-text strong{font-size:14px;line-height:1.4;color:#1f2937}
+.xjpe-card-text small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px;line-height:1.5;min-height:36px;color:#667085}
+.xjpe-card-switch{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;white-space:nowrap;cursor:pointer}
+.xjpe-card-switch input{margin:2px 0!important}
+.xjpe-card-switch .xjpe-status{font-style:normal}
+.xjpe-card-footer{display:flex;align-items:center;justify-content:space-between;padding:7px 15px 12px;margin-top:auto;min-height:32px}
+.xjpe-card-footer>span{font-size:11px;color:#8190a2}
+.xjpe-config-trigger{font-size:12px!important;min-height:30px!important;border-radius:8px!important}
+.xjpe-config-trigger span{display:inline-block;margin-left:4px;transition:transform .18s ease}
+.xjpe-card.is-expanded{grid-column:1 / -1;min-height:0}
+.xjpe-card.is-expanded .xjpe-config-trigger span{transform:rotate(180deg)}
+.xjpe-card.is-expanded .xjpe-card-head{min-height:0}
+.xjpe-card.is-expanded .xjpe-card-text small{min-height:0;-webkit-line-clamp:unset}
+.xjpe-card-body{padding:18px;border-top:1px solid #e9edf2;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:14px 18px;background:linear-gradient(180deg,#fafbfd,#fff)}
+.xjpe-card-body .xjpe-tip,.xjpe-card-body .xjpe-wide-field{grid-column:1/-1}
+.xjpe-card-body .xjpe-tip{margin:0}
+@media(max-width:782px){.xjpe-effects-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}.xjpe-effect-count{flex-basis:100%;margin-left:0}}

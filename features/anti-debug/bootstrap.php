@@ -36,6 +36,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ), 2 );
 			add_action( 'wp_ajax_jlwa_anti_debug_event', array( $this, 'record_event' ) );
 			add_action( 'wp_ajax_nopriv_jlwa_anti_debug_event', array( $this, 'record_event' ) );
+			add_action( 'send_headers', array( $this, 'protect_bypass_url' ) );
 		}
 
 		/** Install defaults without autoloading a large configuration object. */
@@ -246,6 +247,10 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			$options = $this->get_options();
 			$logs    = get_option( self::LOG_OPTION, array() );
 			$logs    = is_array( $logs ) ? $logs : array();
+			$server_options = class_exists( 'JLWA_Page_Effects_Feature' ) ? JLWA_Page_Effects_Feature::instance()->get_options() : array();
+			$server_guard = isset( $server_options['effects']['nosource'] ) ? $server_options['effects']['nosource'] : array();
+			$server_restricted = ! empty( $server_guard['enabled'] ) && 'restricted' === ( $server_guard['server_mode'] ?? 'public' ) && ( ! empty( $server_guard['server_posts'] ) || ! empty( $server_guard['server_pages'] ) );
+			$server_scope = $server_restricted ? ( ! empty( $server_guard['server_posts'] ) ? '文章 ' : '' ) . ( ! empty( $server_guard['server_pages'] ) ? '页面' : '' ) : '尚未配置';
 			?>
 			<div class="jlwa-ad-admin">
 				<?php if ( ! empty( $_GET['jlwa_ad_saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
@@ -257,7 +262,19 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 
 				<section class="jlwa-ad-boundary">
 					<div><span class="dashicons dashicons-shield-alt"></span></div>
-					<div><strong>功能边界</strong><p>该功能通过多种侧信号检测开发者工具并执行前台处置，可以显著提高普通分析和批量转载成本，但不能代替服务器权限控制，也不承诺对专业逆向绝对不可绕过。</p></div>
+					<div><strong>功能边界</strong><p>这是客户端阻碍工具，并非安全边界。浏览器菜单、禁用 JS、网络请求与已下载内容都无法可靠阻止。用于阻碍普通复制，真正的付费或私有内容必须经服务端授权校验；检测日志可能伪造、严格模式可能误伤正常用户。</p></div>
+				</section>
+
+				<section class="jlwa-ad-security-check" aria-label="安全能力自检">
+					<div><strong>安全能力自检</strong><small>分别核对客户端阻碍与真正的服务器授权</small></div>
+					<ul>
+						<li><span>客户端反调试</span><strong><?php echo ! empty( $options['enabled'] ) ? '已启用（仍可绕过）' : '未启用'; ?></strong></li>
+						<li><span>服务器限制全文</span><strong><?php echo $server_restricted ? esc_html( '已启用 · ' . $server_scope ) : '未启用'; ?></strong></li>
+						<li><span>当前授权模型</span><strong><?php echo $server_restricted ? esc_html( 'WordPress 权限：' . ( $server_guard['server_capability'] ?? 'read' ) ) : '无服务器内容门禁'; ?></strong></li>
+						<li><span>REST、RSS 与公共摘要</span><strong><?php echo $server_restricted ? '限制全文模式强制遮蔽' : '无服务器级保证'; ?></strong></li>
+					</ul>
+					<p>WordPress「所有已登录用户」不等于子比「已购买用户」或「付费会员」。真正的订单权限应由子比主题或服务端单独校验；公开浏览器检测日志只能作为线索，不能当作可信安全审计。</p>
+					<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-page-effects&tab=effects' ) ); ?>">检查服务端内容保护设置</a>
 				</section>
 
 				<form method="post" class="jlwa-ad-form">
@@ -333,7 +350,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						</div>
 						<div class="jlwa-ad-grid">
 							<?php $this->checkbox_card( 'response[auto_recover]', '信号消失后自动恢复', '未启用会话持久锁时，关闭开发者工具后恢复正文。', ! empty( $options['response']['auto_recover'] ) ); ?>
-							<?php $this->checkbox_card( 'logging[enabled]', '记录触发日志', '只保存时间、原因、页面、浏览器摘要和匿名访客指纹。', ! empty( $options['logging']['enabled'] ) ); ?>
+							<?php $this->checkbox_card( 'logging[enabled]', '记录触发线索', '公开客户端上报，可被模拟，不是可信安全审计。只保存不含查询参数的页面路径及匿名访客摘要。', ! empty( $options['logging']['enabled'] ) ); ?>
 						</div>
 						<section class="jlwa-ad-emergency">
 							<div><strong>紧急旁路</strong><p>高强度循环启用后，可用下面的地址临时绕过前台反调试。管理员登录状态仍默认自动绕过。</p></div>
@@ -476,6 +493,20 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			wp_add_inline_script( 'jlwa-anti-debug', 'window.JLWA_ANTI_DEBUG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
 		}
 
+		/** Keep emergency bypass query keys out of intermediary caches and Referer headers. */
+		public function protect_bypass_url() {
+			if ( ! isset( $_GET['jlwa_safe'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				return;
+			}
+			$options = $this->get_options();
+			$key = isset( $options['scope']['emergency_key'] ) ? (string) $options['scope']['emergency_key'] : '';
+			$provided = sanitize_text_field( wp_unslash( $_GET['jlwa_safe'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( $key && is_string( $provided ) && hash_equals( $key, $provided ) ) {
+				nocache_headers();
+				header( 'Referrer-Policy: no-referrer', true );
+			}
+		}
+
 		/** @param array<string,mixed> $options Options. */
 		private function should_load( $options ) {
 			if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || is_feed() || is_robots() ) {
@@ -537,7 +568,9 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			set_transient( $rate_key, 1, 20 );
 			$reasons = isset( $_POST['reasons'] ) ? (array) wp_unslash( $_POST['reasons'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$reasons = array_slice( array_values( array_filter( array_map( 'sanitize_key', $reasons ) ) ), 0, 8 );
-			$url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+			// Treat public AJAX telemetry as untrusted. Store only a local path,
+			// never URL queries (which may contain passwords or bypass keys).
+			$url = isset( $_POST['url'] ) ? $this->safe_event_path( wp_unslash( $_POST['url'] ) ) : '/';
 			$score = isset( $_POST['score'] ) ? min( 500, max( 0, absint( $_POST['score'] ) ) ) : 0;
 			$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 			$logs = get_option( self::LOG_OPTION, array() );
@@ -546,7 +579,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				'time'    => current_time( 'mysql' ),
 				'reasons' => $reasons,
 				'score'   => $score,
-				'url'     => $url ? wp_make_link_relative( $url ) : '',
+				'url'     => $url,
 				'visitor' => $visitor,
 				'ua'      => substr( $user_agent, 0, 180 ),
 			);
@@ -556,6 +589,28 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			}
 			update_option( self::LOG_OPTION, $logs, false );
 			wp_send_json_success();
+		}
+
+		/** Public detection reports can never be trusted as an audit log. */
+		private function safe_event_path( $raw ) {
+			if ( ! is_string( $raw ) || strlen( $raw ) > 2048 ) {
+				return '/';
+			}
+			$parts = wp_parse_url( $raw );
+			if ( ! is_array( $parts ) ) {
+				return '/';
+			}
+			if ( isset( $parts['host'] ) || isset( $parts['scheme'] ) ) {
+				$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+				if ( empty( $parts['host'] ) || strtolower( $parts['host'] ) !== strtolower( (string) $site_host ) ) {
+					return '/';
+				}
+			}
+			$path = isset( $parts['path'] ) ? $parts['path'] : '/';
+			if ( ! is_string( $path ) || '' === $path || '/' !== $path[0] || 0 === strpos( $path, '//' ) ) {
+				return '/';
+			}
+			return substr( sanitize_text_field( $path ), 0, 256 );
 		}
 
 		/** @return array<string,mixed> */

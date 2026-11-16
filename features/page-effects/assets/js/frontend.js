@@ -246,21 +246,29 @@
 
   function initLantern() {
     var e = effects.lantern || {};
-    var count = clamp(int(e.quantity, 2), 1, 6);
-    var size = clamp(int(e.size, 82), 36, 180);
-    var text = String(e.text || '福').slice(0, 2);
+    var count = clamp(int(e.quantity, 2), 1, mobile ? 2 : 4);
+    var size = clamp(int(e.size, 82), 36, mobile ? 90 : 140);
+    var glyph = String(e.text || '福').slice(0, 2);
     var wrap = layer('xjpe-lantern-wrap', 3);
+    var positions = count === 1 ? [50] : (count === 2 ? [12, 88] : (count === 3 ? [11, 50, 89] : [10, 36, 64, 90]));
+    var fragment = document.createDocumentFragment();
     for (var i = 0; i < count; i++) {
-      var l = document.createElement('div');
-      l.className = 'xjpe-lantern';
-      l.style.setProperty('--xjpe-lantern-size', size + 'px');
-      var left = count === 1 ? 50 : (8 + i * (84 / (count - 1)));
-      l.style.left = 'calc(' + left + '% - ' + (size / 2) + 'px)';
-      l.style.animationDelay = (i * -0.45) + 's';
-      l.innerHTML = '<div class="xjpe-lantern-line"></div><div class="xjpe-lantern-body"><span></span></div><div class="xjpe-lantern-tail"></div>';
-      l.querySelector('span').textContent = text;
-      wrap.appendChild(l);
+      var lantern = document.createElement('div');
+      lantern.className = 'xjpe-lantern';
+      lantern.style.setProperty('--xjpe-lantern-size', size + 'px');
+      lantern.style.left = 'calc(' + positions[i] + '% - ' + (size / 2) + 'px)';
+      lantern.style.animationDelay = (i * -0.7) + 's';
+      lantern.innerHTML = '<span class="xjpe-lantern-cord"></span><svg class="xjpe-lantern-paper" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" aria-hidden="true">' +
+        '<defs><linearGradient id="xjpe-paper-' + i + '" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#8a2122"/><stop offset=".25" stop-color="#cb4e39"/><stop offset=".5" stop-color="#ec9b68"/><stop offset=".78" stop-color="#bf4535"/><stop offset="1" stop-color="#7b1f22"/></linearGradient></defs>' +
+        '<path d="M50 18C30 18 14 34 14 61s16 44 36 44 36-17 36-44S70 18 50 18Z" fill="url(#xjpe-paper-' + i + ')" stroke="#dc9d65" stroke-width="1"/>' +
+        '<path d="M50 18C38 18 30 37 30 61s8 44 20 44M50 18c12 0 20 19 20 43s-8 44-20 44M50 18v87" fill="none" stroke="#70272a" stroke-opacity=".36" stroke-width="1"/>' +
+        '<path d="M35 17h30M35 106h30" stroke="#d6ad72" stroke-width="6" stroke-linecap="round"/>' +
+        '<path d="M50 110v12M43 111v10M57 111v10" stroke="#c48a4f" stroke-width="1.5" stroke-linecap="round"/>' +
+        '</svg><span class="xjpe-lantern-glyph"></span>';
+      lantern.querySelector('.xjpe-lantern-glyph').textContent = glyph;
+      fragment.appendChild(lantern);
     }
+    wrap.appendChild(fragment);
   }
 
   function initParticles() {
@@ -373,7 +381,7 @@
     var footer = null;
     try { footer = document.querySelector(selector); } catch (error) {}
     if (!footer || !footer.parentNode) return;
-
+    if (footer.previousElementSibling && footer.previousElementSibling.classList.contains('xjpe-waves')) return;
     var wrap = document.createElement('div');
     wrap.className = 'xjpe-waves';
     wrap.setAttribute('aria-hidden', 'true');
@@ -382,7 +390,12 @@
     wrap.style.setProperty('--xjpe-wave-speed', clamp(int(e.speed, 12), 4, 40) + 's');
     wrap.style.setProperty('--xjpe-wave-color-1', String(e.color_1 || '#5b8cff'));
     wrap.style.setProperty('--xjpe-wave-color-2', String(e.color_2 || '#9b5cff'));
-    wrap.innerHTML = '<div class="xjpe-wave xjpe-wave-b"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path d="M0 74 C240 28 480 112 720 68 C960 24 1200 104 1440 62 L1440 120 L0 120 Z"></path><path transform="translate(1440 0)" d="M0 74 C240 28 480 112 720 68 C960 24 1200 104 1440 62 L1440 120 L0 120 Z"></path></svg></div><div class="xjpe-wave xjpe-wave-a"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path d="M0 82 C180 44 360 38 540 74 C720 110 900 106 1080 66 C1260 26 1350 48 1440 70 L1440 120 L0 120 Z"></path><path transform="translate(1440 0)" d="M0 82 C180 44 360 38 540 74 C720 110 900 106 1080 66 C1260 26 1350 48 1440 70 L1440 120 L0 120 Z"></path></svg></div>';
+    // Continuous single-span curves: no doubled 2880px SVG, seams or endless horizontal motion.
+    // Default motion is a small vertical displacement, which never breaks the footer edge.
+    wrap.innerHTML = '<svg class="xjpe-wave-svg" viewBox="0 0 1440 120" preserveAspectRatio="none" focusable="false" aria-hidden="true">' +
+      '<path class="xjpe-wave-back" d="M0 74 C240 32 450 42 700 72 S1190 105 1440 74 L1440 120 H0Z"/>' +
+      '<path class="xjpe-wave-front" d="M0 88 C200 62 370 49 660 83 S1180 115 1440 88 L1440 120 H0Z"/>' +
+      '</svg>';
     footer.parentNode.insertBefore(wrap, footer);
   }
 

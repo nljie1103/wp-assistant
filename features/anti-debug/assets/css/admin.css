@@ -256,3 +256,14 @@
   font-size: 11px;
   font-weight: 800;
 }
+
+/* Compact capability audit: a JS deterrent must never be presented as authorization. */
+.jlwa-ad-security-check{border:1px solid #d9e3eb;background:#fff;border-radius:17px;padding:18px 20px;margin:0 0 18px}
+.jlwa-ad-security-check>div:first-child{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.jlwa-ad-security-check>div:first-child strong{font-size:15px}
+.jlwa-ad-security-check small{color:#68768b}
+.jlwa-ad-security-check ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px;margin:14px 0;padding:0}
+.jlwa-ad-security-check li{list-style:none;background:#f6f8fc;border:1px solid #edf1f5;border-radius:12px;display:flex;flex-direction:column;gap:6px;padding:12px;margin:0}
+.jlwa-ad-security-check li span{color:#617087;font-size:12px}
+.jlwa-ad-security-check li strong{font-size:13px;color:#243149}
+.jlwa-ad-security-check p{color:#68768b;line-height:1.65;margin:0 0 12px;font-size:12px}
