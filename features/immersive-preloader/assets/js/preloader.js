@@ -1,17 +1,19 @@
-/** 九流沉浸式预加载 1.2.2 — reliable session marking, forced preview and safe skip handling. */
+/** 九流沉浸式预加载：真实就绪事件、无伪百分比、低开销退出。 */
 (function () {
 	'use strict';
 
 	var CFG = window.JIP_CFG || {};
-	var MIN = Math.max(0, parseFloat(CFG.minDuration || 0.45)) * 1000;
-	var MAX = Math.max(500, parseFloat(CFG.maxDuration || 3) * 1000);
+	function duration(value, fallback) { var parsed = parseFloat(value); return isFinite(parsed) && parsed >= 0 ? parsed : fallback; }
+	var MIN = Math.max(0, duration(CFG.minDuration, 0.12)) * 1000;
+	var MAX = Math.max(500, duration(CFG.maxDuration, 2) * 1000);
 	var EFFECT = CFG.effect || 'logo3d';
 	var COMPLETION = CFG.completion || 'dom';
 	var ALLOW_SKIP = !!parseInt(CFG.allowSkip, 10);
 	var startTime = window.__JIP_START__ || Date.now();
 	var ended = false;
 	var cleanupCallbacks = [];
-	var progressTimer = 0;
+	var progressDelay = 0;
+	var endDelay = 0;
 	var maxTimer = 0;
 	var criticalTimer = 0;
 
@@ -19,37 +21,32 @@
 	function onCleanup(fn) { cleanupCallbacks.push(fn); }
 	function cleanupEffects() {
 		cleanupCallbacks.splice(0).forEach(function (fn) { try { fn(); } catch (e) {} });
-		if (progressTimer) { clearInterval(progressTimer); progressTimer = 0; }
+		if (progressDelay) { clearTimeout(progressDelay); progressDelay = 0; }
+		if (endDelay) { clearTimeout(endDelay); endDelay = 0; }
 		if (maxTimer) { clearTimeout(maxTimer); maxTimer = 0; }
 		if (criticalTimer) { clearTimeout(criticalTimer); criticalTimer = 0; }
 		if (window.__JIP_HARD_TIMER__) { clearTimeout(window.__JIP_HARD_TIMER__); window.__JIP_HARD_TIMER__ = 0; }
 	}
 
-	function updateProgress(value, label) {
-		var el = getEl(); if (!el) return;
-		var bar = el.querySelector('.jip-progress span');
-		var text = el.querySelector('.jip-progress em');
-		if (bar) bar.style.width = Math.max(0, Math.min(100, value)) + '%';
-		if (text && label) text.textContent = label;
-		var progress = el.querySelector('.jip-progress');
-		if (progress) progress.setAttribute('aria-valuenow', String(Math.round(value)));
-	}
-
+	// An arbitrary percentage cannot describe a WordPress page: the full total
+	// (ads, third-party requests, lazy images) is unknown. Use an honest
+	// indeterminate indicator only if the page is still preparing after 160 ms.
 	function startProgress() {
-		var value = 10;
-		updateProgress(value);
-		progressTimer = setInterval(function () {
-			if (ended) return;
-			value = Math.min(88, value + Math.max(1, (88 - value) * 0.08));
-			updateProgress(value);
-		}, 200);
+		progressDelay = setTimeout(function () {
+			if (!ended && getEl()) getEl().classList.add('jip-progress-visible');
+		}, 160);
 	}
 
 	function endPreloader() {
 		if (ended) return;
 		ended = true;
 		cleanupEffects();
-		updateProgress(100, '页面已准备完成');
+		var complete = getEl();
+		if (complete) {
+			complete.classList.add('jip-complete');
+			var status = complete.querySelector('.jip-progress em');
+			if (status) status.textContent = '页面已就绪';
+		}
 		var el = getEl();
 		var html = document.documentElement;
 		html.classList.add('jip-fade-in');
@@ -62,13 +59,14 @@
 			if (el.parentNode) el.parentNode.removeChild(el);
 			try { window.dispatchEvent(new CustomEvent('jip:ended')); } catch (e) {}
 		}
-		el.addEventListener('transitionend', cleanup, { once: true });
-		setTimeout(cleanup, 430);
+		el.addEventListener('transitionend', function (event) { if (event.target === el) cleanup(); });
+		setTimeout(cleanup, EFFECT === 'aperture' ? 540 : 440);
 	}
 
 	function endWithMinDuration(extra) {
 		var remain = Math.max(0, MIN - (Date.now() - startTime));
-		setTimeout(endPreloader, remain + (extra || 0));
+		if (endDelay) clearTimeout(endDelay);
+		endDelay = setTimeout(endPreloader, remain + (extra || 0));
 	}
 
 	function bindSkip() {
@@ -135,8 +133,8 @@
 		var cssWidth = 1, cssHeight = 1, dpr = 1;
 
 		function resize() {
-			cssWidth = Math.max(1, el.clientWidth); cssHeight = Math.max(1, el.clientHeight);
-			dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+			cssWidth = Math.min(360, Math.max(1, el.clientWidth)); cssHeight = Math.min(360, Math.max(1, el.clientHeight));
+			dpr = Math.max(1, Math.min(1.25, window.devicePixelRatio || 1));
 			canvas.width = Math.round(cssWidth * dpr); canvas.height = Math.round(cssHeight * dpr);
 			canvas.style.width = cssWidth + 'px'; canvas.style.height = cssHeight + 'px';
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -146,7 +144,7 @@
 
 		function fallback() {
 			particles = [];
-			var n = Math.min(320, Math.round(cssWidth / 3));
+			var n = Math.min(120, Math.round(cssWidth / 3));
 			var r = Math.min(cssWidth, cssHeight) * 0.13;
 			for (var k = 0; k < n; k++) {
 				var ang = (k / n) * Math.PI * 2;
@@ -161,7 +159,7 @@
 				var data = tctx.getImageData(0, 0, 90, 90).data;
 				var scale = Math.min(cssWidth, cssHeight) * .0032;
 				particles = [];
-				for (var y = 0; y < 90; y += 4) for (var x = 0; x < 90; x += 4) {
+				for (var y = 0; y < 90; y += 7) for (var x = 0; x < 90; x += 7) {
 					var i = (y * 90 + x) * 4; if (data[i + 3] < 130) continue;
 					particles.push({ x: Math.random() * cssWidth, y: Math.random() * cssHeight, tx: cssWidth / 2 + (x - 45) * scale, ty: cssHeight / 2 + (y - 45) * scale, vx: 0, vy: 0, c: 'rgba(' + data[i] + ',' + data[i+1] + ',' + data[i+2] + ',.95)' });
 				}
@@ -169,8 +167,13 @@
 			} catch (e) { fallback(); }
 		}
 
-		function loop() {
+		var firstFrame = 0, lastFrame = 0;
+		function loop(stamp) {
 			if (ended) return;
+			if (!firstFrame) firstFrame = stamp;
+			if (stamp - firstFrame > 820) { el.classList.add('jip-particles-ready'); return; }
+			if (stamp - lastFrame < 30) { rafId = requestAnimationFrame(loop); return; }
+			lastFrame = stamp;
 			ctx.clearRect(0, 0, cssWidth, cssHeight);
 			for (var i = 0; i < particles.length; i++) {
 				var p = particles[i]; var dx = p.tx - p.x, dy = p.ty - p.y;
@@ -179,7 +182,7 @@
 			}
 			rafId = requestAnimationFrame(loop);
 		}
-		if (sourceImg.complete) buildFromImage(); else { sourceImg.addEventListener('load', buildFromImage, { once: true }); sourceImg.addEventListener('error', fallback, { once: true }); }
+		if (sourceImg.complete && sourceImg.naturalWidth > 0) buildFromImage(); else if (sourceImg.complete) fallback(); else { sourceImg.addEventListener('load', buildFromImage, { once: true }); sourceImg.addEventListener('error', fallback, { once: true }); }
 		rafId = requestAnimationFrame(loop);
 	}
 
@@ -199,22 +202,23 @@
 			if (!img || img.closest('#jip-preloader')) return false;
 			var rect = img.getBoundingClientRect();
 			return rect.bottom > 0 && rect.top < (window.innerHeight || 800) * 1.25 && rect.width > 24 && rect.height > 24;
-		}).slice(0, 6);
+		}).slice(0, 3);
 		images.forEach(function (img) {
-			if (img.complete && img.naturalWidth > 0) return;
+			// Broken cached images are already settled, not a reason to hold the page.
+			if (img.complete) return;
 			pending += 1;
 			var settled = false;
 			function settle() { if (settled) return; settled = true; oneDone(); }
 			img.addEventListener('load', settle, { once: true });
 			img.addEventListener('error', settle, { once: true });
-			if (img.decode) img.decode().then(settle).catch(function () {});
+			if (img.decode) img.decode().then(settle, settle);
 		});
 		if (document.fonts && document.fonts.ready) {
 			pending += 1;
 			document.fonts.ready.then(oneDone).catch(oneDone);
 		}
-		if (!pending) finish();
-		criticalTimer = setTimeout(finish, Math.min(900, Math.max(180, MAX - (Date.now() - startTime) - 80)));
+		if (!pending) { finish(); return; }
+		criticalTimer = setTimeout(finish, Math.min(400, Math.max(120, MAX - (Date.now() - startTime) - 80)));
 	}
 
 	function finishByStrategy() {
@@ -241,7 +245,10 @@
 		}
 		if (!getEl()) { document.documentElement.classList.remove('jip-loading'); return; }
 		bindSkip(); animateTitle(); startProgress();
-		if (EFFECT === 'particles') initParticlesEffect();
+		if (EFFECT === 'particles') {
+			if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) getEl().classList.add('jip-particles-ready');
+			else initParticlesEffect();
+		}
 		var remainingMax = Math.max(0, MAX - (Date.now() - startTime));
 		maxTimer = setTimeout(function () { if (!ended) endPreloader(); }, remainingMax);
 		finishByStrategy();

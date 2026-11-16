@@ -55,7 +55,8 @@ class JRMU_Diagnostics {
 		if ( ! self::is_url_host_allowed_for_check( $url ) ) {
 			return new WP_Error( 'host_not_allowed', '为安全起见，只允许检测当前站点、额外源站域名或多域名白名单中的 URL。' );
 		}
-		$response = wp_safe_remote_get(
+		// HEAD avoids downloading images/videos just to inspect cache headers.
+		$response = wp_safe_remote_head(
 			$url,
 			array(
 				'timeout'     => 10,
@@ -66,6 +67,13 @@ class JRMU_Diagnostics {
 		);
 		if ( is_wp_error( $response ) ) {
 			return $response;
+		}
+		// Some origins disallow HEAD. Use a byte-limited GET as the fallback.
+		if ( in_array( (int) wp_remote_retrieve_response_code( $response ), array( 405, 501 ), true ) ) {
+			$response = wp_safe_remote_get( $url, array( 'timeout' => 10, 'redirection' => 3, 'limit_response_size' => 1024, 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 		$headers = wp_remote_retrieve_headers( $response );
 		$out     = array();
@@ -91,10 +99,7 @@ class JRMU_Diagnostics {
 			JRMU_Domain_Adapter::instance()->get_allowed_domain_hosts(),
 			JRMU_Domain_Adapter::instance()->get_rewrite_source_hosts()
 		);
-		$current = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( preg_replace( '/:\d+$/', '', sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) ) ) : '';
-		if ( $current ) {
-			$allowed[] = $current;
-		}
+		// HTTP_HOST alone is user-controlled and must not extend this allow-list.
 		$allowed = array_unique( array_filter( $allowed ) );
 		return in_array( $host, $allowed, true );
 	}

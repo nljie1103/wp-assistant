@@ -160,7 +160,7 @@ class JRMU_Converter {
 		}
 
 		$parts = wp_parse_url( $url );
-		if ( empty( $parts['host'] ) || empty( $parts['path'] ) ) {
+		if ( empty( $parts['host'] ) || empty( $parts['path'] ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
 			return $url;
 		}
 
@@ -205,7 +205,9 @@ class JRMU_Converter {
 			return $content;
 		}
 
-		$pattern = '#(^|["\'\s\(,=])(/(?:' . implode( '|', $paths ) . ')[^"\'\s<>)]+)#i';
+		// The restored path must start with a directory separator. Otherwise
+		// /wp-content/uploads-archive is accidentally treated as uploads.
+		$pattern = '#(^|["\'\s\(,=])(/(?:' . implode( '|', $paths ) . ')/[^"\'\s<>)]+)#i';
 		$restored = preg_replace_callback(
 			$pattern,
 			function ( $matches ) use ( $base_url ) {
@@ -372,7 +374,8 @@ class JRMU_Converter {
 	public function is_allowed_path( $path ) {
 		$path = '/' . ltrim( (string) $path, '/' );
 		foreach ( $this->get_allowed_paths() as $prefix ) {
-			if ( 0 === strpos( $path, $prefix ) ) {
+			// Match a complete directory boundary, never uploads-backup or plugins-old.
+			if ( $path === $prefix || 0 === strpos( $path, $prefix . '/' ) ) {
 				return true;
 			}
 		}

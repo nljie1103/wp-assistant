@@ -23,24 +23,34 @@ class JIP_Settings {
 	 */
 	public static function get_effects() {
 		return array(
+			'editorial' => array(
+				'label' => '杂志级排版揭幕 · 推荐',
+				'description' => '以真实网页内容就绪为结束信号；品牌字标、细线和分栏排版依次进入，画面一气呵成退出。',
+				'preview' => 'assets/previews/preview-editorial.svg',
+			),
+			'aperture' => array(
+				'label' => '舞台帷幕 · 轻量切幕',
+				'description' => '两块纯色幕布配合数字排版与短促位移，无全屏模糊或逐帧粒子重绘。',
+				'preview' => 'assets/previews/preview-aperture.svg',
+			),
 			'logo3d'    => array(
 				'label'       => '立体 Logo 开场 + 动态蒙版 + 文字弹入 + 荧光扫描',
 				'description' => '核心效果，最高优先级。3D 立体边框 + 渐变旋转 + 蒙版 Logo + 文字弹入 + 荧光扫描线。',
 				'preview'     => 'assets/previews/preview-logo3d.svg',
 			),
 			'particles' => array(
-				'label'       => '粒子汇聚 Logo 入场',
-				'description' => '粒子从四面八方汇聚形成 Logo 形状。',
+				'label'       => '轻量粒子汇聚 · 限时显示',
+				'description' => '小画布有限粒子进行短暂汇聚，约 0.8 秒后显露真实 Logo，不持续重绘。',
 				'preview'     => 'assets/previews/preview-particles.svg',
 			),
 			'gradient'  => array(
-				'label'       => '渐变色彩穿梭开屏',
-				'description' => '多彩渐变光带高速穿梭，最终汇聚为站点名。',
+				'label'       => '渐变层次 · 字体渐入',
+				'description' => '柔和色彩背景和网站名称的独立渐入效果；不代表真实进度。',
 				'preview'     => 'assets/previews/preview-gradient.svg',
 			),
 			'lines'     => array(
-				'label'       => '简约线条勾勒 Logo',
-				'description' => 'SVG 描边线条逐步绘制出 Logo。',
+				'label'       => '几何线条绘制',
+				'description' => '绘制抽象几何 SVG 图形，并非真实描绘上传的 Logo。',
 				'preview'     => 'assets/previews/preview-lines.svg',
 			),
 			'glass'     => array(
@@ -84,15 +94,15 @@ class JIP_Settings {
 	public static function get_defaults() {
 		return array(
 			'enabled'          => 0,
-			'min_duration'     => 0.45,
-			'max_duration'     => 3,
+			'min_duration'     => 0.12,
+			'max_duration'     => 2,
 			'completion'       => 'critical',
 			'mobile_enable'    => 1,
 			'reduce_motion'    => 1,
 			'skip_save_data'   => 1,
 			'show_progress'    => 1,
-			'status_text'      => '正在准备页面…',
-			'effect'           => 'logo3d',
+			'status_text'      => '页面准备中',
+			'effect'           => 'editorial',
 			'logo_id'          => 0,
 			'logo_url'         => '',
 			'logo_size'        => 80,

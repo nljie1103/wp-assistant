@@ -106,7 +106,7 @@ try {
 } finally {
     $prop->setValue( $preloader_frontend, $previous_options );
 }
-echo "10 种开屏选择全部能真实生成对应 HTML，极光/极简 DOM 正确：通过\n";
+echo "全部开屏选择均能真实生成对应 HTML，极光/极简 DOM 正确：通过\n";
 
 // The page-effects visitor payload excludes any inactive effect settings.
 $page_feature = JLWA_Page_Effects_Feature::instance();

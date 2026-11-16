@@ -179,12 +179,14 @@ class JRMU_Scanner {
 		$post_ids    = array_map( 'absint', (array) $post_ids );
 		$post_ids    = array_filter( array_unique( $post_ids ) );
 		$action      = sanitize_key( $action );
-		$target_base = $target_base ? untrailingslashit( esc_url_raw( $target_base ) ) : home_url();
+		// Never turn an invalid/empty destination into the homepage silently.
+		// Permanent restore/target operations require an explicit valid origin.
+		$target_base = JRMU_Settings::sanitize_rewrite_target( $target_base );
 
 		if ( ! self::is_valid_action( $action ) ) {
 			return array( 'requested' => count( $post_ids ), 'updated' => 0, 'skipped' => count( $post_ids ), 'errors' => array( '无效操作。' ) );
 		}
-		if ( in_array( $action, array( self::ACTION_RESTORE_MEDIA_FULL, self::ACTION_INTERNAL_TO_TARGET ), true ) && ! preg_match( '#^https?://#i', $target_base ) ) {
+		if ( in_array( $action, array( self::ACTION_RESTORE_MEDIA_FULL, self::ACTION_INTERNAL_TO_TARGET ), true ) && '' === $target_base ) {
 			return array( 'requested' => count( $post_ids ), 'updated' => 0, 'skipped' => count( $post_ids ), 'errors' => array( '目标域名无效。' ) );
 		}
 
