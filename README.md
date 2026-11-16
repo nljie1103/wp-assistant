@@ -62,43 +62,56 @@
 
 <a id="screenshots"></a>
 
-## 🖼️ 实际界面与开屏
+## 🖼️ 界面与视觉预览
 
-下列图片来自本项目独立 WordPress 测试站点的**真实浏览器截图**，不是真实子比交易页面，也不代表所有主题视觉完全一致。开屏画面使用测试站点名称与插件内置示例 Logo。
+以下展示图来自独立 WordPress 测试站点。**点击卡片标题展开图片，再次点击即可收起**；图片仅供界面参考，不代表所有主题的显示结果。
 
-### 后台：状态与配置入口
+<details>
+<summary><strong>🧭 后台 · 状态与配置入口</strong></summary>
 
-![九流 WP 助手后台总览实测截图](docs/images/admin-dashboard.png)
+![九流 WP 助手后台总览](docs/images/admin-dashboard.png)
 
-### 页面美化：18 项紧凑等高卡片（v2.5.10 浏览器实测）
+</details>
 
-![页面美化统一收起参数的等高特效卡片](docs/images/effects-compact.png)
+<details>
+<summary><strong>🎛️ 页面美化 · 紧凑卡片管理</strong></summary>
 
-每个特效默认只显示开关和摘要；筛选后可按需展开详细配置。点击收起不会重置设置。
+![页面美化特效管理卡片](docs/images/effects-compact.png)
 
-### 底部柔和波浪与纸艺灯笼（v2.5.10 浏览器实测）
+每项特效只展示开关与概要，点击「配置」才展开参数；收起不会重置设置。
 
-![柔和页脚波浪与轻摆纸艺灯笼的实际 WordPress 页面](docs/images/effects-wave-lantern.png)
+</details>
 
-图中波浪位于网站页脚之前、不是固定悬浮遮挡按钮。截图是在**独立测试站点临时开启效果**时拍摄，不代表会自动修改用户当前已保存的开关。
+<details>
+<summary><strong>🏮 页面特效 · 柔和波浪与纸艺灯笼</strong></summary>
 
-### 新版排版揭幕 / 舞台帷幕（v2.5.9 真实浏览器截图）
+![页脚柔和波浪与纸艺灯笼](docs/images/effects-wave-lantern.png)
 
-以下画面来自测试站点真实 Chrome 页面，为方便拍摄展示曾将测试站点最小展示时长临时设置为 4 秒；**正式版本默认最小展示 0.12 秒，不会等待 4 秒**。
+波浪位于页脚之前。演示效果是在测试站点临时启用的，不会自动改变你的网站配置。
 
-![杂志级排版揭幕真实浏览器截图](docs/images/preloader-editorial.png)
+</details>
 
-![舞台帷幕真实浏览器截图](docs/images/preloader-aperture.png)
+<details>
+<summary><strong>🎬 开屏 · 排版揭幕与舞台帷幕</strong></summary>
 
-在“预加载 → 效果选择”中每个选项都有 **▶ 实时预览**，点击后将打开带演示标记的当前网站真实首页，并且不保存或更改已有的开屏配置。
+![排版揭幕开屏](docs/images/preloader-editorial.png)
 
-### 极光光幕 / 极简聚焦
+![舞台帷幕开屏](docs/images/preloader-aperture.png)
 
-![极光光幕开屏实测截图](docs/images/preloader-aurora.png)
+为展示动画，截图时曾临时延长测试站点的展示时间；正式使用按你的后台设置和页面就绪状态结束。各效果还可在后台点击「实时预览」，无需先保存。
 
-![极简聚焦开屏实测截图](docs/images/preloader-minimal.png)
+</details>
 
-开屏的动画持续时间、结束策略、Logo 与标题均在后台设置。两个新样式默认**不会擅自开启**；已有网站的原效果和已保存参数保持不变。
+<details>
+<summary><strong>✨ 开屏 · 极光光幕与极简聚焦</strong></summary>
+
+![极光光幕开屏](docs/images/preloader-aurora.png)
+
+![极简聚焦开屏](docs/images/preloader-minimal.png)
+
+Logo、结束策略与展示时间可在后台调整；更新插件不会自动切换原有开屏效果。
+
+</details>
 
 ---
 
