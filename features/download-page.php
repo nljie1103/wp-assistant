@@ -3,6 +3,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class JLWA_Download_Page_Feature {
+// Internal option/feature compatibility version, not JLWA public release.
     const VERSION = '1.1.0';
     const OPTION_KEY = 'jlwa_download_page_options';
     private static $instance = null;

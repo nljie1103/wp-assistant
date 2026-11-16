@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 	final class JLWA_Anti_Debug_Feature {
+// Internal option/feature compatibility version, not JLWA public release.
 		const VERSION     = '1.2.0';
 		const OPTION_NAME = 'jlwa_anti_debug_options';
 		const LOG_OPTION  = 'jlwa_anti_debug_logs';

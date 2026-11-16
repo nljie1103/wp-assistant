@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Legacy internal module/schema identifier, NOT the public plugin release.
 define( 'WPAIAS_VERSION', '1.1.3' );
 define( 'WPAIAS_PLUGIN_FILE', __FILE__ );
 define( 'WPAIAS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

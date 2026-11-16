@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.11
+Stable tag: 2.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.0 =
+* 统一插件版本号进位规范；版本从 2.5.11 规范化到 2.6.0，今后 2.6.9 进位到 2.7.0。
+* 所有功能域使用主插件版本展示；内置模块旧 schema 迁移标记不改动，避免原配置误迁移。
+* AI 摘要前台资源、媒体与链接后台资源统一使用主版本作为缓存标识，防止升级后加载旧 CSS/JS。
+* 发布流程加入版本号合法性、跨文件同步和 Git 历史进位检查，以及自动化测试。
+
 
 = 2.5.11 =
 * 修复特效管理按钮点击无效：`admin.js` 不再使用旧功能模块的固定 1.8.0 缓存版本，改用统一插件版本，防止新版 UI 加载旧脚本。

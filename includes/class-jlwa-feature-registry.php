@@ -29,7 +29,7 @@ class JLWA_Feature_Registry {
 				'short_label' => '页面美化',
 				'icon'        => 'dashicons-art',
 				'slug'        => 'jlwa-page-effects',
-				'version'     => '1.8.0',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Page_Effects_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/page-effects/bootstrap.php',
 				'description' => '樱花、雪花、落叶、气泡、页脚波浪、光标造型、鼠标拖尾、点击爆炸、内容保护与全站视觉特效。',
@@ -45,7 +45,7 @@ class JLWA_Feature_Registry {
 				'short_label' => '反调试',
 				'icon'        => 'dashicons-shield-alt',
 				'slug'        => 'jlwa-anti-debug',
-				'version'     => '1.1.0',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Anti_Debug_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/anti-debug/bootstrap.php',
 				'description' => '多探测器评分、四级可组合防御链、可选持续 debugger/刷新/关闭循环与匿名日志。',
@@ -57,7 +57,7 @@ class JLWA_Feature_Registry {
 				'short_label' => 'AI 摘要',
 				'icon'        => 'dashicons-welcome-write-blog',
 				'slug'        => 'wpaias-settings',
-				'version'     => '1.1.2',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_AI_Summary_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/ai-article-summary/bootstrap.php',
 				'description' => '多服务商模型、安全摘要生成、文章元数据缓存、装饰图标、动画与额度保护。',
@@ -72,7 +72,7 @@ class JLWA_Feature_Registry {
 				'short_label' => '预加载',
 				'icon'        => 'dashicons-image-rotate',
 				'slug'        => 'jlwa-immersive-preloader',
-				'version'     => '1.1.0',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Immersive_Preloader_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/immersive-preloader/bootstrap.php',
 				'description' => '性能优先的沉浸开屏、自定义 Logo、真实完成策略、节流跳过与完整动画清理。',
@@ -87,7 +87,7 @@ class JLWA_Feature_Registry {
 				'short_label' => '下载页美化',
 				'icon'        => 'dashicons-download',
 				'slug'        => 'jlwa-download-page',
-				'version'     => '1.1.0',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Download_Page_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/download-page.php',
 				'description' => '三套完整子比资源中心模板、真实账户与额度信息、五种封面策略及横竖图自适应。',
@@ -100,7 +100,7 @@ class JLWA_Feature_Registry {
 				'short_label' => '媒体与链接',
 				'icon'        => 'dashicons-admin-links',
 				'slug'        => 'jlwa-relative-media-urls',
-				'version'     => '4.2.0',
+				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Media_Urls_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/relative-media-urls/bootstrap.php',
 				'description' => '相对媒体地址、安全域名白名单、明确源站、反向代理诊断、扫描预览与修复。',
@@ -174,28 +174,15 @@ class JLWA_Feature_Registry {
 		return '';
 	}
 
-	/** @param string $key Feature key. @return string */
+	/**
+	 * One shipped version for every feature: internal schema/migration constants
+	 * are deliberately independent and must never be presented as release tags.
+	 *
+	 * @param string $key Feature key.
+	 * @return string
+	 */
 	public static function version( $key ) {
-		$feature = self::get( $key );
-		if ( ! $feature ) {
-			return '-';
-		}
-		switch ( $key ) {
-			case 'page-effects':
-				return class_exists( 'JLWA_Page_Effects_Feature', false ) ? (string) JLWA_Page_Effects_Feature::VERSION : $feature['version'];
-			case 'anti-debug':
-				return class_exists( 'JLWA_Anti_Debug_Feature', false ) ? (string) JLWA_Anti_Debug_Feature::VERSION : $feature['version'];
-			case 'ai-summary':
-				return defined( 'WPAIAS_VERSION' ) ? (string) WPAIAS_VERSION : $feature['version'];
-			case 'preloader':
-				return defined( 'JIP_VERSION' ) ? (string) JIP_VERSION : $feature['version'];
-			case 'download-page':
-				return class_exists( 'JLWA_Download_Page_Feature', false ) ? (string) JLWA_Download_Page_Feature::VERSION : $feature['version'];
-			case 'media-urls':
-				return defined( 'JRMU_VERSION' ) ? (string) JRMU_VERSION : $feature['version'];
-			default:
-				return $feature['version'];
-		}
+		return self::get( $key ) ? JLWA_VERSION : '-';
 	}
 
 	/** @param string $key Feature key. */

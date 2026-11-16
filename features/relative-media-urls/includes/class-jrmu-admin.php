@@ -59,8 +59,8 @@ class JRMU_Admin {
 		if ( ! in_array( $hook, $allowed_hooks, true ) ) {
 			return;
 		}
-		wp_enqueue_style( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/css/admin.css', array(), JRMU_VERSION );
-		wp_enqueue_script( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/js/admin.js', array(), JRMU_VERSION, true );
+		wp_enqueue_style( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/css/admin.css', array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JRMU_VERSION );
+		wp_enqueue_script( 'jrmu-admin', JRMU_PLUGIN_URL . 'assets/js/admin.js', array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : JRMU_VERSION, true );
 	}
 
 	/** 渲染页面。 */

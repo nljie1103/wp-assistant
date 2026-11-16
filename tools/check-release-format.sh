@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Require versioned Chinese commit subjects and a unique, descriptive Chinese release title.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 if [ "$#" -ne 3 ]; then
   echo '用法：check-release-format.sh 版本号 Commit主题 Release主题' >&2
   exit 2
@@ -8,8 +9,10 @@ fi
 version="$1"
 subject="$2"
 topic="$3"
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo '版本号必须采用 X.Y.Z。' >&2; exit 1
+# Reject misleading 2.5.10 / 2.5.11: every segment after the major
+# has only digits 0–9; rollover uses 2.6.0 instead.
+if ! python3 tools/version-policy.py validate "$version" >/dev/null; then
+  echo '版本号必须采用 X.Y.Z，每段满十进一，例如 2.5.9 → 2.6.0。' >&2; exit 1
 fi
 if [[ ! "$subject" =~ ^v${version}：(修复|更新|优化|完善|新增).+ ]]; then
   printf 'Commit 标题格式错误：%s\n要求：v%s：修复/更新内容\n' "$subject" "$version" >&2

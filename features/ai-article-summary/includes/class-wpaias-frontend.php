@@ -375,14 +375,14 @@ class WPAIAS_Frontend {
 			'wpaias-frontend',
 			WPAIAS_PLUGIN_URL . 'assets/css/frontend.css',
 			array(),
-			WPAIAS_VERSION
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : WPAIAS_VERSION
 		);
 
 		wp_enqueue_script(
 			'wpaias-frontend',
 			WPAIAS_PLUGIN_URL . 'assets/js/frontend.js',
 			array(),
-			WPAIAS_VERSION,
+			defined( 'JLWA_VERSION' ) ? JLWA_VERSION : WPAIAS_VERSION,
 			true
 		);
 

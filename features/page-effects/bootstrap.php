@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
     final class JLWA_Page_Effects_Feature {
+// Internal option/feature compatibility version, not JLWA public release.
         const VERSION     = '1.8.0';
         const OPTION_NAME = 'xjpe_options';
         const MENU_SLUG   = 'jlwa-page-effects';

@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! class_exists( 'JLWA_Mouse_Interactions' ) ) {
 	final class JLWA_Mouse_Interactions {
 		const OPTION_NAME = 'jlwa_mouse_interactions';
+// Internal option/feature compatibility version, not JLWA public release.
 		const VERSION     = '1.0.0';
 
 		/** @var JLWA_Mouse_Interactions|null */
