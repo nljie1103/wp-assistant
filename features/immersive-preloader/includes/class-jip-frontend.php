@@ -104,10 +104,23 @@ class JIP_Frontend {
 		if ( empty( $this->options ) ) {
 			$this->options = JIP_Settings::get_options();
 		}
-		if ( empty( $this->options['enabled'] ) ) {
+		$force_preview = $this->is_force_preview_request();
+		if ( $force_preview ) {
+			// Authenticated, nonce-checked, request-local live preview. Do not
+			// overwrite any saved effect or the production loading strategy.
+			$preview_effect = isset( $_GET['jip_effect_preview'] ) ? sanitize_key( wp_unslash( $_GET['jip_effect_preview'] ) ) : '';
+			if ( $preview_effect && isset( JIP_Settings::get_effects()[ $preview_effect ] ) ) {
+				$this->options['effect'] = $preview_effect;
+			}
+			$this->options['min_duration'] = 2.3;
+			$this->options['max_duration'] = 2.8;
+			$this->options['completion'] = 'dom';
+			$this->options['status_text'] = '演示模式 · 仅为展示动效';
+		}
+		if ( empty( $this->options['enabled'] ) && ! $force_preview ) {
 			return false;
 		}
-		if ( ! $this->is_force_preview_request() && ! empty( $this->options['home_only'] ) && ! ( is_front_page() || is_home() ) ) {
+		if ( ! $force_preview && ! empty( $this->options['home_only'] ) && ! ( is_front_page() || is_home() ) ) {
 			return false;
 		}
 		return true;
@@ -134,7 +147,20 @@ class JIP_Frontend {
 	data-skip="<?php echo (int) $opts['allow_skip']; ?>"
 	data-show-title="<?php echo (int) $opts['show_site_title']; ?>"
 	data-logo-size="<?php echo (int) $opts['logo_size']; ?>">
-	<?php if ( 'logo3d' === $effect ) : ?>
+	<?php if ( 'editorial' === $effect ) : ?>
+		<div class="jip-editorial-shell" aria-hidden="true"><span class="jip-editorial-rule"></span><span class="jip-editorial-number">01 / 01</span></div>
+		<div class="jip-stage jip-editorial-stage">
+			<div class="jip-editorial-eyebrow">JIULIU&nbsp; / &nbsp;DIGITAL EXPERIENCE</div>
+			<div class="jip-editorial-wordmark"><?php echo esc_html( ! empty( $opts['show_site_title'] ) && $site_name ? $site_name : 'WELCOME' ); ?></div>
+			<div class="jip-editorial-caption">DESIGNED TO BEGIN</div>
+		</div>
+	<?php elseif ( 'aperture' === $effect ) : ?>
+		<div class="jip-aperture-half jip-aperture-left" aria-hidden="true"></div><div class="jip-aperture-half jip-aperture-right" aria-hidden="true"></div>
+		<div class="jip-stage jip-aperture-stage"><div class="jip-aperture-index">• &nbsp; ENTER THE SITE &nbsp; •</div>
+			<?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-aperture-wordmark"><?php echo esc_html( $site_name ); ?></div><?php endif; ?>
+			<div class="jip-aperture-detail">EXPLORE&nbsp; — &nbsp;CREATE&nbsp; — &nbsp;SHARE</div>
+		</div>
+	<?php elseif ( 'logo3d' === $effect ) : ?>
 		<div class="jip-stage">
 			<div class="jip-frame" aria-hidden="true">
 				<div class="jip-frame-border"></div>
@@ -201,7 +227,7 @@ class JIP_Frontend {
 	<?php elseif ( 'ink' === $effect ) : ?>
 		<div class="jip-ink-cloud" aria-hidden="true"><i></i><i></i><i></i></div><div class="jip-stage"><img class="jip-simple-logo" src="<?php echo esc_url( $logo_url ); ?>" alt=""><?php if ( ! empty( $opts['show_site_title'] ) && $site_name ) : ?><div class="jip-site-title"><?php echo esc_html( $site_name ); ?></div><?php endif; ?></div>
 	<?php endif; ?>
-	<?php if ( ! empty( $opts['show_progress'] ) ) : ?><div class="jip-progress" role="progressbar" aria-label="页面准备进度"><span></span><em><?php echo esc_html( $opts['status_text'] ); ?></em></div><?php endif; ?>
+	<?php if ( ! empty( $opts['show_progress'] ) ) : ?><div class="jip-progress" role="status" aria-live="polite" aria-label="页面加载状态"><span aria-hidden="true"></span><em><?php echo esc_html( $opts['status_text'] ); ?></em></div><?php endif; ?>
 	<div class="jip-skip-tip"><?php echo ! empty( $opts['allow_skip'] ) ? '点击任意位置跳过' : '&nbsp;'; ?></div>
 </div>
 		<?php
@@ -223,7 +249,7 @@ class JIP_Frontend {
 		if ( ! $this->should_display() ) {
 			return;
 		}
-		$bg          = 'minimal' === $this->options['effect'] ? '#fbfaf7' : ( 'aurora' === $this->options['effect'] ? '#060c1b' : $this->options['bg_color'] );
+		$bg          = 'editorial' === $this->options['effect'] ? '#f5f4ef' : ( 'aperture' === $this->options['effect'] ? '#101820' : ( 'minimal' === $this->options['effect'] ? '#fbfaf7' : ( 'aurora' === $this->options['effect'] ? '#060c1b' : $this->options['bg_color'] ) ) );
 		$html        = $this->get_preloader_html();
 		$once        = ! empty( $this->options['once_per_session'] ) ? 'true' : 'false';
 		$home_only   = ! empty( $this->options['home_only'] ) ? 'true' : 'false';
@@ -274,9 +300,8 @@ class JIP_Frontend {
 </script>
 <style id="jip-critical-css">
 /* 锁定 html/body 背景色，彻底消除白屏：从浏览器渲染第一帧就是预加载背景色 */
-html.jip-loading { background: <?php echo esc_attr( $bg ); ?> !important; overflow: hidden !important; }
-html.jip-loading body { overflow: hidden !important; }
-html.jip-fade-in, html.jip-fade-in body { overflow: auto !important; }
+html.jip-loading { background: <?php echo esc_attr( $bg ); ?> !important; }
+/* Do not toggle scrollbars: hiding scrollbars causes a layout shift on entry. */
 /* 正文始终在遮罩后正常解析和绘制，不再通过 visibility:hidden 制造虚假等待。 */
 #jip-preloader{position:fixed;inset:0;width:100%;height:100%;background:<?php echo esc_attr( $bg ); ?>;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity;transition:opacity .36s ease, transform .36s ease;}
 #jip-preloader.jip-hide{opacity:0;transform:translateY(-6px);pointer-events:none;}

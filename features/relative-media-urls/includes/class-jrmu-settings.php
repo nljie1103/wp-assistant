@@ -236,6 +236,26 @@ class JRMU_Settings {
 		return $scheme . '://' . $host . $port . $path;
 	}
 
+	/** A write target must be a site origin (optionally a configured subdirectory). */
+	public static function sanitize_rewrite_target( $raw ) {
+		$raw = trim( (string) $raw );
+		$parts = wp_parse_url( $raw );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) || ! in_array( strtolower( $parts['scheme'] ), array( 'http', 'https' ), true ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['query'] ) || isset( $parts['fragment'] ) ) {
+			return '';
+		}
+		$host = strtolower( $parts['host'] );
+		// No silent reinterpretation of malformed hosts/ports during a permanent rewrite.
+		if ( ! preg_match( '/^(?=.{1,253}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/', $host ) || false !== strpos( $host, '..' ) ) {
+			return '';
+		}
+		$port = isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '';
+		$path = isset( $parts['path'] ) ? $parts['path'] : '';
+		if ( false !== strpos( $path, '\\' ) || preg_match( '#(?:^|/)\.\.(?:/|$)#', $path ) ) {
+			return '';
+		}
+		return untrailingslashit( strtolower( $parts['scheme'] ) . '://' . $host . $port . $path );
+	}
+
 	/**
 	 * 获取当前请求 URL。
 	 *

@@ -178,14 +178,14 @@ class JIP_Admin {
 							<th scope="row"><label for="jip_min_duration">最小展示时长</label></th>
 							<td>
 								<input type="number" id="jip_min_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[min_duration]" value="<?php echo esc_attr( $options['min_duration'] ); ?>" min="0" step="0.1" class="small-text" /> 秒
-								<p class="description">即使页面加载完成，也至少让动画播放这么长时间。推荐值：0.4～0.8 秒。内容会在遮罩后方正常渲染，不再人为隐藏正文。</p>
+								<p class="description">即使页面加载完成，也至少让动画播放这么长时间。推荐值：0～0.15 秒，页面就绪即离开，不人为拖延。内容会在遮罩后方正常渲染，不再人为隐藏正文。</p>
 							</td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="jip_max_duration">最大等待时长</label></th>
 							<td>
 								<input type="number" id="jip_max_duration" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[max_duration]" value="<?php echo esc_attr( $options['max_duration'] ); ?>" min="0.1" step="0.1" class="small-text" /> 秒
-								<p class="description">超过这个时间页面还没加载完，自动结束预加载。推荐值：2～4 秒。超过后强制结束，避免开屏遮挡真实内容。</p>
+								<p class="description">超过这个时间页面还没加载完，自动结束预加载。推荐值：1.5～2 秒；极慢页面也应让用户尽快操作。超过后强制结束，避免开屏遮挡真实内容。</p>
 							</td>
 						</tr>
 
@@ -201,7 +201,7 @@ class JIP_Admin {
 				<!-- 2. 效果选择 -->
 				<div class="jip-card">
 					<h2 class="jip-card-title">效果选择</h2>
-					<p class="description">选择您喜欢的预加载效果。第一个为推荐核心效果。</p>
+					<p class="description">卡片内图片是<strong>静态示意</strong>，不是动画截图。点击每张卡的“实时预览”可在真实首页直接查看对应开屏，<strong>不用先保存设置</strong>；预览会明确标注演示模式并延长展示以便观察，生产站点仍按真实就绪状态结束。</p>
 					<div class="jip-effects-grid">
 						<?php foreach ( $effects as $key => $info ) : ?>
 							<label class="jip-effect-card <?php echo ( $options['effect'] === $key ) ? 'is-active' : ''; ?>" data-effect="<?php echo esc_attr( $key ); ?>">
@@ -211,11 +211,16 @@ class JIP_Admin {
 								</span>
 								<span class="jip-effect-label"><?php echo esc_html( $info['label'] ); ?></span>
 								<span class="jip-effect-desc"><?php echo esc_html( $info['description'] ); ?></span>
+								<button type="button" class="button button-secondary jip-preview-effect" data-preview-url="<?php echo esc_url( add_query_arg( 'jip_effect_preview', $key, $this->force_preview_url() ) ); ?>" aria-label="实时预览：<?php echo esc_attr( $info['label'] ); ?>">▶ 实时预览</button>
 							</label>
 						<?php endforeach; ?>
 					</div>
 				</div>
 				</div>
+			<div class="jip-live-preview-modal" id="jip-live-preview-modal" hidden role="dialog" aria-modal="true" aria-label="开屏动态预览">
+				<div class="jip-live-preview-head"><div><strong>开屏实时预览</strong><small>实际首页渲染 · 演示时长约 2.3 秒，正式使用按页面就绪结束</small></div><button type="button" class="button jip-live-preview-close" aria-label="关闭预览">关闭预览 ✕</button></div>
+				<iframe title="真实浏览器开屏动态预览" loading="lazy" data-preview-frame="1" referrerpolicy="same-origin"></iframe>
+			</div>
 
 				<div class="jip-tab-panel <?php echo 'logo' === $tab ? 'is-active' : ''; ?>">
 				<!-- 3. 自定义 Logo 设置（仅核心效果显示） -->
@@ -304,7 +309,7 @@ class JIP_Admin {
 						</tr>
 						<tr><th scope="row">移动端显示</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[mobile_enable]" value="1" <?php checked( 1, (int) $options['mobile_enable'] ); ?>> 手机上也显示；关闭后由浏览器端判断，兼容页面缓存</label></td></tr>
 						<tr><th scope="row">无障碍与省流量</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[reduce_motion]" value="1" <?php checked( 1, (int) $options['reduce_motion'] ); ?>> 系统要求减少动态效果时自动简化/跳过</label><br><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[skip_save_data]" value="1" <?php checked( 1, (int) $options['skip_save_data'] ); ?>> 浏览器开启省流量模式时跳过</label></td></tr>
-						<tr><th scope="row">进度提示</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[show_progress]" value="1" <?php checked( 1, (int) $options['show_progress'] ); ?>> 显示阶段式进度条（表示准备阶段，不伪装真实下载百分比）</label><p><input type="text" class="regular-text" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[status_text]" value="<?php echo esc_attr( $options['status_text'] ); ?>" placeholder="正在准备页面…"></p></td></tr>
+						<tr><th scope="row">进度提示</th><td><label><input type="checkbox" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[show_progress]" value="1" <?php checked( 1, (int) $options['show_progress'] ); ?>> 显示不确定进度提示（不显示虚假百分比，真实就绪后退出）</label><p><input type="text" class="regular-text" name="<?php echo esc_attr( JIP_OPTION_KEY ); ?>[status_text]" value="<?php echo esc_attr( $options['status_text'] ); ?>" placeholder="正在准备页面…"></p></td></tr>
 
 					</table>
 				</div>

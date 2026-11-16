@@ -43,6 +43,32 @@
 		$('input[name$="[effect]"]').on('change', syncEffect);
 		syncEffect();
 
+		// Only load one live preview iframe on demand. Static SVG thumbnails
+		// are illustrations, NOT proof of working frontend animations.
+		var $preview = $('#jip-live-preview-modal');
+		var $previewFrame = $preview.find('iframe');
+		var $returnFocus = null;
+		function closePreview() {
+			if (!$preview.length || $preview.prop('hidden')) return;
+			$preview.prop('hidden', true);
+			$previewFrame.removeAttr('src'); // stop playback, release page resources
+			$('body').removeClass('jip-preview-open');
+			if ($returnFocus) $returnFocus.trigger('focus');
+		}
+		$cards.on('click', '.jip-preview-effect', function (event) {
+			event.preventDefault(); event.stopPropagation();
+			var url = $(this).attr('data-preview-url');
+			if (!url || !$preview.length) return;
+			$returnFocus = $(this);
+			$previewFrame.attr('src', url);
+			$preview.prop('hidden', false);
+			$('body').addClass('jip-preview-open');
+			$preview.find('.jip-live-preview-close').trigger('focus');
+		});
+		$preview.on('click', '.jip-live-preview-close', closePreview);
+		$preview.on('click', function (event) { if (event.target === this) closePreview(); });
+		$(document).on('keydown', function (event) { if (event.key === 'Escape') closePreview(); });
+
 		// ----- 媒体上传器 -----
 		var frame;
 		$('#jip_upload_logo').on('click', function (e) {

@@ -247,7 +247,7 @@ class JRMU_Admin {
 		$post_type    = isset( $_GET['jrmu_post_type'] ) ? sanitize_key( wp_unslash( $_GET['jrmu_post_type'] ) ) : 'any';
 		$post_status  = isset( $_GET['jrmu_post_status'] ) ? sanitize_key( wp_unslash( $_GET['jrmu_post_status'] ) ) : 'publish';
 		$keyword      = isset( $_GET['jrmu_keyword'] ) ? sanitize_text_field( wp_unslash( $_GET['jrmu_keyword'] ) ) : '';
-		$target_base  = isset( $_GET['jrmu_target_base'] ) ? esc_url_raw( wp_unslash( $_GET['jrmu_target_base'] ) ) : home_url();
+		$target_base  = isset( $_GET['jrmu_target_base'] ) ? JRMU_Settings::sanitize_rewrite_target( wp_unslash( $_GET['jrmu_target_base'] ) ) : home_url();
 		$preview_action = isset( $_GET['jrmu_preview_action'] ) ? sanitize_key( wp_unslash( $_GET['jrmu_preview_action'] ) ) : JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
 		if ( ! JRMU_Scanner::is_valid_action( $preview_action ) ) {
 			$preview_action = JRMU_Scanner::ACTION_CONVERT_MEDIA_RELATIVE;
@@ -388,7 +388,7 @@ class JRMU_Admin {
 			wp_safe_redirect( admin_url( 'admin.php?page=' . JRMU_MENU_SLUG . '&tab=scanner&jrmu_notice=invalid_action' ) );
 			exit;
 		}
-		$target_base = isset( $_POST['target_base'] ) ? esc_url_raw( wp_unslash( $_POST['target_base'] ) ) : home_url();
+		$target_base = isset( $_POST['target_base'] ) ? JRMU_Settings::sanitize_rewrite_target( wp_unslash( $_POST['target_base'] ) ) : home_url();
 		$result      = JRMU_Scanner::instance()->apply_post_action( $post_ids, $action, $target_base );
 		$url         = add_query_arg( array( 'page' => JRMU_MENU_SLUG, 'tab' => 'scanner', 'jrmu_notice' => 'done', 'requested' => $result['requested'], 'updated' => $result['updated'], 'skipped' => isset( $result['skipped'] ) ? $result['skipped'] : 0 ), admin_url( 'admin.php' ) );
 		wp_safe_redirect( $url );
