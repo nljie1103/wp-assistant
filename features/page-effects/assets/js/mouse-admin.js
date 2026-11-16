@@ -38,8 +38,8 @@
       '<span class="xjpe-card-text"><strong>' + esc(title) + '</strong><small>' + esc(desc) + '</small></span>' +
       '<label class="xjpe-card-switch"><input type="checkbox" class="xjpe-toggle" aria-label="启用' + esc(title) + '" name="' + esc(fieldName(section, 'enabled')) + '" value="1"' + checked(enabled) + '>' +
       '<span class="xjpe-status">' + (enabled ? '已启用' : '未启用') + '</span></label></div>' +
-      '<div class="xjpe-card-footer"><span>交互增强</span><button type="button" class="button xjpe-config-trigger" aria-expanded="false" aria-controls="' + id + '">配置 <span aria-hidden="true">⌄</span></button></div>' +
-      '<div class="xjpe-card-body" id="' + id + '" hidden>' + body + '</div></article>';
+      '<details class="xjpe-config-details" name="xjpe-effect-config"><summary class="xjpe-card-footer" aria-controls="' + id + '"><span>交互增强</span><span class="button xjpe-config-label">配置 <span aria-hidden="true">⌄</span></span></summary>' +
+      '<div class="xjpe-card-body" id="' + id + '">' + body + '</div></details></article>';
   }
 
   function build() {

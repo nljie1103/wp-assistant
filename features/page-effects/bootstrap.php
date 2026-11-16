@@ -500,7 +500,8 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             }
 
             wp_enqueue_style( 'xjpe-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION );
-            wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
+            // Cache must follow the shipped plugin release, not the frozen 1.8.0 module version.
+            wp_enqueue_script( 'xjpe-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION, true );
         }
 
         private function protection_options() {
@@ -656,7 +657,7 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             wp_enqueue_style( 'xjpe-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION );
 
             $in_footer = isset( $options['compat']['load_location'] ) && 'footer' === $options['compat']['load_location'];
-            wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, $in_footer );
+            wp_enqueue_script( 'xjpe-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), defined( 'JLWA_VERSION' ) ? JLWA_VERSION : self::VERSION, $in_footer );
             wp_add_inline_script( 'xjpe-frontend', 'window.XJPE_CONFIG=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
             if ( ! empty( $options['global']['custom_js'] ) ) {
                 wp_add_inline_script( 'xjpe-frontend', $this->custom_js_wrapper( $options['global']['custom_js'] ), 'after' );
@@ -944,10 +945,12 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                                             <span class="xjpe-status"><?php echo ! empty( $effect['enabled'] ) ? '已启用' : '未启用'; ?></span>
                                         </label>
                                     </div>
-                                    <div class="xjpe-card-footer"><span><?php echo esc_html( $def['group'] ); ?></span><button type="button" class="button xjpe-config-trigger" aria-expanded="false" aria-controls="<?php echo esc_attr( $body_id ); ?>">配置 <span aria-hidden="true">⌄</span></button></div>
-                                    <div class="xjpe-card-body" id="<?php echo esc_attr( $body_id ); ?>" hidden>
-                                        <?php $this->render_effect_fields( $key, $effect ); ?>
-                                    </div>
+                                    <details class="xjpe-config-details" name="xjpe-effect-config">
+                                        <summary class="xjpe-card-footer" aria-controls="<?php echo esc_attr( $body_id ); ?>"><span><?php echo esc_html( $def['group'] ); ?></span><span class="button xjpe-config-label">配置 <span aria-hidden="true">⌄</span></span></summary>
+                                        <div class="xjpe-card-body" id="<?php echo esc_attr( $body_id ); ?>">
+                                            <?php $this->render_effect_fields( $key, $effect ); ?>
+                                        </div>
+                                    </details>
                                 </article>
                             <?php endforeach; ?>
                         </section>

@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.10
+Stable tag: 2.5.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.11 =
+* 修复特效管理按钮点击无效：`admin.js` 不再使用旧功能模块的固定 1.8.0 缓存版本，改用统一插件版本，防止新版 UI 加载旧脚本。
+* 配置项改为浏览器原生 HTML details/summary 折叠，不依赖 JS 才能展开；仍支持同一时间仅展开一个配置，原有字段与设置均保留。
+* 修复动态鼠标特效脚本的加载顺序、旧光标被替换后错误计入统计的问题；实际 18 项与显示数量保持一致。
+* 增加全部筛选分组、已启用条件、动态鼠标卡片和折叠配置的自动化测试与隔离 WordPress 回归。
+
 
 = 2.5.10 =
 * 重构页面美化管理：紧凑等高卡片、按需展开参数、按分组或已启用筛选，鼠标交互三项也纳入统一管理，保留既有设置。

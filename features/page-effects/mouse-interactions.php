@@ -213,7 +213,8 @@ if ( ! class_exists( 'JLWA_Mouse_Interactions' ) ) {
 				return;
 			}
 			wp_enqueue_style( 'jlwa-mouse-admin', JLWA_PLUGIN_URL . 'features/page-effects/assets/css/mouse-admin.css', array(), JLWA_VERSION );
-			wp_enqueue_script( 'jlwa-mouse-admin', JLWA_PLUGIN_URL . 'features/page-effects/assets/js/mouse-admin.js', array(), JLWA_VERSION, true );
+			// Load the card controller first; dynamic mouse cards must not race its listeners.
+			wp_enqueue_script( 'jlwa-mouse-admin', JLWA_PLUGIN_URL . 'features/page-effects/assets/js/mouse-admin.js', array( 'xjpe-admin' ), JLWA_VERSION, true );
 			wp_localize_script(
 				'jlwa-mouse-admin',
 				'JLWA_MOUSE_ADMIN',

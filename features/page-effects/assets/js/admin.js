@@ -16,14 +16,15 @@
     var counter = document.querySelector('.xjpe-effect-count');
     function closeCard(card) {
       if (!card) return;
+      var details = card.querySelector('.xjpe-config-details');
+      if (details) details.open = false;
       card.classList.remove('is-expanded');
-      var body = card.querySelector('.xjpe-card-body');
-      var button = card.querySelector('.xjpe-config-trigger');
-      if (body) body.hidden = true;
-      if (button) button.setAttribute('aria-expanded', 'false');
       if (currentOpen === card) currentOpen = null;
     }
     function applyFilter() {
+      // The mouse extension replaces the legacy cursor card. Do not keep a
+      // detached card in the totals, filters or batch-toggle state.
+      cards = cards.filter(function (card) { return card.isConnected !== false; });
       var visible = 0;
       var enabled = 0;
       cards.forEach(function (card) {
@@ -42,7 +43,7 @@
       cards.push(card);
       var cb = card.querySelector('.xjpe-toggle');
       var st = card.querySelector('.xjpe-status');
-      var trigger = card.querySelector('.xjpe-config-trigger');
+      var details = card.querySelector('.xjpe-config-details');
       if (!cb) return;
       function sync() {
         card.classList.toggle('is-enabled', cb.checked);
@@ -50,16 +51,14 @@
         applyFilter();
       }
       cb.addEventListener('change', sync);
-      if (trigger) trigger.addEventListener('click', function () {
-        var expanding = currentOpen !== card;
-        closeCard(currentOpen);
-        if (expanding) {
-          var body = card.querySelector('.xjpe-card-body');
-          if (body) body.hidden = false;
-          trigger.setAttribute('aria-expanded', 'true');
-          card.classList.add('is-expanded');
-          currentOpen = card;
-        }
+      // Native <details>/<summary> makes each configuration usable even before
+      // JavaScript finishes loading. JS only synchronizes the grid and closes
+      // another card in browsers without support for the HTML `name` group.
+      if (details) details.addEventListener('toggle', function () {
+        if (details.open && currentOpen && currentOpen !== card) closeCard(currentOpen);
+        card.classList.toggle('is-expanded', details.open);
+        if (details.open) currentOpen = card;
+        else if (currentOpen === card) currentOpen = null;
       });
       sync();
     }
