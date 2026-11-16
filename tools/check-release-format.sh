@@ -19,7 +19,14 @@ if [[ -z "$topic" || "$topic" == *"v$version"* || "$topic" == *"｜"* || "$topic
   printf 'Release 主题无效：%s\n需使用不重复版本号的中文内容主题。\n' "$topic" >&2
   exit 1
 fi
-if ! [[ "$topic" =~ [一-龥] ]]; then
+# Bash Unicode character ranges differ between runner locales (C.UTF-8 vs
+# en_US.UTF-8). Validate Han characters by Unicode code point instead.
+if ! python3 - "$topic" <<'PYCODE'
+import sys
+s = sys.argv[1]
+raise SystemExit(0 if any(0x3400 <= ord(ch) <= 0x9FFF for ch in s) else 1)
+PYCODE
+then
   echo 'Release 主题必须包含中文内容。' >&2; exit 1
 fi
 printf 'Commit：%s\nRelease：v%s｜%s\n' "$subject" "$version" "$topic"
