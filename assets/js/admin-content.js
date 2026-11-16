@@ -32,7 +32,9 @@
 			if (!input) return;
 			function sync() {
 				if (input.type === 'radio' && input.name) {
-					document.querySelectorAll(selector + ' ' + inputSelector + '[name="' + window.CSS.escape(input.name) + '"]').forEach(function (peer) {
+					// Do not depend on CSS.escape (missing in older webviews).
+					document.querySelectorAll(selector + ' ' + inputSelector).forEach(function (peer) {
+						if (peer.name !== input.name) return;
 						var peerCard = peer.closest(selector);
 						if (peerCard) peerCard.classList.toggle(activeClass, !!peer.checked);
 					});
@@ -60,11 +62,11 @@
 	function preserveTabScroll() {
 		document.querySelectorAll('.jlwa-feature-host .nav-tab-wrapper').forEach(function (tabs) {
 			var active = tabs.querySelector('.nav-tab-active');
-			if (active && typeof active.scrollIntoView === 'function') {
-				window.setTimeout(function () {
-					active.scrollIntoView({ block: 'nearest', inline: 'center' });
-				}, 0);
-			}
+			if (!active || tabs.scrollWidth <= tabs.clientWidth) return;
+			// scrollIntoView() can move the WHOLE document, unexpectedly jumping
+			// administrators away from the page heading. Move only the tab strip.
+			var left = active.offsetLeft - tabs.offsetLeft;
+			tabs.scrollLeft = Math.max(0, left - (tabs.clientWidth - active.offsetWidth) / 2);
 		});
 	}
 
