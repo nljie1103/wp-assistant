@@ -48,7 +48,7 @@ class WPAIAS_API {
 
 		$model      = isset( $overrides['model'] ) ? $overrides['model'] : ( isset( $settings['model'] ) ? $settings['model'] : '' );
 		$api_key    = array_key_exists( 'current_api_key', $overrides ) ? $overrides['current_api_key'] : null;
-		$endpoint   = isset( $overrides['endpoint'] ) ? $overrides['endpoint'] : ( isset( $settings['custom_endpoint'] ) ? $settings['custom_endpoint'] : '' );
+		$endpoint   = WPAIAS_Endpoint_Policy::resolve( $provider_key, $provider, $settings, $overrides );
 		$temperature = isset( $overrides['temperature'] ) ? (float) $overrides['temperature'] : (float) ( isset( $settings['temperature'] ) ? $settings['temperature'] : 0.7 );
 		$max_tokens  = isset( $overrides['max_tokens'] ) ? (int) $overrides['max_tokens'] : (int) ( isset( $settings['max_tokens'] ) ? $settings['max_tokens'] : 512 );
 		$prompt_tpl  = isset( $overrides['prompt'] ) ? $overrides['prompt'] : ( isset( $settings['prompt'] ) ? $settings['prompt'] : '' );
@@ -65,11 +65,6 @@ class WPAIAS_API {
 			}
 			if ( '' === $model ) {
 				$model = isset( $settings['custom_model'] ) ? $settings['custom_model'] : '';
-			}
-		} else {
-			// 预设服务商：默认 endpoint 使用配置项。
-			if ( '' === $endpoint ) {
-				$endpoint = $provider['endpoint'];
 			}
 		}
 

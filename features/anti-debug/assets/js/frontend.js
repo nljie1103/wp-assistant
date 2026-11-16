@@ -498,7 +498,7 @@
   function shortcutHandler(event) {
     if (!detectors.shortcuts) return;
     var target = event.target;
-    if (target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    var editing = !!(target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]'));
     var code = event.keyCode || event.which || 0;
     var key = String(event.key || '').toLowerCase();
     if (!key && code) key = String.fromCharCode(code).toLowerCase();
@@ -508,6 +508,9 @@
       (primary && event.shiftKey && ['i', 'j', 'c', 'k'].indexOf(key) >= 0) ||
       (event.metaKey && event.altKey && ['i', 'j', 'c', 'u'].indexOf(key) >= 0);
     if (!devShortcut) return;
+    // Preserve legitimate editing shortcuts in text fields, but do not let
+    // focusing a search box bypass F12 or the developer-tools combinations.
+    if (editing && primary && !event.shiftKey && key === 'u') return;
     if (event.cancelable) event.preventDefault();
     event.stopPropagation();
     if (event.stopImmediatePropagation) event.stopImmediatePropagation();

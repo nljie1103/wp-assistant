@@ -6,6 +6,10 @@ final class FrontendSecurityTest extends TestCase {
 
     protected function setUp(): void {
         $GLOBALS['test_post'] = new WP_Post( 42, '' );
+        $GLOBALS['test_is_singular'] = true;
+        $GLOBALS['test_is_page'] = false;
+        $GLOBALS['test_is_front_page'] = false;
+        $GLOBALS['test_is_home'] = false;
         $GLOBALS['test_password_valid'] = false;
         $GLOBALS['test_user_can_edit'] = false;
         $GLOBALS['test_localized'] = array();

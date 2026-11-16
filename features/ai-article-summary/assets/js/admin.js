@@ -8,8 +8,12 @@
 	var WPAIAS = window.WPAIAS_ADMIN || {};
 	var providers = WPAIAS.providers || {};
 	var i18n = WPAIAS.i18n || {};
-	var apiKeys = $.extend( {}, WPAIAS.api_keys || {} );
+	// The browser only knows whether saved keys exist. Keep newly typed keys
+	// in memory until submission, never load existing secrets from WordPress.
+	var savedKeySlots = WPAIAS.api_key_status || {};
+	var apiKeys = {};
 	var activeKeySlot = '';
+	var activeProviderKey = '';
 
 	function init() {
 		bindProviderChange();
@@ -229,15 +233,23 @@
 		var $key = $( '#wpaias-api-key' );
 		if ( ! $key.length ) return;
 
-		var slot = useCurrentSelection ? apiKeySlot( currentProvider(), currentModel() ) : activeKeySlot;
-		if ( ! slot ) return;
+		// On a provider change currentProvider() already points to the NEW
+		// provider. Persist the input against the previous active provider.
+		var providerKey = useCurrentSelection ? currentProvider() : activeProviderKey;
+		var slot = useCurrentSelection ? apiKeySlot( providerKey, currentModel() ) : activeKeySlot;
+		if ( ! slot || ! providerKey ) return;
 
 		var value = ( $key.val() || '' ).trim();
 		if ( ! value ) {
+			// Blank means keep the saved key, and discards any unsaved draft for
+			// this model. It never requests deletion of a database secret.
+			delete apiKeys[ slot ];
+			delete apiKeys[ providerApiKeySlot( providerKey ) ];
+			syncApiKeysJson();
 			return;
 		}
 		apiKeys[ slot ] = value;
-		var providerSlot = providerApiKeySlot( currentProvider() );
+		var providerSlot = providerApiKeySlot( providerKey );
 		if ( providerSlot ) {
 			apiKeys[ providerSlot ] = value;
 		}
@@ -251,19 +263,19 @@
 		var providerKey = currentProvider();
 		var modelName = currentModel();
 		var slot = apiKeySlot( providerKey, modelName );
-		activeKeySlot = slot;
-
 		var providerSlot = providerApiKeySlot( providerKey );
-		if ( slot && Object.prototype.hasOwnProperty.call( apiKeys, slot ) ) {
-			$key.val( apiKeys[ slot ] );
-		} else if ( providerSlot && Object.prototype.hasOwnProperty.call( apiKeys, providerSlot ) ) {
-			$key.val( apiKeys[ providerSlot ] );
-		} else {
-			$key.val( '' );
-		}
+		activeKeySlot = slot;
+		activeProviderKey = providerKey;
+
+		// Display only a newly typed draft, never a persisted API Key.
+		var draft = slot && Object.prototype.hasOwnProperty.call( apiKeys, slot ) ? apiKeys[ slot ] :
+			( providerSlot && Object.prototype.hasOwnProperty.call( apiKeys, providerSlot ) ? apiKeys[ providerSlot ] : '' );
+		$key.val( draft );
+		var saved = !!( ( slot && savedKeySlots[ slot ] ) || ( providerSlot && savedKeySlots[ providerSlot ] ) );
+		$key.attr( 'placeholder', saved ? '已保存密钥；留空表示保留' : '填写新的 API Key' );
 
 		var label = modelName ? providerKey + ' / ' + modelName : providerKey;
-		$( '#wpaias-key-binding-label' ).text( label ? '当前绑定：' + label : '' );
+		$( '#wpaias-key-binding-label' ).text( label ? '当前绑定：' + label + ( saved ? ' · 已保存' : ' · 尚未保存' ) : '' );
 		syncApiKeysJson();
 	}
 

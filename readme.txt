@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 2.5.5
+Stable tag: 2.5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.5.6 =
+* 预设 AI 服务商只访问对应官方接口，避免旧自定义接口地址截获 API Key。
+* 管理页面不再回填已有 API Key，仍支持多服务商保存状态与新密钥提交。
+* 修复测试连接时空输入无法使用已保存密钥、切换服务商时草稿串号。
+* 修复 WordPress 静态首页的反调试启用范围，并加强快捷键处理。
+* 说明网站无法禁止浏览器菜单打开开发者工具；更新缓存版本，增加多环境回归测试。
 
 = 2.5.5 =
 * 修复密码保护文章的摘要缓存及前端请求访问控制。

@@ -237,8 +237,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			if ( ! in_array( $hook, $allowed, true ) ) {
 				return;
 			}
-			wp_enqueue_style( 'jlwa-anti-debug-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), self::VERSION );
-			wp_enqueue_script( 'jlwa-anti-debug-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), self::VERSION, true );
+			wp_enqueue_style( 'jlwa-anti-debug-admin', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), JLWA_VERSION );
+			wp_enqueue_script( 'jlwa-anti-debug-admin', plugins_url( 'assets/js/admin.js', __FILE__ ), array(), JLWA_VERSION, true );
 		}
 
 		/** Render the dedicated feature settings screen. */
@@ -343,7 +343,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					</section>
 
 					<section class="jlwa-ad-panel" data-panel="layers">
-						<div class="jlwa-ad-danger-note"><strong>可选高强度防御</strong><p>四个层级按延迟依次执行，每个层级都可单独启停和组合动作。持续 debugger、循环刷新和循环关闭会明显影响访客浏览，仅在确认旁路地址可用后启用。</p></div>
+						<div class="jlwa-ad-danger-note"><strong>能力与限制</strong><p>本站只能阻止部分页面快捷键并在检测到调试迹象后响应，无法禁止访客通过 Chrome/Edge/Firefox 浏览器菜单手动打开开发者工具。管理员自动绕过、移动端与首页开关会影响脚本是否加载。高强度操作可能误伤正常访客，启用前请先验证紧急旁路地址。</p></div>
 
 						<section class="jlwa-ad-layer jlwa-ad-layer--1">
 							<header><span>LEVEL 1</span><div><strong>警告与软阻断</strong><p>先提示、模糊和限制操作，不离开当前页面。</p></div></header>
@@ -456,8 +456,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			if ( empty( $options['enabled'] ) || ! $this->should_load( $options ) ) {
 				return;
 			}
-			wp_enqueue_style( 'jlwa-anti-debug', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), self::VERSION );
-			wp_enqueue_script( 'jlwa-anti-debug', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), self::VERSION, false );
+			wp_enqueue_style( 'jlwa-anti-debug', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), JLWA_VERSION );
+			wp_enqueue_script( 'jlwa-anti-debug', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), JLWA_VERSION, false );
 			$config = array(
 				'mode'      => $options['mode'],
 				'detectors' => $options['detectors'],
@@ -504,14 +504,16 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					return false;
 				}
 			}
+			// A static WordPress homepage is also is_page(). Home scope must
+			// win over the generic page rule so the administrator's home toggle works.
+			if ( is_front_page() || is_home() ) {
+				return ! empty( $scope['home'] );
+			}
 			if ( is_singular( 'post' ) ) {
 				return ! empty( $scope['posts'] );
 			}
 			if ( is_page() ) {
 				return ! empty( $scope['pages'] );
-			}
-			if ( is_front_page() || is_home() ) {
-				return ! empty( $scope['home'] );
 			}
 			if ( is_archive() || is_search() ) {
 				return ! empty( $scope['archives'] );

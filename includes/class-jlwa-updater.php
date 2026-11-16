@@ -412,6 +412,7 @@ class JLWA_Updater {
 			'features/anti-debug/assets/js/frontend.js',
 			'features/ai-article-summary/bootstrap.php',
 			'features/ai-article-summary/includes/class-wpaias-api.php',
+			'features/ai-article-summary/includes/class-wpaias-endpoint-policy.php',
 			'features/ai-article-summary/includes/class-wpaias-cache.php',
 			'features/immersive-preloader/bootstrap.php',
 			'features/immersive-preloader/assets/css/preloader.css',

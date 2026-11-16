@@ -1,4 +1,4 @@
-name: Plugin regression checks
+name: 九流 WP 助手｜自动化回归
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    name: PHP ${{ matrix.php }} checks
+    name: PHP ${{ matrix.php }} 语法及回归测试
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
