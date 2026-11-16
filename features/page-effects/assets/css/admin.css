@@ -67,3 +67,14 @@
 .xjpe-card-body .xjpe-tip,.xjpe-card-body .xjpe-wide-field{grid-column:1/-1}
 .xjpe-card-body .xjpe-tip{margin:0}
 @media(max-width:782px){.xjpe-effects-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}.xjpe-effect-count{flex-basis:100%;margin-left:0}}
+
+/* 2.5.11: browser-native disclosure remains clickable if JS is delayed/cached. */
+.xjpe-config-details { display:block; margin-top:auto; min-width:0; }
+.xjpe-config-details>summary { cursor:pointer;list-style:none;user-select:none; }
+.xjpe-config-details>summary::-webkit-details-marker { display:none; }
+.xjpe-config-details>summary:focus-visible { outline:2px solid #2271b1;outline-offset:-2px;border-radius:8px; }
+.xjpe-config-details[open] { margin-top:0; }
+.xjpe-config-details[open]>.xjpe-card-footer { border-top:1px solid #e7edf2; }
+.xjpe-config-label { display:inline-flex!important;align-items:center;justify-content:center;gap:4px;min-height:30px!important;font-size:12px!important;border-radius:8px!important;pointer-events:none; }
+.xjpe-config-label>span { display:inline-block;transition:transform .18s ease; }
+.xjpe-config-details[open] .xjpe-config-label>span { transform:rotate(180deg); }

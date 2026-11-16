@@ -9,12 +9,23 @@ wp_set_current_user( (int) get_user_by('login','jlwaadmin')->ID );
 JLWA_Page_Effects_Feature::instance()->render_admin_page();
 $html = ob_get_clean();
 jlwa_2510_assert(substr_count($html,'data-xjpe-card') === count($defs), 'Missing compact effect cards');
-jlwa_2510_assert(substr_count($html,'class="xjpe-card-body"') === count($defs), 'Expected exactly one closed parameter panel per card');
-jlwa_2510_assert(substr_count($html,'aria-expanded="false"') === count($defs), 'Panels must start collapsed');
+jlwa_2510_assert(substr_count($html,'class="xjpe-card-body"') === count($defs), 'Expected one parameter panel per card');
+jlwa_2510_assert(substr_count($html,'<details class="xjpe-config-details"') === count($defs), 'Expected native collapsible configuration per card');
+jlwa_2510_assert(substr_count($html,'<summary class="xjpe-card-footer"') === count($defs), 'Missing native clickable details summaries');
+jlwa_2510_assert(strpos($html,'<details class="xjpe-config-details" name="xjpe-effect-config" open')===false,'Configuration panels should start closed');
 jlwa_2510_assert(strpos($html,'data-xjpe-filter="enabled"')!==false,'Missing enabled-only filter');
 jlwa_2510_assert(strpos($html,'xjpe_options[effects][waves][height]')!==false,'Waves values missing from hidden settings');
 jlwa_2510_assert(strpos($html,'xjpe_options[effects][lantern][text]')!==false,'Lantern text missing from hidden settings');
-echo '16 项紧凑特效卡、按需展开、配置仍随表单提交：通过' . PHP_EOL;
+echo '原生特效卡使用 HTML 原生展开、配置仍随表单提交：通过' . PHP_EOL;
+
+// The frozen feature-internal version 1.8.0 caused browsers to keep an old
+// admin.js after the full plugin was updated to 2.5.10. All scripts must use
+// the shipped main version or the UI can be newer than its click handlers.
+JLWA_Page_Effects_Feature::instance()->enqueue_admin_assets( JLWA_MENU_SLUG . '_page_jlwa-page-effects' );
+$scripts = wp_scripts()->registered;
+jlwa_2510_assert( isset( $scripts['xjpe-admin'] ) && $scripts['xjpe-admin']->ver === JLWA_VERSION, 'Page effects admin.js cached with obsolete module version' );
+jlwa_2510_assert( '1.8.0' !== (string) $scripts['xjpe-admin']->ver, 'Page effects still uses original 1.8.0 asset cache' );
+echo '特效管理 JS 缓存版本绑定到统一插件版本：通过' . PHP_EOL;
 
 // Isolated option filter allows testing restricted mode without editing saved settings.
 $source = JLWA_Page_Effects_Feature::default_options();
