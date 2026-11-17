@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.0
+Stable tag: 2.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
-6. 下载页美化：科技蓝紫、简洁商务、VIP、流光极光、杂志留白、曜石夜幕六套子比下载页视觉方案，以及特色图、首图、稳定随机图、默认图和自动回退。
+6. 下载页美化：科技蓝紫、简洁商务、VIP、流光极光、杂志留白、曜石夜幕六套子比下载页视觉方案，以及可选的 OpenList 付费资源私有交付；该项需要额外部署 Nginx 内部通道和源站目录封锁，默认关闭。
 
 == Installation ==
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.1 =
+* 增加子比权限验证后的 OpenList 私有下载交付，通过 X-Accel-Redirect 调用 Nginx 内部通道，不再把命中的付费文件重定向到公开源站。
+* 新增下载页美化后台私有交付设置，默认关闭且与页面视觉开关独立；不修改订单、WebDAV 凭据或已有文章 URL。
+* 拦截器对匹配资源的异常输入拒绝并防止回退到 302；对非匹配的公开图片和其它下载保持原行为。
+* 增加 Nginx 内部代理、源站目录防直链、Cloudflare 缓存清理、测试与回滚说明。仅更新插件还不足以消除旧直链风险。
+
+
 
 = 2.6.0 =
 * 统一插件版本号进位规范；版本从 2.5.11 规范化到 2.6.0，今后 2.6.9 进位到 2.7.0。

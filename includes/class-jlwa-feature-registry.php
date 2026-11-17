@@ -90,7 +90,7 @@ class JLWA_Feature_Registry {
 				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Download_Page_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/download-page.php',
-				'description' => '三套完整子比资源中心模板、真实账户与额度信息、五种封面策略及横竖图自适应。',
+				'description' => '六套子比资源页风格与封面管理；可选 OpenList 付费资源私有交付，继承子比订单权限。',
 				'eyebrow'     => 'DOWNLOAD EXPERIENCE',
 				'standalone'  => array(),
 			),
@@ -234,6 +234,12 @@ class JLWA_Feature_Registry {
 		if ( 'download-page' === $key && ( ! class_exists( 'JLWA_Download_Page_Feature' ) || ! JLWA_Download_Page_Feature::is_compatible() ) ) {
 			return array( 'ready' => false, 'enabled' => $enabled, 'label' => '需子比主题', 'tone' => 'warning', 'hint' => '当前缺少子比下载/付费接口，即使开启设置，前台也不会接管下载页。' );
 		}
+		if ( 'download-page' === $key && $enabled && class_exists( 'JLWA_Download_Page_Feature' ) ) {
+			$options = JLWA_Download_Page_Feature::options();
+			if ( ! empty( $options['private_enabled'] ) ) {
+				return array( 'ready' => true, 'enabled' => true, 'label' => '私有交付已开启', 'tone' => 'warning', 'hint' => '仍须确认 Nginx 内部代理、OpenList 公网目录封锁及 Cloudflare 旧缓存已验证；仅插件启用不代表源站安全。' );
+			}
+		}
 		if ( 'ai-summary' === $key && $enabled && class_exists( 'JLWA_AI_Summary_Feature' ) ) {
 			$settings = JLWA_AI_Summary_Feature::get_settings();
 			if ( '' === JLWA_AI_Summary_Feature::get_api_key_for_model( $settings ) ) {
@@ -260,7 +266,7 @@ class JLWA_Feature_Registry {
 				return ! empty( $options['enabled'] );
 			case 'download-page':
 				$options = get_option( 'jlwa_download_page_options', array() );
-				return ! empty( $options['enabled'] );
+				return ! empty( $options['enabled'] ) || ! empty( $options['private_enabled'] );
 			case 'media-urls':
 				$options = get_option( 'jiuliu_relative_media_urls_options', array() );
 				foreach ( array( 'convert_existing_media_output', 'convert_future_media_output', 'convert_post_on_save', 'convert_post_on_frontend', 'domain_adaptation_enabled', 'canonical_enabled' ) as $setting ) {

@@ -24,7 +24,7 @@ class JLWA_Download_Page_Feature {
             'template' => 'technology',
             'cover_mode' => 'auto',
             'default_image_url' => '',
-        );
+        ) + JLWA_Private_Download::defaults();
     }
 
     public static function options() {
@@ -56,7 +56,7 @@ class JLWA_Download_Page_Feature {
             'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
             'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
             'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
-        );
+        ) + JLWA_Private_Download::sanitized( $input );
     }
 
     public function enqueue_admin_assets( $hook = '' ) {
@@ -127,6 +127,19 @@ class JLWA_Download_Page_Feature {
             <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，新增主题不复制支付代码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
             <div class="jlwa-download-section"><h3>选择完整页面模板</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
             <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>六种视觉方案都自动识别横图、方图和竖图，并适配封面比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>
+            <section class="jlwa-download-section" id="jlwa-private-delivery">
+                <h3>🔒 付费资源 · 私有安全交付</h3>
+                <p><strong>独立于下载页美化开关。</strong>子比确认订单权限后由 Nginx 内部转发 OpenList 文件，不向浏览器提供原始链接。默认关闭，升级时不会自动改变下载行为。</p>
+                <p><strong>注意：</strong>开启之前必须先配置 WordPress 站点的 Nginx <code>internal</code> 入口并测试；启用之后，还必须在 OpenList 公网入口拒绝相应付费目录的直链，才能真正阻止绕过付款。<strong>仅打开这里的开关不能保护公开文件。</strong></p>
+                <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_enabled]" value="1" <?php checked( ! empty( $options['private_enabled'] ) ); ?>><span><strong>启用私有交付拦截</strong>（未匹配的普通下载仍使用子比原有流程；已匹配资源遇到配置错误会拒绝并提示，不回退到公开 302）</span></label>
+                <p><label for="jlwa-private-hosts"><strong>受保护源站域名（每行一个，不带协议）</strong></label></p>
+                <textarea id="jlwa-private-hosts" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_hosts]" rows="2" class="large-text code"><?php echo esc_textarea( $options['private_hosts'] ); ?></textarea>
+                <p><label for="jlwa-private-source"><strong>公开源路径前缀</strong>（仅保护此目录，必须以斜杠结尾）</label></p>
+                <input id="jlwa-private-source" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_source_prefix]" value="<?php echo esc_attr( $options['private_source_prefix'] ); ?>">
+                <p><label for="jlwa-private-internal"><strong>WordPress Nginx 私有内部入口</strong>（须和 Nginx 配置完全一致）</label></p>
+                <input id="jlwa-private-internal" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_internal_prefix]" value="<?php echo esc_attr( $options['private_internal_prefix'] ); ?>">
+                <p>部署示例与验收清单：插件包内 <code>docs/paid-download-security.md</code>。不要求修改子比主题、不更换 WebDAV 密码，也不会修改历史文章地址。</p>
+            </section>
             <?php submit_button( '保存下载页设置' ); ?>
         </form></div>
         <script>jQuery(function($){var frame;$('#jlwa-select-cover').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'选择默认封面',button:{text:'使用这张图片'},multiple:false,library:{type:'image'}});frame.on('select',function(){$('#jlwa-default-cover').val(frame.state().get('selection').first().toJSON().url);});frame.open();});});</script>
