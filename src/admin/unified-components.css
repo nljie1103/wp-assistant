@@ -1,0 +1,841 @@
+/*
+ * 九流 WP 助手 · v3 shared component system
+ * All selectors scoped to .jlwa-v3 (NOT wp-admin globally, NOT front-end).
+ *
+ * Invariants:
+ *  1. ZERO card/button lift on hover, for every functional module.
+ *  2. Hover = quieter border/background change; selection = same indigo ring.
+ *  3. Four feedback tones, same geometry, typography and dismiss behavior.
+ *  4. Interactive controls retain their native form semantics/nonce handlers.
+ *  5. No styling applied to actual animation previews, iframe or editor output.
+ */
+
+.jlwa-v3 {
+  --ui-radius-xs: 6px;
+  --ui-radius-sm: 8px;
+  --ui-radius-md: 10px;
+  --ui-radius-lg: 12px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-border: var(--jlwa-ui-border, #e4e4e7);
+  --ui-text: var(--jlwa-ui-foreground, #18181b);
+  --ui-muted: var(--jlwa-ui-secondary, #71717a);
+  --ui-surface: var(--jlwa-ui-bg, #fff);
+  --ui-subtle: var(--jlwa-ui-surface, #fafafa);
+  --ui-hover: var(--jlwa-ui-hover, #f4f4f5);
+  --ui-accent: #6366f1;
+  --ui-ring: rgba(99, 102, 241, .17);
+  --ui-success: #15803d;
+  --ui-success-bg: #f0fdf4;
+  --ui-success-border: #bbf7d0;
+  --ui-warning: #a16207;
+  --ui-warning-bg: #fffbeb;
+  --ui-warning-border: #fde68a;
+  --ui-danger: #b91c1c;
+  --ui-danger-bg: #fef2f2;
+  --ui-danger-border: #fecaca;
+  --ui-info: #1d4ed8;
+  --ui-info-bg: #eff6ff;
+  --ui-info-border: #bfdbfe;
+  --ui-motion: 160ms ease;
+  --ui-shadow: 0 1px 3px rgba(24,24,27,.045);
+}
+/* Inherit the exact same tokens into stand-alone module dialogs. */
+.jlwa-v3[data-jlwa-theme="dark"] {
+  --ui-accent: #a5b4fc;
+  --ui-ring: rgba(165,180,252,.19);
+  --ui-success: #86efac;
+  --ui-success-bg: #052e16;
+  --ui-success-border: #166534;
+  --ui-warning: #fcd34d;
+  --ui-warning-bg: #422006;
+  --ui-warning-border: #854d0e;
+  --ui-danger: #fca5a5;
+  --ui-danger-bg: #450a0a;
+  --ui-danger-border: #991b1b;
+  --ui-info: #93c5fd;
+  --ui-info-bg: #172554;
+  --ui-info-border: #1e40af;
+  --ui-shadow: 0 1px 3px rgba(0,0,0,.17);
+}
+
+/* Universal typography, section headings and explanatory text */
+.jlwa-v3 .jlwa-feature-host {
+  color: var(--ui-text);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.jlwa-v3 .jlwa-feature-host :is(h2,h3,h4):not(.nav-tab-wrapper) {
+  color: var(--ui-text) !important;
+  font-weight: 740;
+  line-height: 1.45;
+  letter-spacing: -.018em;
+}
+.jlwa-v3 .jlwa-feature-host h2:not(.nav-tab-wrapper) { font-size: 18px; }
+.jlwa-v3 .jlwa-feature-host h3 { font-size: 15px; }
+.jlwa-v3 .jlwa-feature-host :is(.description,small) { color: var(--ui-muted); line-height: 1.65; }
+.jlwa-v3 .jlwa-feature-host :is(.jip-card-title,.wpaias-section-title,.jrmu-panel>h2:first-child,.xjpe-panel>h2:first-child) {
+  color: var(--ui-text) !important;
+  border-color: var(--ui-border) !important;
+  background: transparent !important;
+  padding-bottom: 12px !important;
+}
+.jlwa-v3 .jlwa-feature-host code:not(.CodeMirror-code *) {
+  color: var(--ui-text);
+  background: var(--ui-hover);
+  border-radius: var(--ui-radius-xs);
+  overflow-wrap: anywhere;
+}
+
+/* ========= SURFACE / PANEL (no hover lift) =========
+   Includes page effects, anti-debug, AI, preloader, media and download page.
+   A surface is NOT clickable by default. */
+.jlwa-v3 .jlwa-feature-host :is(
+ .xjpe-panel,.jip-card,.jrmu-panel,.jrmu-main-card,.jrmu-side-card,
+ .jlwa-ad-form,.jlwa-ad-boundary,.jlwa-ad-layer,.jlwa-ad-security-check,
+ .wpaias-tab-content,.wpaias-update-box,.wpaias-live-preview-wrap,
+ .jlwa-download-intro,.jlwa-download-section,
+ .postbox,.card,.jlwa-ad-log-table-wrap,.jrmu-scan-form
+) {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.xjpe-panel,.jip-card,.jrmu-panel,.wpaias-tab-content,.jlwa-download-section) {
+  padding: clamp(16px,2.1vw,24px) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-form { overflow: visible; }
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-boundary { background: var(--ui-subtle) !important; }
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-security-check,.jlwa-ad-emergency,.wpaias-safety-note,.xjpe-tip,.jlwa-ad-boundary) {
+  border-radius: var(--ui-radius-lg) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-toolbar,.jlwa-ad-layer>header) {
+  background: var(--ui-subtle) !important;
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+}
+.jlwa-v3 .jlwa-feature-host .jrmu-side-card {
+  border: 0 !important;
+  border-left: 1px solid var(--ui-border) !important;
+  border-radius: 0 !important;
+  padding-left: 18px;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-layer--3,.jlwa-ad-layer--4,.jlwa-ad-emergency) {
+  background: var(--ui-surface) !important;
+  border-color: var(--ui-border) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-emergency,.jrmu-warning,.wpaias-safety-note,.xjpe-tip) {
+  background: var(--ui-warning-bg) !important;
+  border: 1px solid var(--ui-warning-border) !important;
+  color: var(--ui-warning) !important;
+  padding: 12px 16px !important;
+  border-radius: var(--ui-radius-md) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-emergency,.jrmu-warning,.wpaias-safety-note,.xjpe-tip) p,
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-emergency,.jrmu-warning,.wpaias-safety-note,.xjpe-tip) strong {
+  color: inherit !important;
+}
+
+/* ========= INTERACTIVE OPTION CARDS =========
+   Every selectable card uses the SAME interaction: no Y translation,
+   no shadow jump, border on hover, accent on selection. */
+.jlwa-v3 .jlwa-feature-host :is(
+ .xjpe-card,.jlwa-ad-option,.wpaias-style-card,.wpaias-anim-item,
+ .jip-effect-card,.jlwa-template-card,.jlwa-mode-row
+) {
+  transform: none !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: var(--ui-shadow) !important;
+  transition: border-color var(--ui-motion),background-color var(--ui-motion),box-shadow var(--ui-motion) !important;
+  color: var(--ui-text);
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .xjpe-card,.jlwa-ad-option,.wpaias-style-card,.wpaias-anim-item,
+ .jip-effect-card,.jlwa-template-card,.jlwa-mode-row
+):hover {
+  transform: none !important;
+  border-color: #a1a1aa !important;
+  background: var(--ui-subtle) !important;
+  box-shadow: var(--ui-shadow) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .xjpe-card,.jlwa-ad-option,.wpaias-style-card,.wpaias-anim-item,
+ .jip-effect-card,.jlwa-template-card,.jlwa-mode-row
+):focus-within {
+  border-color: var(--ui-accent) !important;
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 1px;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .xjpe-card.is-enabled,.xjpe-card.is-expanded,
+ .jlwa-ad-option.is-checked,.jlwa-ad-option:has(input:checked),
+ .wpaias-style-card.active,.wpaias-style-card:has(input:checked),
+ .wpaias-anim-item:has(input:checked),
+ .jip-effect-card.is-active,.jip-effect-card:has(input:checked),
+ .jlwa-template-card:has(input:checked),
+ .jlwa-mode-row:has(input:checked)
+) {
+  transform: none !important;
+  border-color: var(--ui-accent) !important;
+  background: var(--ui-subtle) !important;
+  box-shadow: 0 0 0 2px var(--ui-ring) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.xjpe-card-text strong,.jip-effect-label,.jlwa-ad-option strong,.jlwa-template-card strong,.wpaias-style-card strong) {
+  color: var(--ui-text) !important;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.jlwa-v3 .jlwa-feature-host :is(.xjpe-card-text small,.jip-effect-desc,.jlwa-ad-option small,.jlwa-template-card small) {
+  color: var(--ui-muted) !important;
+}
+.jlwa-v3 .jlwa-feature-host .xjpe-card-head { background: transparent !important; }
+.jlwa-v3 .jlwa-feature-host .xjpe-card-body {
+  background: var(--ui-subtle) !important;
+  border-color: var(--ui-border) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jip-effect-preview,
+.jlwa-v3 .jlwa-feature-host .jlwa-template-card .preview {
+  /* These are intentional media samples; do not repaint them. */
+  border-radius: var(--ui-radius-sm) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.xjpe-config-details>summary,.jlwa-template-card,.jlwa-mode-row,.jip-effect-card,.wpaias-style-card) { cursor: pointer; }
+
+/* ========= TAB STRIPS ========= */
+.jlwa-v3 .jlwa-feature-host :is(
+ .nav-tab-wrapper,.wpaias-tabs,.xjpe-tabs,.jip-tabs,.jrmu-tabs,.jlwa-ad-tabs
+) {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px !important;
+  margin: 0 0 18px !important;
+  padding: 6px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-md) !important;
+  background: var(--ui-hover) !important;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .nav-tab,.jlwa-ad-tabs button,.xjpe-effect-filters .button
+) {
+  min-height: 36px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--ui-radius-sm) !important;
+  margin: 0 !important;
+  padding: 7px 12px !important;
+  background: transparent !important;
+  color: var(--ui-muted) !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 20px !important;
+  transform: none !important;
+  transition: color var(--ui-motion),background-color var(--ui-motion),border-color var(--ui-motion) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.nav-tab,.jlwa-ad-tabs button,.xjpe-effect-filters .button):hover {
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  transform: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .nav-tab-active,.jlwa-ad-tabs button.is-active,.xjpe-effect-filters .button.is-active
+),.jlwa-v3 .jlwa-feature-host :is(
+ .nav-tab-active,.jlwa-ad-tabs button.is-active,.xjpe-effect-filters .button.is-active
+):hover {
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  border-color: var(--ui-border) !important;
+  box-shadow: var(--ui-shadow) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-tabs { border-bottom: 1px solid var(--ui-border) !important; }
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-tabs button { border-bottom-width: 1px !important; }
+
+/* ========= BUTTONS =========
+   Same height, radius, color, hover and active behavior on all six modules.
+   Do not override icon-only buttons or iframe media controls. */
+.jlwa-v3 .jlwa-feature-host :is(
+ .button,.button-secondary,.button-primary,button[type="submit"],input[type="submit"],.submit .button
+) {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px !important;
+  padding: 7px 13px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-sm) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 20px !important;
+  transform: none !important;
+  transition: background-color var(--ui-motion),border-color var(--ui-motion),color var(--ui-motion) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.button,button[type="submit"],input[type="submit"]):hover:not(:disabled) {
+  transform: none !important;
+  border-color: #a1a1aa !important;
+  background: var(--ui-hover) !important;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.button-primary,.button.button-primary,.submit .button-primary,input[type="submit"].button-primary) {
+  background: var(--jlwa-ui-brand) !important;
+  border-color: var(--jlwa-ui-brand) !important;
+  color: #fff !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.button-primary,.button.button-primary,.submit .button-primary,input[type="submit"].button-primary):hover:not(:disabled) {
+  background: var(--jlwa-ui-brand) !important;
+  border-color: var(--jlwa-ui-brand) !important;
+  color: #fff !important;
+  filter: brightness(.92);
+}
+.jlwa-v3 .jlwa-feature-host :is(.button-link-delete,.button.delete,.submit .delete) {
+  border-color: var(--ui-danger-border) !important;
+  background: var(--ui-danger-bg) !important;
+  color: var(--ui-danger) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.button-link-delete,.button.delete):hover:not(:disabled) {
+  background: var(--ui-danger-bg) !important;
+  border-color: var(--ui-danger) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(button,input[type="submit"]):active:not(:disabled) { transform: none !important; filter: brightness(.95); }
+.jlwa-v3 .jlwa-feature-host :is(button,input[type="submit"]):disabled,
+.jlwa-v3 .jlwa-feature-host :is(.button,.button-primary)[aria-disabled="true"],
+.jlwa-v3 .jlwa-feature-host :is(button,input[type="submit"])[aria-busy="true"] {
+  opacity: .5 !important;
+  cursor: not-allowed !important;
+  filter: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.button,input[type="submit"],button):focus-visible {
+  outline: 2px solid var(--ui-accent) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host .xjpe-config-label { pointer-events: none; }
+
+/* Specific functional filters must win over generic button styling. */
+.jlwa-v3 .jlwa-feature-host .xjpe-effect-filters .button {
+  border-radius: var(--ui-radius-sm) !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--ui-muted) !important;
+}
+.jlwa-v3 .jlwa-feature-host .xjpe-effect-filters .button.is-active {
+  border-color: var(--ui-border) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: var(--ui-shadow) !important;
+}
+/* Destructive anti-debug settings stay red when selected, not indigo. */
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-option.is-dangerous:has(input:checked) {
+  border-color: var(--ui-danger-border) !important;
+  background: var(--ui-danger-bg) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-danger) 15%, transparent) !important;
+}
+
+/* ========= INPUTS / CHECKBOXES / SWITCHES ========= */
+.jlwa-v3 .jlwa-feature-host :is(
+ input[type="text"],input[type="email"],input[type="url"],
+ input[type="search"],input[type="number"],input[type="password"],
+ select,textarea
+) {
+  min-height: 38px;
+  max-width: 100%;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-sm) !important;
+  color: var(--ui-text) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  transition: border-color var(--ui-motion),box-shadow var(--ui-motion) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(input[type="text"],input[type="email"],input[type="url"],input[type="search"],input[type="number"],input[type="password"],select,textarea):focus {
+  border-color: var(--ui-accent) !important;
+  box-shadow: 0 0 0 3px var(--ui-ring) !important;
+  outline: none !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(input,select,textarea):disabled,
+.jlwa-v3 .jlwa-feature-host :is(input,select,textarea)[readonly] {
+  background: var(--ui-hover) !important;
+  color: var(--ui-muted) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(input[type="checkbox"],input[type="radio"]) {
+  accent-color: var(--ui-accent);
+  border-color: var(--ui-border);
+}
+.jlwa-v3 .jlwa-feature-host :is(input[type="checkbox"],input[type="radio"]):focus-visible {
+  outline: 2px solid var(--ui-accent) !important;
+  outline-offset: 2px;
+}
+.jlwa-v3 .jlwa-feature-host .form-table th {
+  width: 215px;
+  color: var(--ui-text) !important;
+  font-size: 12px;
+  font-weight: 690;
+}
+.jlwa-v3 .jlwa-feature-host .form-table :is(th,td) {
+  border-color: var(--ui-border) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-master>span,.wpaias-slider) {
+  background: #a1a1aa;
+  transition: background-color var(--ui-motion) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-master input:checked+span,
+.jlwa-v3 .jlwa-feature-host .wpaias-switch input:checked+.wpaias-slider {
+  background: #6366f1 !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-master input:focus-visible+span,
+.jlwa-v3 .jlwa-feature-host .wpaias-switch input:focus-visible+.wpaias-slider {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 3px;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-option__check { border-color: var(--ui-border); }
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-option input:checked+.jlwa-ad-option__check {
+  border-color: #6366f1;
+  background: #6366f1;
+}
+
+/* ========= STATUS / BADGES ========= */
+.jlwa-v3 .jlwa-feature-host :is(
+ .jrmu-badge,.xjpe-status,.wpaias-test-result,.wpaias-mb-status,
+ .jlwa-feature-intro__state,.jlwa-feature-intro__version,.jlwa-state-badge
+) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 999px !important;
+  background: var(--ui-hover) !important;
+  color: var(--ui-muted) !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+  line-height: 16px;
+  font-weight: 680;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .jrmu-badge.is-on,.wpaias-test-result.ok,.wpaias-mb-status.ok,
+ .jlwa-feature-intro__state.is-success,.jlwa-state-badge.is-success
+) {
+  background: var(--ui-success-bg) !important;
+  border-color: var(--ui-success-border) !important;
+  color: var(--ui-success) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(
+ .jrmu-badge.is-off,.wpaias-test-result.fail,
+ .jlwa-feature-intro__state.is-danger,.jlwa-state-badge.is-danger
+) {
+  background: var(--ui-danger-bg) !important;
+  border-color: var(--ui-danger-border) !important;
+  color: var(--ui-danger) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.xjpe-card.is-enabled .xjpe-status) {
+  color: var(--ui-success) !important;
+  border-color: var(--ui-success-border) !important;
+  background: var(--ui-success-bg) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.jip-effect-card.is-active,.wpaias-style-card.active) .jip-effect-label { color: var(--ui-text); }
+
+/* ========= NOTICES / FEEDBACK =========
+   Keep existing role/semantics/WordPress dismiss handlers. Never synthesize
+   a "saved" success notice before WordPress confirms the result. */
+.jlwa-v3 .jlwa-feature-host :is(.notice,.jlwa-download-save-notice,.jlwa-ad-emergency,.wpaias-safety-note) {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 8px 0 14px !important;
+  padding: 12px 42px 12px 16px !important;
+  border: 1px solid var(--ui-info-border) !important;
+  border-left: 3px solid var(--ui-info) !important;
+  border-radius: var(--ui-radius-md) !important;
+  background: var(--ui-info-bg) !important;
+  color: var(--ui-info) !important;
+  box-shadow: none !important;
+  line-height: 1.65;
+}
+.jlwa-v3 .jlwa-feature-host :is(.notice,.jlwa-download-save-notice,.jlwa-ad-emergency,.wpaias-safety-note) :is(p,strong,a) { color: inherit; }
+.jlwa-v3 .jlwa-feature-host :is(.notice-success,.notice.updated) {
+  background: var(--ui-success-bg) !important;
+  border-color: var(--ui-success-border) !important;
+  border-left-color: var(--ui-success) !important;
+  color: var(--ui-success) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.notice-warning,.jlwa-ad-emergency,.wpaias-safety-note) {
+  background: var(--ui-warning-bg) !important;
+  border-color: var(--ui-warning-border) !important;
+  border-left-color: var(--ui-warning) !important;
+  color: var(--ui-warning) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.notice-error,.notice.error) {
+  background: var(--ui-danger-bg) !important;
+  border-color: var(--ui-danger-border) !important;
+  border-left-color: var(--ui-danger) !important;
+  color: var(--ui-danger) !important;
+}
+.jlwa-v3 .jlwa-feature-host :is(.notice p,.notice ul) { margin-block: 4px; }
+.jlwa-v3 .jlwa-feature-host .notice-dismiss,
+.jlwa-v3 .jlwa-feature-host .jlwa-ui-dismiss {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--ui-radius-xs);
+  color: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  opacity: .7;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ui-dismiss:hover,
+.jlwa-v3 .jlwa-feature-host .notice-dismiss:hover { background: var(--ui-hover) !important; opacity: 1; }
+.jlwa-v3 .jlwa-feature-host .jlwa-ui-dismiss:focus-visible { outline: 2px solid var(--ui-accent) !important; outline-offset: 1px; }
+.jlwa-v3 .jlwa-feature-host .jlwa-ui-dismiss svg { width: 16px; height: 16px; }
+/* Non-transient warnings and errors are NOT closable by the adapter. */
+
+/* ========= DETAILS, LOGS AND TABLES ========= */
+.jlwa-v3 .jlwa-feature-host details:not(.xjpe-config-details) {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-md);
+  padding: 0 13px;
+  background: var(--ui-surface);
+}
+.jlwa-v3 .jlwa-feature-host details:not(.xjpe-config-details)>summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--ui-text);
+  font-weight: 670;
+}
+.jlwa-v3 .jlwa-feature-host details:not(.xjpe-config-details)>summary:hover { color: var(--ui-accent); }
+.jlwa-v3 .jlwa-feature-host details:not(.xjpe-config-details)>summary:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.jlwa-v3 .jlwa-feature-host details:not(.xjpe-config-details)[open] { padding-bottom: 12px; }
+.jlwa-v3 .jlwa-feature-host :is(.widefat,.wp-list-table,.jlwa-ad-log-table,.jrmu-results-table) {
+  max-width: 100%;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-md) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: none !important;
+  color: var(--ui-text);
+  border-spacing: 0;
+}
+.jlwa-v3 .jlwa-feature-host :is(.widefat,.wp-list-table,.jlwa-ad-log-table) :is(th,td) {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  vertical-align: middle;
+  background: transparent;
+}
+.jlwa-v3 .jlwa-feature-host :is(.widefat,.wp-list-table,.jlwa-ad-log-table) thead th {
+  background: var(--ui-subtle);
+  color: var(--ui-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+.jlwa-v3 .jlwa-feature-host :is(.widefat,.wp-list-table,.jlwa-ad-log-table) tbody tr:hover { background: var(--ui-hover); }
+.jlwa-v3 .jlwa-feature-host :is(.widefat,.wp-list-table,.jlwa-ad-log-table) tbody tr:last-child td { border-bottom: 0; }
+.jlwa-v3 .jlwa-feature-host :is(.jrmu-scan-form,.jrmu-bulkbar) {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-md);
+  padding: 14px !important;
+  background: var(--ui-subtle) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jrmu-copy-ok { color: var(--ui-success) !important; font-weight: 670; }
+.jlwa-v3 .jlwa-feature-host :is(.wpaias-changelog,textarea.code,pre) {
+  border-radius: var(--ui-radius-sm);
+  overflow-wrap: anywhere;
+}
+.jlwa-v3 .jlwa-feature-host .wpaias-changelog { background: #18181b !important; color: #fafafa !important; }
+
+/* ========= EXISTING MODALS / DIALOGS ========= */
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-head { border-radius: var(--ui-radius-md); }
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-head>div { gap: 3px; }
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-head strong { font-weight: 740; }
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-modal {
+  background: rgba(9,9,11,.69) !important;
+  backdrop-filter: blur(6px);
+}
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-modal iframe {
+  border-radius: var(--ui-radius-lg) !important;
+  border: 1px solid var(--ui-border) !important;
+  box-shadow: 0 24px 70px rgba(9,9,11,.27) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-close {
+  border: 1px solid rgba(255,255,255,.3) !important;
+  background: rgba(255,255,255,.1) !important;
+  color: #fff !important;
+}
+.jlwa-v3 .jlwa-feature-host .jip-live-preview-close:hover { background: rgba(255,255,255,.2) !important; }
+
+/* ========= DARK MODE: actual module internals (not only Vue shell) ========= */
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host {
+  --ad-primary: #a5b4fc;
+  --ad-violet: #a5b4fc;
+  color: var(--ui-text);
+}
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(
+ .xjpe-panel,.xjpe-card,.xjpe-card-body,.jip-card,.jip-effect-card,
+ .jlwa-ad-form,.jlwa-ad-boundary,.jlwa-ad-layer,.jlwa-ad-option,.jlwa-ad-security-check,
+ .wpaias-tab-content,.wpaias-style-card,.wpaias-anim-item,
+ .jrmu-panel,.jrmu-main-card,.jrmu-side-card,.jlwa-download-section,.jlwa-download-intro,.jlwa-template-card,
+ .postbox,.card
+) { color: var(--ui-text) !important; }
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(
+ .xjpe-panel,.jip-card,.jlwa-download-section,.jlwa-ad-form,.wpaias-tab-content,.jrmu-panel
+) :is(p,span,label,small,td,th) { color: inherit; }
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(.description,.xjpe-card-text small,.jip-effect-desc,.jlwa-ad-option small,.jlwa-template-card small) {
+  color: var(--ui-muted) !important;
+}
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(
+ .xjpe-card-body,.jlwa-ad-toolbar,.jlwa-ad-layer>header,.jrmu-scan-form,.jrmu-bulkbar
+) { background: var(--ui-subtle) !important; }
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(.jlwa-ad-option__check,.wpaias-style-card__check) { color: var(--ui-text); }
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host .jlwa-ad-option input:checked+.jlwa-ad-option__check { color: #fff !important; }
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-feature-host :is(.jip-effect-card .jip-effect-preview,.jlwa-template-card .preview) { color: inherit; }
+
+/* Responsive content tables, complex option grids and dialogs */
+@media(max-width:1020px) {
+ .jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-grid,.jip-effects-grid,.jlwa-template-grid,.xjpe-effects-grid) {
+   grid-template-columns: repeat(auto-fill,minmax(min(100%,240px),1fr));
+ }
+}
+@media(max-width:782px) {
+ .jlwa-v3 .jlwa-feature-host .form-table :is(th,td) { display: block; width: 100%; padding: 9px 0; }
+ .jlwa-v3 .jlwa-feature-host .form-table tr+tr th { border-top: 1px solid var(--ui-border); }
+ .jlwa-v3 .jlwa-feature-host .form-table tr+tr td { border-top: 0 !important; }
+ .jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-tabs,.nav-tab-wrapper) { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: thin; }
+ .jlwa-v3 .jlwa-feature-host :is(.jlwa-ad-tabs button,.nav-tab) { flex: 0 0 auto; }
+ .jlwa-v3 .jlwa-feature-host .jrmu-side-card { border-left: 0 !important; border-top: 1px solid var(--ui-border) !important; padding: 16px 0 0; }
+ .jlwa-v3 .jlwa-feature-host .jlwa-download-columns { grid-template-columns: 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .jlwa-v3 .jlwa-feature-host :is(.button,.xjpe-card,.jlwa-ad-option,.jip-effect-card,.jlwa-template-card,.wpaias-style-card,.wpaias-anim-item) {
+   transition: none !important;
+   animation: none !important;
+ }
+}
+
+/* One Reka UI confirmation/alert primitive for all admin modules.
+   Portal is attached to document.body; intentionally not under .jlwa-v3. */
+.jlwa-ui-confirm-dialog {
+  --confirm-bg: #fff;
+  --confirm-text: #18181b;
+  --confirm-muted: #71717a;
+  --confirm-border: #e4e4e7;
+  --confirm-hover: #f4f4f5;
+  position: fixed;
+  z-index: 100002;
+  top: min(24vh, 200px);
+  left: 50%;
+  width: min(calc(100vw - 32px), 465px);
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: 22px 24px 21px;
+  transform: translateX(-50%);
+  border: 1px solid var(--confirm-border);
+  border-radius: 13px;
+  background: var(--confirm-bg);
+  color: var(--confirm-text);
+  box-shadow: 0 24px 80px rgba(0,0,0,.24);
+  font: 13px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+.jlwa-ui-confirm-dialog *, .jlwa-ui-confirm-dialog *::before, .jlwa-ui-confirm-dialog *::after { box-sizing: border-box; }
+.jlwa-ui-confirm-dialog :is(button,a):focus-visible { outline: 2px solid #6366f1; outline-offset: 3px; }
+.jlwa-ui-confirm-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.jlwa-ui-confirm-symbol {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border: 1px solid #e0e7ff; border-radius: 11px; background: #eef2ff; color: #4f46e5;
+}
+.jlwa-ui-confirm-symbol.is-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.jlwa-ui-confirm-close {
+  display: grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: var(--confirm-muted); cursor: pointer;
+}
+.jlwa-ui-confirm-close:hover { border-color: var(--confirm-border); background: var(--confirm-hover); }
+.jlwa-ui-confirm-title { margin: 16px 0 5px; font-size: 17px; line-height: 1.35; font-weight: 750; letter-spacing: -.02em; }
+.jlwa-ui-confirm-description { margin: 0; color: var(--confirm-muted); font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jlwa-ui-confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px; }
+.jlwa-ui-confirm-actions button {
+  min-width: 81px; min-height: 37px; padding: 8px 14px;
+  border: 1px solid var(--confirm-border); border-radius: 8px;
+  font: inherit; font-size: 12px; font-weight: 650;
+  box-shadow: none; cursor: pointer; transition: background-color 160ms ease,border-color 160ms ease;
+}
+.jlwa-ui-confirm-cancel { color: var(--confirm-text); background: var(--confirm-bg); }
+.jlwa-ui-confirm-cancel:hover { background: var(--confirm-hover); }
+.jlwa-ui-confirm-accept { background: #18181b; border-color: #18181b !important; color: #fff; }
+.jlwa-ui-confirm-accept:hover { background: #27272a; }
+.jlwa-ui-confirm-accept.is-danger { background: #b91c1c; border-color: #b91c1c !important; }
+.jlwa-ui-confirm-accept.is-danger:hover { background: #991b1b; }
+html[data-jlwa-theme="dark"] .jlwa-ui-confirm-dialog {
+  --confirm-bg: #18181b;
+  --confirm-text: #fafafa;
+  --confirm-muted: #a1a1aa;
+  --confirm-border: #3f3f46;
+  --confirm-hover: #27272a;
+}
+html[data-jlwa-theme="dark"] .jlwa-ui-confirm-accept:not(.is-danger) { background: #6366f1; border-color: #6366f1 !important; color: white; }
+html[data-jlwa-theme="dark"] .jlwa-ui-confirm-symbol { background: #312e81; color: #c7d2fe; border-color: #4338ca; }
+html[data-jlwa-theme="dark"] .jlwa-ui-confirm-symbol.is-danger { background: #450a0a; color: #fca5a5; border-color: #991b1b; }
+@media(max-width:600px) {
+ .jlwa-ui-confirm-dialog { top: 12vh; padding: 18px; }
+ .jlwa-ui-confirm-actions { flex-wrap: wrap; }
+ .jlwa-ui-confirm-actions button { flex: 1; }
+}
+
+
+/* ========= DELIVERY RESULTS, DIAGNOSTICS & SYSTEM ========= */
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result,
+.jlwa-v3 .jlwa-feature-host .jlwa-probe-result {
+  display: block;
+  width: 100%;
+  margin: 12px 0 !important;
+  padding: 12px 16px !important;
+  border: 1px solid var(--ui-info-border) !important;
+  border-left: 3px solid var(--ui-info) !important;
+  border-radius: var(--ui-radius-md) !important;
+  background: var(--ui-info-bg) !important;
+  color: var(--ui-info) !important;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result.is-success,
+.jlwa-v3 .jlwa-feature-host .jlwa-probe-result.is-success {
+  border-color: var(--ui-success-border) !important;
+  border-left-color: var(--ui-success) !important;
+  color: var(--ui-success) !important;
+  background: var(--ui-success-bg) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result.is-error,
+.jlwa-v3 .jlwa-feature-host .jlwa-probe-result.is-error {
+  border-color: var(--ui-danger-border) !important;
+  border-left-color: var(--ui-danger) !important;
+  color: var(--ui-danger) !important;
+  background: var(--ui-danger-bg) !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result>summary { min-height: 32px; font-weight: 700; }
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result>summary span { color: inherit !important; opacity: .8; }
+.jlwa-v3 .jlwa-feature-host .jlwa-deploy-result pre {
+  padding: 14px !important;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm) !important;
+  color: var(--ui-text);
+  background: var(--ui-surface) !important;
+  font-family: ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-security-check li {
+  background: var(--ui-subtle) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-sm) !important;
+  box-shadow: none !important;
+}
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-security-check :is(li strong,li span) { color: var(--ui-text) !important; }
+.jlwa-v3 .jlwa-feature-host .jlwa-ad-security-check li span { color: var(--ui-muted) !important; }
+.jlwa-v3 .jlwa-feature-host .wpaias-cats {
+  background: var(--ui-subtle) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-sm);
+}
+.jlwa-v3 .jlwa-feature-host .wpaias-cats label {
+  border-radius: var(--ui-radius-xs);
+  transition: background-color var(--ui-motion);
+}
+.jlwa-v3 .jlwa-feature-host .wpaias-cats label:hover {
+  background: var(--ui-hover) !important;
+  color: var(--ui-text);
+}
+.jlwa-v3 .jlwa-update-panel,.jlwa-v3 .jlwa-system-side {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  box-shadow: var(--ui-shadow) !important;
+  color: var(--ui-text);
+}
+.jlwa-v3 .jlwa-update-panel h2,.jlwa-v3 .jlwa-system-side h2 { color: var(--ui-text); }
+.jlwa-v3 .jlwa-system-tip {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-subtle) !important;
+}
+.jlwa-v3 .jlwa-update-actions :is(.button,.button-primary) {
+  min-height: 38px;
+  padding: 7px 13px;
+  border-radius: var(--ui-radius-sm);
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background-color var(--ui-motion), border-color var(--ui-motion) !important;
+}
+.jlwa-v3 .jlwa-update-actions .button-primary {
+  background: var(--jlwa-ui-brand) !important;
+  color: #fff !important;
+  border-color: var(--jlwa-ui-brand) !important;
+}
+.jlwa-v3 .jlwa-update-actions :is(.button,.button-primary):hover:not(:disabled) {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: brightness(.94);
+}
+.jlwa-v3 .jlwa-update-status {
+  border: 1px solid var(--ui-info-border) !important;
+  border-left: 3px solid var(--ui-info) !important;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-info-bg) !important;
+  color: var(--ui-info) !important;
+  box-shadow: none;
+}
+.jlwa-v3 .jlwa-update-status.is-success {
+  border-color: var(--ui-success-border) !important;
+  border-left-color: var(--ui-success) !important;
+  color: var(--ui-success) !important;
+  background: var(--ui-success-bg) !important;
+}
+.jlwa-v3 .jlwa-update-status.is-warning {
+  border-color: var(--ui-warning-border) !important;
+  border-left-color: var(--ui-warning) !important;
+  color: var(--ui-warning) !important;
+  background: var(--ui-warning-bg) !important;
+}
+.jlwa-v3 .jlwa-update-status.is-error {
+  border-color: var(--ui-danger-border) !important;
+  border-left-color: var(--ui-danger) !important;
+  color: var(--ui-danger) !important;
+  background: var(--ui-danger-bg) !important;
+}
+.jlwa-v3 .jlwa-update-log {
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius-sm) !important;
+  background: var(--ui-subtle) !important;
+  overflow-wrap: anywhere;
+}
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-update-panel :is(p,small,span),
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-system-side :is(p,small,span) {
+  color: var(--ui-muted);
+}
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-update-panel :is(h2,strong),
+.jlwa-v3[data-jlwa-theme="dark"] .jlwa-system-side :is(h2,strong) {
+  color: var(--ui-text);
+}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>九流 WP 助手 v3.0.1 UI / 本地隔离测试页</title>
+<style>
+html,body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#18181b;background:#f6f7fa}
+#wpadminbar{height:32px;display:flex;align-items:center;padding-left:20px;background:#1d2327;color:#fff;font-size:12px}
+#adminmenumain{width:150px;position:absolute;top:32px;bottom:0;background:#1d2327;color:#c3c4c7;font-size:12px;padding:18px 5px;box-sizing:border-box}
+#adminmenumain div{padding:10px}
+#wpcontent{margin-left:150px;padding:20px}
+.wrap{box-sizing:border-box}
+</style>
+<!-- Load the six old module CSS files BEFORE the new shared build, like WP. -->
+<link rel="stylesheet" href="../../features/page-effects/assets/css/admin.css">
+<link rel="stylesheet" href="../../features/anti-debug/assets/css/admin.css">
+<link rel="stylesheet" href="../../features/ai-article-summary/assets/css/admin.css">
+<link rel="stylesheet" href="../../features/immersive-preloader/assets/css/admin.css">
+<link rel="stylesheet" href="../../features/relative-media-urls/assets/css/admin.css">
+<link rel="stylesheet" href="../../assets/css/download-page-admin.css">
+<link rel="stylesheet" href="../../assets/css/admin-content.css">
+<link rel="stylesheet" href="../../assets/vue/admin.css">
+<script>
+window.onerror=function(msg,url,line,col,error){document.body.insertAdjacentHTML('beforeend','<pre id="js-error">SCRIPT ERROR: '+String(msg)+' '+String(url)+' '+line+':'+col+'</pre>');};
+window.addEventListener('unhandledrejection',function(evt){document.body.insertAdjacentHTML('beforeend','<pre id="js-error">PROMISE ERROR: '+String(evt.reason)+'</pre>');});
+window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<pre id="js-status">JS loaded: '+String(!!window.JLWA_V3)+' | mounted:'+String(!!document.querySelector(".jlwa-vue-ready"))+'</pre>');},800)});
+window.JLWA_V3={
+ active:"dashboard", title:"控制台",subtitle:"查看实际启用情况、依赖检查与快捷配置入口。",
+ version:"3.0.1",
+ homeUrl:"/tests/fixtures/v3-dashboard.html", updateUrl:"/tests/fixtures/v3-module.html?system",
+ entries: [
+ {key:"dashboard",label:"控制台",description:"站点总览与功能状态",href:"/tests/fixtures/v3-dashboard.html"},
+ {key:"page-effects",label:"页面特效管理",description:"鼠标特效和页面美化",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"anti-debug",label:"反调试与内容保护",description:"保护页面资源",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"ai-summary",label:"AI 文章摘要",description:"使用 AI 提供自动摘要",href:"/tests/fixtures/v3-module.html",ready:false,enabled:false,status:"待配置密钥"},
+ {key:"preloader",label:"沉浸式预加载",description:"页面开屏效果和动画",href:"/tests/fixtures/v3-module.html",ready:true,enabled:false,status:"未启用"},
+ {key:"media-urls",label:"媒体与多域名链接",description:"替换和扫描图片链接",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"download-page",label:"子比下载页与私有交付",description:"WordPress 订单、Nginx 和 OpenList",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"system",label:"系统与更新",description:"版本检查",href:"/tests/fixtures/v3-module.html?system"}
+ ],
+ modules: [],
+};
+window.JLWA_V3.active='download-page';
+window.JLWA_V3.title='子比下载页与私有交付';
+window.JLWA_V3.subtitle='下载页模板、子比购买权限与 Nginx/OpenList 安全交付';
+window.JLWA_V3.modules=window.JLWA_V3.entries.filter(x=>!["system","dashboard"].includes(x.key)).map(x=>({...x,eyebrow:"站点功能"}));
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  setTimeout(function () {
+    var selectors = ['.xjpe-card','.jlwa-ad-option','.wpaias-anim-item','.jip-effect-card','.jlwa-template-card'];
+    var results = selectors.map(function (sel) {
+      var node = document.querySelector(sel);
+      return sel + ': ' + (node ? getComputedStyle(node).transform + ' / ' + getComputedStyle(node).borderRadius : 'missing');
+    });
+    document.body.setAttribute('data-jlwa-style-audit', results.join('; '));
+  },300);
+});
+</script>
+<script defer src="../../assets/vue/admin.js"></script>
+</head>
+<body class="jlwa-admin-screen">
+<div id="wpadminbar">WordPress　　九流 WP 助手　　控制台　　/　　离线测试预览</div>
+<div id="adminmenumain"><div>控制台</div><div>文章</div><div>页面</div><div>外观</div><div>插件</div><div>设置</div><div>九流 WP 助手</div></div>
+<div id="wpcontent">
+<div class="wrap jlwa-app jlwa-v3 jlwa-app--dashboard">
+<div id="jlwa-vue-sidebar"><nav class="jlwa-v3-fallback-nav">正在加载 Vue 3 管理界面...</nav></div>
+<div class="jlwa-v3-workspace"><div id="jlwa-vue-toolbar"></div><div id="jlwa-vue-dialog-host"></div>
+<header class="jlwa-page-heading jlwa-v3-fallback-heading"><h1>控制台</h1></header>
+<main class="jlwa-main" id="jlwa-main-content">
+<section class="jlwa-feature-intro jlwa-feature-intro--download-page"><span class="jlwa-feature-intro__icon">🔒</span><div><h2>子比下载页与私有交付设置中心</h2><p>原 WordPress 设置与购买流程由 PHP 处理。</p></div><div class="jlwa-feature-intro__meta">已启用</div></section>
+<div class="jlwa-feature-canvas"><div class="jlwa-feature-host jlwa-feature-host--download-page">
+<nav class="nav-tab-wrapper"><a class="nav-tab nav-tab-active" href="#download">模板管理</a><a class="nav-tab" href="#security">私有交付</a><a class="nav-tab" href="#advanced">高级设置</a></nav>
+<section class="jlwa-download-section">
+<h2>下载页模板</h2><p>本区域的设置表单为浏览器静态测试，实际插件仍使用原 WordPress 表单。</p>
+<form id="jlwa-test-form" method="post">
+<label>模板标题 <input type="text" name="template_title" value="默认下载模板"></label>
+<label>下载模式 <select name="mode"><option selected value="safe">私有下载</option><option value="public">普通下载</option></select></label>
+<label><input type="checkbox" name="private_enabled" value="1" checked> 启用私有交付拦截</label>
+<h3>付费资源访问保护</h3>
+<label>OpenList 本机端口 <input type="number" name="port" value="5245"></label>
+<label>保护源目录 <input type="text" value="/d/storage/private/" name="source"></label>
+<p class="submit"><button class="button button-primary" type="submit">保存设置</button></p>
+</form>
+<p id="jlwa-test-save-status" role="status">未保存测试设置</p>
+</section>
+</div></div>
+<script>
+document.getElementById('jlwa-test-form').addEventListener('submit',function(e){e.preventDefault();document.getElementById('jlwa-test-save-status').textContent='原生 WordPress 风格表单 submit 事件已保留：'+String(new FormData(e.target).get('template_title'));});
+</script>
+
+<section class="jlwa-feature-canvas" style="margin-top:20px" aria-label="六模块统一组件浏览器验收">
+  <div class="jlwa-feature-host">
+    <h2>六大功能 · 全局组件验收</h2>
+    <div class="jlwa-ui-fixture-grid">
+      <div class="xjpe-panel"><h3>页面特效</h3><div class="xjpe-card is-enabled"><div class="xjpe-card-head"><div class="xjpe-card-text"><strong>纸艺灯笼</strong><small>已启用互动特效</small></div></div><div class="xjpe-card-footer"><span class="xjpe-status">已启用</span><button class="button xjpe-config-trigger" type="button">配置</button></div></div></div>
+      <div class="jlwa-ad-form"><h3>反调试保护</h3><label class="jlwa-ad-option is-checked"><input type="checkbox" checked><span class="jlwa-ad-option__check">✓</span><span><strong>内容保护</strong><small>防止未经授权复制</small></span></label></div>
+      <div class="wpaias-tab-content"><h3>AI 文章摘要</h3><label class="wpaias-anim-item"><input type="radio" name="animation" checked> 轻柔渐入</label><div style="margin-top:12px"><span class="wpaias-test-result ok">连接正常</span></div></div>
+      <div class="jip-card"><h3>沉浸式预加载</h3><label class="jip-effect-card is-active"><input type="radio" name="effect" checked><span class="jip-effect-preview is-fallback">✨</span><strong class="jip-effect-label">纸艺揭幕</strong><small class="jip-effect-desc">页面开场效果</small></label></div>
+      <div class="jrmu-panel"><h3>媒体链接管理</h3><span class="jrmu-badge is-on">已启用</span><table class="widefat striped"><thead><tr><th>文件</th><th>操作</th></tr></thead><tbody><tr><td>photo.png</td><td>预览通过</td></tr></tbody></table></div>
+      <div class="jlwa-download-section"><h3>下载页与安全交付</h3><label class="jlwa-template-card"><input type="radio" name="template" checked><span class="preview"></span><strong>默认安全模板</strong><small>子比购买下载保护</small></label></div>
+    </div>
+    <h3>统一通知、状态和危险操作</h3>
+    <div class="notice notice-success"><p>模拟保存成功消息（可以关闭）</p></div>
+    <div class="notice notice-info"><p>模拟普通信息通知（可以关闭）</p></div>
+    <div class="notice notice-warning"><p>重要：请先完成真实已购下载测试。</p></div>
+    <div class="notice notice-error" role="alert"><p>演示失败状态：尚未完成操作。</p></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button type="button" id="jlwa-test-alert" class="button">显示统一提示弹窗</button>
+      <button type="button" id="jlwa-test-confirm" class="button button-primary">显示危险确认</button>
+      <form id="jlwa-dialog-test-form" onsubmit="return window.JLWA_DIALOG ? window.JLWA_DIALOG.confirmSubmit(event, this, '确认执行需要权限的操作？', { title: '安全操作确认', danger:true }) : confirm('确认执行？');"><input type="hidden" name="action" value="safe"><button class="button button-primary" type="submit">提交演示表单</button></form>
+      <span id="jlwa-dialog-test-result" role="status">尚未执行</span>
+    </div>
+  </div>
+</section>
+<style>
+.jlwa-ui-fixture-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.jlwa-ui-fixture-grid>div{padding:16px!important;margin:0!important}
+.jlwa-ui-fixture-grid>div>h3{margin-top:0}
+@media(max-width:1100px){.jlwa-ui-fixture-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){.jlwa-ui-fixture-grid{grid-template-columns:1fr;}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('jlwa-test-alert').addEventListener('click',function(){
+    window.JLWA_DIALOG.alert('这是一条统一的提示信息。', {title:'操作提示'});
+  });
+  document.getElementById('jlwa-test-confirm').addEventListener('click',function(){
+    window.JLWA_DIALOG.confirm('高风险操作需要明确确认。',{title:'确认高风险操作',danger:true}).then(function(ok){
+      document.getElementById('jlwa-dialog-test-result').textContent='危险确认：'+(ok?'同意':'取消');
+    });
+  });
+  document.getElementById('jlwa-dialog-test-form').addEventListener('submit',function(event){
+    // Browser-only fixture: verify the authorized resubmit still reaches
+    // the original submit event and is not silently authorized on cancel.
+    if (event.defaultPrevented) return;
+    event.preventDefault();
+    document.getElementById('jlwa-dialog-test-result').textContent='原生 submit 已执行';
+  });
+});
+</script>
+</main></div></div>
+</div>
+</body></html>

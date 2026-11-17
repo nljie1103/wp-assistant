@@ -69,7 +69,12 @@
 		});
 
 		update.addEventListener('click', function () {
-			if (!window.confirm('将从唯一主仓库更新整个九流WP助手。更新前会完整备份，失败会自动回滚。确认继续？')) return;
+			var question = '将从唯一主仓库更新整个九流WP助手。更新前会完整备份，失败会自动回滚。确认继续？';
+			var decision = window.JLWA_DIALOG && window.JLWA_DIALOG.confirm ?
+				window.JLWA_DIALOG.confirm(question, { title: '确认更新完整插件', danger: true, confirmLabel: '确认更新' }) :
+				Promise.resolve(window.confirm(question));
+			decision.then(function (approved) {
+			if (!approved || update.disabled) return;
 			check.disabled = true;
 			update.disabled = true;
 			setStatus('正在下载、校验、备份并安装完整插件，请不要关闭页面…', 'is-loading');
@@ -83,12 +88,16 @@
 				setStatus('更新失败：' + error.message, 'is-error');
 				check.disabled = false;
 			});
+			});
 		});
 	}
 
 	function enhanceFeatureForms() {
 		document.querySelectorAll('.jlwa-feature-host form').forEach(function (form) {
 			form.addEventListener('submit', function (event) {
+				// An async confirmation may have canceled this initial submit.
+				// Do NOT mark it busy or rewrite the button until it is approved.
+				if (event.defaultPrevented) return;
 				form.classList.add('is-submitting');
 				form.setAttribute('aria-busy', 'true');
 				var button = event.submitter || null;

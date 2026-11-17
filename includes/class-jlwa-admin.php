@@ -454,6 +454,7 @@ class JLWA_Admin {
 			</div>
 			<div class="jlwa-v3-workspace">
 				<div id="jlwa-vue-toolbar"></div>
+				<div id="jlwa-vue-dialog-host"></div>
 				<header class="jlwa-page-heading jlwa-v3-fallback-heading">
 					<div><span>JIULIU WORKSPACE</span><h1><?php echo esc_html( $title ); ?></h1><p><?php echo esc_html( $subtitle ); ?></p></div>
 				</header>

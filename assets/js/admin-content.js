@@ -11,8 +11,10 @@
 			form.classList.add('jlwa-feature-form');
 			form.addEventListener('change', function () { setDirty(form); });
 			form.addEventListener('input', function () { setDirty(form); });
-			form.addEventListener('submit', function () {
-				form.classList.remove('is-dirty');
+			form.addEventListener('submit', function (event) {
+				// The first submit of an async danger dialog is intentionally
+				// canceled. Keep the unsaved indicator until approval.
+				if (!event.defaultPrevented) form.classList.remove('is-dirty');
 			});
 		});
 	}

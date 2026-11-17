@@ -304,7 +304,7 @@ class JLWA_Private_Deploy {
             $show_last = isset( $_GET['jlwa_deploy_result'] ) && '1' === (string) $_GET['jlwa_deploy_result'];
             if ( $has_last ) :
             ?>
-                <details id="jlwa-deploy-result" class="jlwa-deploy-result" <?php echo $show_last ? 'open' : ''; ?>>
+                <details id="jlwa-deploy-result" class="jlwa-deploy-result <?php echo ! empty( $last['ok'] ) ? 'is-success' : 'is-error'; ?>" <?php echo $show_last ? 'open' : ''; ?>>
                     <summary><strong><?php echo esc_html( ( ! empty( $last['ok'] ) ? '成功' : '失败' ) . '：' . ( $last['action'] ?? 'Nginx 操作' ) ); ?></strong> <span>最近一次部署操作结果（点击查看详细输出）</span></summary>
                     <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?php echo esc_html( ( ! empty( $last['ok'] ) ? '成功：' : '失败：' ) . ( $last['action'] ?? '' ) . "\n" . ( $last['message'] ?? '' ) ); ?></pre>
                 </details>
@@ -389,7 +389,7 @@ class JLWA_Private_Deploy {
                 <button type="submit" class="button button-secondary">检查公开直链是否已封锁</button>
             </form>
             <?php $probe = get_option( 'jlwa_private_probe_result', array() ); if ( is_array( $probe ) && ! empty( $probe['time'] ) ) : ?>
-                <p id="jlwa-probe-result" role="status"><strong><?php echo ! empty( $probe['ok'] ) ? '本次探测通过：' : '本次探测未通过：'; ?></strong><?php echo esc_html( $probe['message'] ?? '' ); ?></p>
+                <p id="jlwa-probe-result" class="jlwa-probe-result <?php echo ! empty( $probe['ok'] ) ? 'is-success' : 'is-error'; ?>" role="status"><strong><?php echo ! empty( $probe['ok'] ) ? '本次探测通过：' : '本次探测未通过：'; ?></strong><?php echo esc_html( $probe['message'] ?? '' ); ?></p>
             <?php endif; ?>
             <p><strong>提示：</strong>向导状态仅证明配置阶段；即使本次匿名探测得到 403，也不能代替已购账号、CDN 缓存及 OpenList API 的完整外部安全验收。</p>
         </section>

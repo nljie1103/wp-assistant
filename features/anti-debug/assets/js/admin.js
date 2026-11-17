@@ -36,6 +36,24 @@
     });
   }
 
+  function confirmDanger(message) {
+    if (window.JLWA_DIALOG && typeof window.JLWA_DIALOG.confirm === 'function') {
+      return window.JLWA_DIALOG.confirm(message, {
+        title: '确认高风险设置', danger: true,
+        confirmLabel: '确认启用', cancelLabel: '取消'
+      });
+    }
+    return Promise.resolve(window.confirm(message));
+  }
+
+  function showInformation(message) {
+    if (window.JLWA_DIALOG && typeof window.JLWA_DIALOG.alert === 'function') {
+      return window.JLWA_DIALOG.alert(message, { title: '功能说明' });
+    }
+    window.alert(message);
+    return Promise.resolve();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var root = document.querySelector('.jlwa-ad-admin');
     if (!root) return;
@@ -46,8 +64,22 @@
       if (!input) return;
       input.addEventListener('change', function () {
         if (card.classList.contains('is-dangerous') && input.checked) {
-          var accepted = window.confirm('这是高风险防御动作，可能造成循环刷新、持续断点或页面无法正常关闭。请确认管理员绕过和紧急旁路地址已经可用。');
-          if (!accepted) input.checked = false;
+          // Fail CLOSED until the async accessible confirmation succeeds.
+          // No high-risk setting is enabled while the dialog is pending.
+          input.checked = false;
+          input.disabled = true;
+          syncCard(card);
+          confirmDanger('这是高风险防御动作，可能造成循环刷新、持续断点或页面无法正常关闭。请确认管理员绕过和紧急旁路地址已经可用。')
+            .then(function (accepted) {
+              input.disabled = false;
+              input.checked = !!accepted;
+              syncCard(card);
+            }, function () {
+              input.disabled = false;
+              input.checked = false;
+              syncCard(card);
+            });
+          return;
         }
         syncCard(card);
       });
@@ -86,7 +118,7 @@
         applyMode(mode.value, root);
         if (mode.value === 'strict') {
           window.setTimeout(function () {
-            window.alert('严格模式会启用窗口差值与 debugger 耗时探测。防御层仍由“分级防御链”单独决定，不会自动开启循环刷新或无限 debugger。');
+            showInformation('严格模式会启用窗口差值与 debugger 耗时探测。防御层仍由“分级防御链”单独决定，不会自动开启循环刷新或无限 debugger。');
           }, 10);
         }
       });

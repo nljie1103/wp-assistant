@@ -328,6 +328,21 @@
 		} );
 	}
 
+	function confirmAction(message, options) {
+		if (window.JLWA_DIALOG && typeof window.JLWA_DIALOG.confirm === 'function') {
+			return window.JLWA_DIALOG.confirm(message, options || {});
+		}
+		return Promise.resolve(window.confirm(message));
+	}
+
+	function showInformation(message) {
+		if (window.JLWA_DIALOG && typeof window.JLWA_DIALOG.alert === 'function') {
+			return window.JLWA_DIALOG.alert(message, { title: '操作提示' });
+		}
+		window.alert(message);
+		return Promise.resolve();
+	}
+
 	function bindToggleKey() {
 		$( document ).on( 'click', '#wpaias-toggle-key', function ( e ) {
 			e.preventDefault();
@@ -351,14 +366,14 @@
 				.done( function ( response ) {
 					if ( requestId !== revealRequestId || provider !== currentProvider() || model !== currentModel() ) return;
 					if ( !response || !response.success || !response.data || typeof response.data.key !== 'string' ) {
-						window.alert( response && response.data && response.data.message ? response.data.message : '没有已保存的密钥。' );
+						showInformation( response && response.data && response.data.message ? response.data.message : '没有已保存的密钥。' );
 						return;
 					}
 					showingSavedKey = true;
 					$key.val( response.data.key ).prop( 'readOnly', true ).attr( 'type', 'text' );
 					$btn.attr( 'aria-pressed', 'true' ).text( '隐藏密钥' );
 				} )
-				.fail( function () { if ( requestId === revealRequestId ) window.alert( '读取密钥失败，请确认管理员会话有效后重试。' ); } )
+				.fail( function () { if ( requestId === revealRequestId ) showInformation( '读取密钥失败，请确认管理员会话有效后重试。' ); } )
 				.always( function () { if ( requestId === revealRequestId && !showingSavedKey ) $btn.prop( 'disabled', false ).text( '显示密钥' ); else if ( requestId === revealRequestId ) $btn.prop( 'disabled', false ); } );
 		} );
 	}
@@ -404,8 +419,11 @@
 	function bindCacheActions() {
 		$( document ).on( 'click', '#wpaias-clear-all', function ( e ) {
 			e.preventDefault();
-			if ( ! window.confirm( i18n.confirm || 'Confirm?' ) ) return;
 			var $btn = $( this );
+			confirmAction( i18n.confirm || '确认清空全部摘要缓存？', {
+				title: '清空全部摘要缓存', danger: true, confirmLabel: '确认清空'
+			} ).then( function ( approved ) {
+			if ( !approved ) return;
 			var $res = $( '#wpaias-clear-all-result' );
 			$btn.prop( 'disabled', true );
 			$res.removeClass( 'ok fail' ).text( '...' );
@@ -421,6 +439,7 @@
 				}
 			} ).always( function () {
 				$btn.prop( 'disabled', false );
+			} );
 			} );
 		} );
 
@@ -487,8 +506,12 @@
 
 		$( document ).on( 'click', '.wpaias-mb-regen', function ( e ) {
 			e.preventDefault();
-			if ( ! window.confirm( i18n.confirm || 'Confirm?' ) ) return;
-			doGen( $( this ).closest( '.wpaias-mb' ), true );
+			var $box = $( this ).closest( '.wpaias-mb' );
+			confirmAction( i18n.confirm || '确认重新生成摘要？', {
+				title: '重新生成摘要', confirmLabel: '重新生成'
+			} ).then( function ( approved ) {
+				if ( approved ) doGen( $box, true );
+			} );
 		} );
 
 		$( document ).on( 'click', '.wpaias-mb-clear', function ( e ) {

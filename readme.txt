@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,17 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.1 =
+* 全局统一六大功能区的板块、选卡、表单、按钮、筛选标签、日志表格、状态徽标、通知和弹窗视觉与交互。
+* 统一悬停行为：所有功能卡片不再上下浮动，使用相同的背景/边框变化，选中状态使用统一强调边框与焦点环；支持深色和减少动态效果。
+* 新增共用的 Vue 3 + Reka UI 安全确认对话框，适配反调试高风险开关、AI 摘要清缓存与重生成、媒体批量改写/清日志、系统更新。
+* 取消/关闭危险确认绝不触发操作。媒体修改继续走原生 WordPress 表单与 nonce，反调试危险选项在确认完成前保持关闭；前端缺失时保留浏览器原生确认回退。
+* WordPress 通知按成功/信息/警告/错误统一语义与样式，异步新增通知同样处理；不会在服务端确认前提示保存成功。
+* Nginx 部署结果与匿名探测明确区分成功和失败，保留现有 OpenList 付费下载与 root 安全配置。
+* 新增全局设计规范、六模块浏览器交互验收页和自动回归测试。
+
+
 
 = 3.0.0 =
 * 统一管理后台升级为 Vue 3 + Reka UI（shadcn-vue 风格）：全新侧边导航、现代化控制台、暗色与浅色主题、移动端抽屉和快捷搜索命令面板。

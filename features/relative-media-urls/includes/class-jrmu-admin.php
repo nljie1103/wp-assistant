@@ -282,7 +282,7 @@ class JRMU_Admin {
 			<?php if ( empty( $results ) ) : ?>
 				<div class="notice notice-info inline"><p>没有发现匹配内容。</p></div>
 			<?php else : ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('建议先备份数据库。本操作只会修改勾选文章的正文/摘要，并会尽量创建文章修订。确认继续吗？');">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.JLWA_DIALOG ? window.JLWA_DIALOG.confirmSubmit(event, this, '建议先备份数据库。本操作只会修改勾选文章的正文/摘要，并会尽量创建文章修订。确认继续吗？', { title: '确认批量修改文章', danger: true, confirmLabel: '确认修改' }) : confirm('建议先备份数据库。本操作只会修改勾选文章的正文/摘要，并会尽量创建文章修订。确认继续吗？');">
 					<input type="hidden" name="action" value="jrmu_apply_post_action"><?php wp_nonce_field( 'jrmu_apply_post_action' ); ?>
 					<input type="hidden" name="target_base" value="<?php echo esc_attr( $target_base ); ?>">
 					<div class="jrmu-bulkbar"><select name="bulk_action"><?php foreach ( $actions as $key => $label ) : ?><option value="<?php echo esc_attr( $key ); ?>" <?php selected( $preview_action, $key ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select> <?php submit_button( '执行勾选文章', 'primary', 'submit', false ); ?></div>
@@ -425,7 +425,7 @@ class JRMU_Admin {
 		<table class="widefat striped"><thead><tr><th>时间</th><th>动作</th><th>选择</th><th>更新</th><th>跳过</th><th>目标域名</th><th>错误</th></tr></thead><tbody>
 		<?php foreach ( $logs as $log ) : ?><tr><td><?php echo esc_html( wp_date( 'Y-m-d H:i:s', absint( $log['time'] ) ) ); ?></td><td><code><?php echo esc_html( $log['action'] ); ?></code></td><td><?php echo esc_html( isset( $log['requested'] ) ? $log['requested'] : 0 ); ?></td><td><?php echo esc_html( isset( $log['updated'] ) ? $log['updated'] : 0 ); ?></td><td><?php echo esc_html( isset( $log['skipped'] ) ? $log['skipped'] : 0 ); ?></td><td><code><?php echo esc_html( isset( $log['target_base'] ) ? $log['target_base'] : '' ); ?></code></td><td><?php if ( ! empty( $log['errors'] ) ) : ?><code><?php echo esc_html( implode( '；', (array) $log['errors'] ) ); ?></code><?php else : ?>-<?php endif; ?></td></tr><?php endforeach; ?>
 		</tbody></table>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('确定清空日志吗？');"><input type="hidden" name="action" value="jrmu_clear_logs"><?php wp_nonce_field( 'jrmu_clear_logs' ); ?><?php submit_button( '清空日志', 'delete' ); ?></form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.JLWA_DIALOG ? window.JLWA_DIALOG.confirmSubmit(event, this, '确定清空日志吗？', { title: '确认清空操作日志', danger: true, confirmLabel: '清空日志' }) : confirm('确定清空日志吗？');"><input type="hidden" name="action" value="jrmu_clear_logs"><?php wp_nonce_field( 'jrmu_clear_logs' ); ?><?php submit_button( '清空日志', 'delete' ); ?></form>
 		<?php endif; ?>
 		<?php
 	}

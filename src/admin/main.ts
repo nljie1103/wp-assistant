@@ -2,8 +2,12 @@ import { createApp, reactive } from 'vue'
 import Sidebar from './components/Sidebar.vue'
 import Toolbar from './components/Toolbar.vue'
 import Dashboard from './components/Dashboard.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
+import { createDialogService } from './dialog-service.mjs'
 import { safeNavigationEntries } from './registry.mjs'
+import { enhanceNotices, watchNotices } from './unified-notices.mjs'
 import './style.css'
+import './unified-components.css'
 
 // Vite bundles Vue, Reka and Lucide into assets/vue/admin.js. Existing PHP
 // forms are intentionally *not* mounted inside Vue; they keep their original
@@ -18,7 +22,7 @@ interface Bridge {
   entries: any[]
   modules: any[]
 }
-declare global { interface Window { JLWA_V3?: Bridge } }
+declare global { interface Window { JLWA_V3?: Bridge; JLWA_DIALOG?: any } }
 
 function boot() {
   const config = window.JLWA_V3
@@ -36,6 +40,9 @@ function boot() {
   appRoot.setAttribute('data-jlwa-theme', savedTheme)
   document.documentElement.dataset.jlwaTheme = savedTheme
   const state = reactive({ theme: savedTheme, commandOpen: false, sidebarOpen: false, dirtyCount: 0 })
+  // Keep notice behavior coherent even when a legacy AJAX callback inserts it.
+  enhanceNotices(appRoot)
+  watchNotices(appRoot)
   const entries = safeNavigationEntries(config.entries)
   const modules = safeNavigationEntries(config.modules)
   const common = { state, entries, active: config.active, version: config.version }
@@ -45,6 +52,13 @@ function boot() {
     // admin forms. Their state is shared through a single reactive object.
     createApp(Sidebar, { ...common, homeUrl: config.homeUrl }).mount(sidebarNode)
     createApp(Toolbar, { ...common, title: config.title, subtitle: config.subtitle }).mount(toolbarNode)
+    const confirmationNode = document.getElementById('jlwa-vue-dialog-host')
+    if (confirmationNode) {
+      const service = reactive({ active: null as any })
+      const dialog = createDialogService(service)
+      createApp(ConfirmDialog, { service, finish: dialog.finish }).mount(confirmationNode)
+      window.JLWA_DIALOG = dialog
+    }
     const dashboard = document.getElementById('jlwa-vue-dashboard')
     if (dashboard) {
       createApp(Dashboard, { ...common, modules, updateUrl: config.updateUrl }).mount(dashboard)
@@ -66,7 +80,11 @@ function boot() {
     const clear = () => { changed.delete(form); sync() }
     form.addEventListener('input', dirty)
     form.addEventListener('change', dirty)
-    form.addEventListener('submit', clear)
+    form.addEventListener('submit', event => {
+      // Inline high-risk confirmation cancels the first submit event.
+      // Leave the dirty indicator intact until the confirmed resubmit.
+      if (!event.defaultPrevented) clear()
+    })
     form.addEventListener('reset', clear)
   })
 
