@@ -116,7 +116,9 @@ jobs:
             --exclude 'tools/' \
             --exclude 'tests/' \
             --exclude 'phpunit.xml.dist' \
-            --exclude 'RELEASE_NOTES_*.md'
+            --exclude 'RELEASE_NOTES_*.md' \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc'
           cd "$BUILD"
           zip -qr "$GITHUB_WORKSPACE/jiuliu-wp-assistant-$VERSION.zip" jiuliu-wp-assistant
           cd "$GITHUB_WORKSPACE"

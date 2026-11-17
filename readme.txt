@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.2
+Stable tag: 2.6.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.3 =
+* 付费文件安全交付新增 Nginx 部署向导：随插件提供受限 root-owned 帮助程序，首次管理员授权后支持预览、备份、分阶段启用、nginx -t、自动恢复和回滚；保留人工真实买家验收关卡。
+* 同一 OpenList 网站的直连/CDN 域名作为访问别名处理，同一 Nginx 站点配置只写一次；付费文件公网入口禁止访问，WordPress 使用本机内部代理读取，避免域名来源头伪造问题。
+* 新增自定义下载域名和短期随机下载票据（默认关闭）；出口必须指向同一 WordPress 实例并在 CDN 强制绕过授权请求缓存，不能宣称文件边缘缓存加速。
+* 新增最少字段的授权事件审计（默认开启）和按用户/文章申请次数的保守限流（默认关闭），不修改子比主题订单和下载代码。
+* 公共插件默认配置不再内置真实网站源域名，部署文档和测试使用 example.com；现有站点已保存配置保留。
+
+
 
 = 2.6.2 =
 * 子比下载页新增服务端未购买拦截：已登录或游客未获购买资格时不会呈现资源页，自动返回原文章购买区，并显示未购买提示；已购买用户正常进入。

@@ -5,3 +5,6 @@ Thumbs.db
 .phpunit.result.cache
 .phpunit.cache/
 vendor/
+
+__pycache__/
+*.pyc

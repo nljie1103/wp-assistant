@@ -206,11 +206,36 @@ class JLWA_Download_Page_Feature {
                 <input id="jlwa-private-source" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_source_prefix]" value="<?php echo esc_attr( $options['private_source_prefix'] ); ?>">
                 <p><label for="jlwa-private-internal"><strong>WordPress Nginx 私有内部入口</strong>（须和 Nginx 配置完全一致）</label></p>
                 <input id="jlwa-private-internal" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_internal_prefix]" value="<?php echo esc_attr( $options['private_internal_prefix'] ); ?>">
+                <hr>
+                <h4>下载出口域名（可选）</h4>
+                <p>购买权限仍由子比在原站验证，开启后向指定的同一 WordPress 站点别名签发短期随机下载凭证。不显示 OpenList URL。必须先在 DNS、SSL 和站点配置中将这个别名指向同一 WordPress 网站并测试。</p>
+                <p><label for="jlwa-delivery-host"><strong>下载出口域名</strong>（不含 https://，例如 download.example.com）</label></p>
+                <input id="jlwa-delivery-host" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_host]" value="<?php echo esc_attr( $options['delivery_host'] ); ?>" placeholder="download.example.com">
+                <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_enabled]" value="1" <?php checked( ! empty( $options['delivery_enabled'] ) ); ?>><span>开启自定义下载出口（默认关闭，先配置并验证域名）</span></label>
+                <p><label>下载凭证有效期（秒，60～600） <input type="number" min="60" max="600" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[ticket_lifetime]" value="<?php echo esc_attr( $options['ticket_lifetime'] ); ?>"></label></p>
+                <p class="description"><strong>CDN 安全边界：</strong>下载凭证属于短期 Bearer 凭据，同有效期内持有者可使用，且支持同凭据范围请求。插件发送 no-store，但仍必须在 CDN 配置中强制对下载凭证参数 <code>jlwa_dl</code> 绕过缓存。普通 CDN 反代不等于文件内容缓存加速；当前版本不允许将私有下载设为公开缓存。</p>
+                <hr>
+                <h4>下载记录与保守限流</h4>
+                <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[audit_enabled]" value="1" <?php checked( ! empty( $options['audit_enabled'] ) ); ?>><span>记录授权下载操作（只存用户、文章、线路、时间、结果，不记录下载密码、凭证或源 URL）</span></label>
+                <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[rate_enabled]" value="1" <?php checked( ! empty( $options['rate_enabled'] ) ); ?>><span>启用每用户每文章的下载申请限流（默认关闭，避免影响正常下载）</span></label>
+                <p><label>60 秒内最多请求次数（10～120） <input type="number" min="10" max="120" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[rate_limit]" value="<?php echo esc_attr( $options['rate_limit'] ); ?>"></label> <small>仅统计重新申请下载；范围续传不额外计数。</small></p>
                 <p><a class="button button-secondary" href="<?php echo esc_url( 'https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md' ); ?>" target="_blank" rel="noopener noreferrer">📘 查看 WordPress Nginx + OpenList 详细配置教程</a></p>
                 <p>教程包括宝塔配置文件位置、完整 Nginx 代码、每一步测试命令和故障回滚方法。升级不修改子比订单、WebDAV 密码或文章下载地址。</p>
             </section>
             <?php submit_button( '保存下载页设置' ); ?>
-        </form></div>
+        </form>
+        <?php if ( class_exists( 'JLWA_Private_Deploy' ) ) { JLWA_Private_Deploy::render_panel(); } ?>
+        <?php
+        $recent = get_option( 'jlwa_private_download_events', array() );
+        if ( is_array( $recent ) && $recent ) :
+        ?>
+        <section class="jlwa-download-section"><h3>最近授权下载事件</h3><p>仅保留最近 120 条，不包含 URL、Token 和提取密码。</p><table class="widefat striped"><thead><tr><th>时间</th><th>用户 ID</th><th>文章 ID</th><th>下载线路</th><th>结果</th></tr></thead><tbody>
+        <?php foreach ( array_reverse( array_slice( $recent, -20 ) ) as $record ) : ?>
+        <tr><td><?php echo esc_html( wp_date( 'Y-m-d H:i:s', (int) ( $record['time'] ?? 0 ) ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['user_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['post_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['down_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) ( $record['result'] ?? '' ) ); ?></td></tr>
+        <?php endforeach; ?>
+        </tbody></table></section>
+        <?php endif; ?>
+        </div>
         <script>jQuery(function($){var frame;$('#jlwa-select-cover').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'选择默认封面',button:{text:'使用这张图片'},multiple:false,library:{type:'image'}});frame.on('select',function(){$('#jlwa-default-cover').val(frame.state().get('selection').first().toJSON().url);});frame.open();});});</script>
         <?php
     }

@@ -1,140 +1,119 @@
-# WordPress 付费资源安全交付：Nginx + OpenList 通用教程
+# 私有下载：九流 WP 助手 v2.6.3 自动部署教程
 
-> 适用于 WordPress、子比主题、九流 WP 助手，以及由 Nginx 反向代理的 OpenList。以下全部使用 **example.com、示例目录和示例端口**，不对应任何实际站点。真实部署信息只应保存在站长自己的后台配置中，不应写入公开 README、教程、日志或默认代码。
+> 本教程全部采用 `example.com` 等示例，**不要直接照抄域名、目录或端口**。只需分清两个网站：WordPress 网站和 OpenList 文件网站。OpenList 绑定直连/CDN 两个域名时，如果都指向同一 Nginx 站点配置，只需要保护这一个站点配置。
 
-## 一分钟理解：只需要两个网站角色
+## 1. 先弄清楚安全边界
 
-| 网站角色 | 示例地址 | 用途 |
-|---|---|---|
-| WordPress 网站 | `https://site.example.com` | 文章、订单、下载页、权限校验和下载入口 |
-| OpenList 网站 | `https://files.example.com` | 图片和资源文件的存储访问 |
+- 子比主题负责购买资格、Nonce、会员和下载资格；**本插件不修改子比主题文件**。
+- WordPress 通过 Nginx `internal` 在服务器内部向 OpenList 请求文件，浏览器只收到下载数据，不收到原始 OpenList 文件 URL。
+- **OpenList 公开入口必须拒绝付费目录**。如果 WordPress 与 OpenList 在同一台机器上，本机 `127.0.0.1` 是最适合的内部访问路径，不需要给访客或 CDN 的 IP 开放权限。
+- 通过 Nginx 拦截的是公网入口。仅隐藏域名、限制 `Referer`、检查前端 `Host` 都不可信；按真实网络来源限制 IP 则有作用，前提是信任链和反代配置正确。
+- 禁止访问付费目录不等于关闭整个 OpenList。公开图片应在别的公开目录，WebDAV 仍可使用原有账号；OpenList API、其它端口、历史缓存必须单独验收。
 
-**一个 OpenList 网站可以绑定多个域名。** 例如 `files.example.com` 使用直连、`files-cdn.example.com` 使用 CDN，它们仍是**同一个 OpenList 服务**；如果两个域名绑定同一个 Nginx 站点/虚拟主机，只需在该站点配置**一次**保护规则，不需要部署两个 OpenList，也不需要重复配置。插件可以把不同访问域名填入允许列表，但这只是同一存储的不同入口。
+## 2. 新手自动部署：先一次性授权，之后在插件后台操作
 
-**保护分为两层**：未经子比授权的人不能看到 WordPress 下载页；即使猜到了 OpenList 原始直链，也不能匿名下载文件。只保护下载页而不保护 OpenList 源站是不够的。
+普通 PHP 用户通常无权写 root 所有的 Nginx 站点配置。v2.6.3 **随插件安装包自带受限部署助手** `ops/jlwa-nginx-helper.py`，不需安装另一个 WordPress 插件。
 
-## 第一步：确认实际环境并备份（当前版本需管理员操作）
-
-宝塔 → **网站 → WordPress 对应网站 → 设置 → 配置文件**，以及 **OpenList 对应网站 → 设置 → 配置文件**。
-
-需要找到两份**网站配置**（可能是同一台服务器上的两个 Nginx 虚拟主机）。例如宝塔通常使用：
-
-```text
-/www/server/panel/vhost/nginx/<WordPress站点配置名>.conf
-/www/server/panel/vhost/nginx/<OpenList站点配置名>.conf
-```
-
-这是模板路径，**不要原样复制尖括号**；使用宝塔显示的实际文件名。
-
-在编辑前分别用宝塔备份功能，或通过 SSH/终端执行（替换两条路径为实际值）：
+先用宝塔查看两份**实际的站点配置文件**，再从系统管理员终端执行以下**一次性命令示例**（必须逐项换成自己的值）：
 
 ```bash
-sudo cp -a '/path/to/wordpress-site.conf' '/path/to/wordpress-site.conf.jlwa.bak'
-sudo cp -a '/path/to/openlist-site.conf' '/path/to/openlist-site.conf.jlwa.bak'
+sudo python3 /path/to/wp-content/plugins/jiuliu-wp-assistant/ops/jlwa-nginx-helper.py install \
+  --wordpress-vhost /www/server/panel/vhost/nginx/site.example.com.conf \
+  --openlist-vhost /www/server/panel/vhost/nginx/files.example.com.conf \
+  --port 5244 \
+  --source /d/storage/private/ \
+  --host files.example.com \
+  --php-user www
 ```
 
-确认 OpenList 的 Docker 端口**没有直接向公网开放**，例如将容器的 5244 映射到宿主机 `127.0.0.1:5244`（这里只是示例；有其它端口时使用真实值）。
+注意：
 
-## 第二步：WordPress Nginx 内部下载位置
+- 以上 `/path/to/...` 及各项值均是占位示例；`port` 必须是宿主机可通过 `127.0.0.1` 访问的 OpenList **本地端口**，不是 Docker 容器内部映射端口。
+- 只能指定宝塔实际 Nginx 虚拟主机的两个普通 `.conf` 文件，必须由 root 管理且不可被其他用户写入。
+- 助手只支持**单一 server 块**的简单站点配置；复杂 vhost 不会强制修改，改用下方手动教程。
+- 该安装步骤会生成 root 所有的 `/usr/local/sbin/jlwa-nginx-helper` 和 `/etc/jlwa-download/approved.json`，仅授权 WordPress 的 PHP 用户通过 `sudo -n` 执行固定操作名（`status/preview/prepare/confirm/protect/rollback`）。**不允许任意 shell 命令或更改未批准的配置路径。**
+- 安装脚本含 Nginx 语法检查；一旦有错误，停止并检查，**不要**将网站文件改为 `777` 或赋予 PHP 完整 root 权限。
 
-在 **WordPress 对应 Nginx 的 `server { ... }` 中**增加下面这两个 `location`。不要放进某个已有 `location` 内。
+然后进入 WordPress 后台 → 九流 WP 助手 → 下载页美化 → **Nginx 安全部署向导**：
 
-**先将三处示例值替换成你自己的配置：**
+1. **预览配置差异**：确认将增加的两个 Nginx 管理片段。未授权或复杂站点会显示错误，不改变任何文件。
+2. **自动备份并配置内部代理**：备份 WordPress vhost 到 root-only 目录，写入 `internal` 规则，执行 `nginx -t` 并 reload；失败恢复原始配置。
+3. **先启用私有交付**，使用真实拥有购买资格的账号从文章下载按钮测试：确认文件完整、浏览器 Network/下载历史没有 OpenList 原始 URL，断点续传符合预期。通过后勾选“已完成真实购买用户下载验证”并确认。**人工确认不代表助手已模拟完成实际文件下载。**
+4. **封锁 OpenList 公网付费目录**：再次先备份，写入源站 `/d/` 和 `/p/` 公开拒绝规则，`nginx -t` 成功后才 reload。内部 `127.0.0.1` 通道继续可读。
+5. 用外部无痕浏览器复测旧直链，期望 403。还需测试 CDN、其它入口、OpenList API（如 `/api/fs/get`）、图片与 WebDAV。**向导仅反映配置阶段，不声称已经证明全站无旁路。**
 
-- `127.0.0.1:5244` —— WordPress 服务器能访问的 OpenList 内部地址和端口
-- `/d/storage/private/` —— OpenList 真实的付费资源目录前缀
-- `files.example.com` —— OpenList 网站的主机名
+任何一步失败应停止；“回滚本次配置备份”只在已部署配置未被其它工具后续修改时自动恢复，避免覆盖其它管理员的新改动。
+
+## 3. 无法首次安装助手时的手动方法
+
+宝塔 → 网站 → WordPress 站点配置文件，在对应 `server {...}` 中添加：
 
 ```nginx
 location ^~ /_jlwa_private_openlist/ {
     internal;
     proxy_pass http://127.0.0.1:5244/d/storage/private/;
     proxy_set_header Host files.example.com;
-    proxy_http_version 1.1;
-    proxy_set_header Connection "";
     proxy_set_header Authorization "";
     proxy_set_header Cookie "";
     proxy_set_header Range $http_range;
     proxy_set_header If-Range $http_if_range;
     proxy_buffering off;
-    proxy_request_buffering off;
     proxy_read_timeout 600s;
     proxy_redirect off;
     proxy_hide_header Location;
     proxy_intercept_errors on;
     error_page 301 302 303 307 308 =502 /__jlwa_private_upstream_error;
     add_header Cache-Control "private, no-store" always;
-    add_header X-Content-Type-Options nosniff always;
 }
-
-location = /__jlwa_private_upstream_error {
-    internal;
-    return 502;
-}
+location = /__jlwa_private_upstream_error { internal; return 502; }
 ```
 
-**重要：** 这只是 Nginx 的通用示例，不保证所有 OpenList 存储驱动都直接返回文件内容。若 OpenList 再次重定向至外部云盘，必须确认它不会将上游 `Location` 暴露给浏览器；必要时改用更合适的服务端转发方案。不要为了让下载成功而关闭这个安全限制。
+注意更改示例本地端口、源目录和 Host。先保存备份、`nginx -t` 成功才 reload，然后测试真实已购下载。
 
-验证配置成功再重载：
-
-```bash
-sudo nginx -t
-sudo nginx -s reload
-```
-
-使用浏览器或 curl 直接请求 `https://site.example.com/_jlwa_private_openlist/probe.zip`，应该被 Nginx 的 `internal` 拒绝（一般 404），不能下载任何文件。
-
-## 第三步：在九流 WP 助手中启用私有交付
-
-WordPress 后台 → **九流 WP 助手 → 下载页美化 → 付费资源 · 私有安全交付**：
-
-| 字段 | 例子 |
-|---|---|
-| 启用私有交付拦截 | **先测试内网位置，再开启** |
-| 受保护源站域名 | `files.example.com`（有 CDN 别名再另起一行填写） |
-| 公开源路径前缀 | `/d/storage/private/` |
-| WordPress Nginx 私有内部入口 | `/_jlwa_private_openlist/` |
-
-开启后，用已经获得合法购买权限的测试用户点击子比下载按钮，检查下载是否完整、能否续传，以及浏览器 Network/下载历史中是否还出现 OpenList 原始文件 URL。**确认成功前，不要封锁公共文件入口。**
-
-若匹配源文件下载失败，先关插件里的私有交付开关排障；无需修改子比主题。
-
-## 第四步：在同一个 OpenList 网站的 Nginx 上关闭付费文件直链
-
-只有第三步已购下载实测正常，才在 **OpenList 对应网站的 Nginx server{}** 中加入以下规则（目录必须与插件配置和实际存储一致）：
+在 OpenList 网站的**同一个** Nginx 配置中，且只在已购下载测试成功后添加：
 
 ```nginx
 location = /d/storage/private { return 403; }
 location ^~ /d/storage/private/ { return 403; }
-
 location = /p/storage/private { return 403; }
 location ^~ /p/storage/private/ { return 403; }
 ```
 
-即使 OpenList 绑定了直连域名和 CDN 域名，只要两者属于相同的 Nginx 站点配置，就**只修改这一处**；若由不同 Nginx/CDN 入口代理到同一服务，还必须分别核实每个入口都无法绕过拦截。
+再次执行 `nginx -t`，成功才 reload。OpenList 如同时绑定两个域名并共用一个 Nginx vhost，不需要在同一个文件重复添加这些规则。
 
-再次 `nginx -t`、reload。匿名访问 `https://files.example.com/d/storage/private/sample.zip` 应返回 **403**。如果 CDN 曾缓存文件，需要在 CDN 中绕过该目录缓存并清理旧缓存，否则边缘节点仍有可能发送历史 ZIP。
+## 4. 自定义下载出口域名及 CDN
 
-对 `/d/storage/public-images/` 等公开图片目录和 OpenList 的 `/dav`（如业务需要 WebDAV）不要误拦截；不需要更换 WebDAV 密码。
+例如：
 
-## 第五步：验收与回滚
+- WordPress 主站：`site.example.com`
+- 额外的下载出口：`download.example.com`
+- OpenList 文件站点：`files.example.com`
 
-| 测试 | 期望结果 |
-|---|---|
-| 未购买或未登录者访问 `/download?post=<文章ID>` | 返回文章购买区域，不加载下载页资源 |
-| 子比有效购买者打开下载页并点击下载 | 正常下载完整文件 |
-| 把 A 的 `/pay-download/` 地址给无权限的 B | 被子比拒绝 |
-| 未购买者直接访问 OpenList 旧文件链接 | 403，不得到 ZIP 数据 |
-| 已购买者的浏览器下载历史 | 不暴露 OpenList 文件源 URL |
-| 内部 URL 被浏览器直接访问 | Nginx `internal` 拒绝 |
-| 已购买者断点续传、多个文件 | 文件正常，且不泄露上游重定向 |
-| 公开图片、OpenList 管理、WebDAV | 正常工作 |
-| 云端缓存、OpenList API、其它端口或其它反代入口 | 无法绕过文件保护 |
+首先确保 `download.example.com` **经过 HTTPS 正常抵达同一套 WordPress 实例**（DNS 指向和 TLS 证书由站长在 DNS/主机/CDN 平台配置，插件无法代替你拥有域名）。不能把下载出口直接指向 OpenList。
 
-回滚顺序：**先恢复 OpenList Nginx 的外部目录规则**，再关闭九流 WP 助手的私有交付开关，最后按需移除 WordPress 内部转发配置。这样可以避免在回滚期间把已经付款的用户锁在下载页外。
+然后在插件“下载页美化 → 私有安全交付”中设置：
 
-## 后续：插件内自动配置（开发约束）
+- 受保护源站域名：`files.example.com`，如有同一服务的 CDN 访问别名可再填一行；
+- 私有目录：`/d/storage/private/`（与内部代理目标完全相同）；
+- 下载出口域名：`download.example.com`（仅填主机名），确认能正确解析到同一个 WordPress 站点后再启用“自定义下载出口”；
+- 下载凭证有效期默认 180 秒，可设置 60～600 秒。
 
-自动检测、备份、写入、`nginx -t`、重载、验证、失败回滚、审计及限流全部在 **九流 WP 助手** 的功能域内实现；绝不修改子比主题源文件。由于 WordPress 的 PHP 进程通常没有系统配置写权限，自动配置若需要特权操作，应通过**随本插件分发、一次性由站长授权安装的严格受限部署组件**完成，不能给 PHP 用户 root 权限或直接 chmod 777。未经验证的站点不应被插件自动改写。
+工作机制：子比在主站授权后，插件创建 **48 位十六进制随机票据**，仅把短期票据通过 HTTPS 302 到下载域名的 `/?jlwa_dl=<票据>`。下载域名的 WordPress 对票据和 Host 校验，通过后再使用本机 Nginx 内部代理交付。票据不包含真实 OpenList 文件 URL 或路径。下载开始后持续传输；Range 续传需要在票据未过期前重新发起，过期后回到原文章再次获取。
 
-开发边界和验收要求见 [《付费下载部署与权限边界》](private-download-design.md)。
+**特别注意：短期票据是 Bearer 访问凭证。拥有票据的人在有效期内可能重复使用；它不是一次一请求的不可转发凭证。** 不推荐做 IP 绑定，否则移动网络、断点续传和代理变化会误伤购买用户。
+
+**CDN 必须设置绕过缓存**：对于 `download.example.com` 上携带 `jlwa_dl` 参数的请求设置 Cache Rule → Bypass；对于主站的 `/pay-download/*`、`/download?post=...`，同样旁路整页缓存。插件发送 `Cache-Control: private, no-store`、`CDN-Cache-Control: no-store`，但 CDN 如果设置了忽略源站 Cache-Control 的强制缓存规则，仍有风险。
+
+> 此模式只提供 CDN 代理网络路径、TLS/链路层的便利，**不保证大文件内容会命中 CDN 边缘缓存加速**。要在边缘缓存私有付费 ZIP，必须另外设计边缘令牌校验（例如受控 Worker + 签名方案），不能直接把这个票据 URL 设成“Cache Everything”。
+
+## 5. 审计、限流和验收
+
+- **审计默认开启**：最近 120 条授权事件，保留时间、用户 ID、文章 ID、线路和处理结果；不记录密码、票据、Cookie、完整真实文件 URL。
+- **限流默认关闭**：可选按用户与文章限制 60 秒内的重新申请下载次数（默认阈值 30），不对每次 Range/续传片段重复计数；不根据单纯 IP 判断购买身份。
+- **子比主题不修改**：原生 Nonce、订单、会员权限保持原样。下载页未购状态仍在服务端拦截。
+
+上线必须验证：游客和未购买者不能打开付费资源页、跨账号下载被子比拒绝、真实已购用户成功获取文件、旧 OpenList 付费 ZIP 公网地址返回 403、图片和 WebDAV 继续可用、CDN 不缓存任何带授权票据的下载内容。
+
+**回滚顺序**：先撤除源站公网封锁，保证买家暂时能正常下载；再关闭插件私有交付/自定义出口开关；最后恢复 WordPress 代理的本次备份。如果其他管理员已经修改过 Nginx，助手会拒绝覆盖，需人工对比备份。
+
+公开安装包不会携带任何真实站长域名、文件 IP、私有下载路径。详细开发边界见 [设计约束](private-download-design.md)。

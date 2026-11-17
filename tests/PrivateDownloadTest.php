@@ -9,6 +9,8 @@ final class PrivateDownloadTest extends TestCase {
 
     protected function setUp(): void {
         $this->settings = JLWA_Private_Download::defaults();
+        $this->settings['private_hosts'] = "files.example.com\nfiles-alt.example.com";
+        $this->settings['private_source_prefix'] = '/d/storage/private/';
     }
 
     public function test_disabled_by_default_and_ordinary_download_is_untouched(): void {
@@ -20,25 +22,25 @@ final class PrivateDownloadTest extends TestCase {
     }
 
     public function test_valid_encoded_chinese_path_routes_to_nginx_internal_location(): void {
-        $url = 'https://openlist-blog-cdn.jiuliu.org/d/google/%E4%BB%98%E8%B4%B9%E8%B5%84%E6%BA%90/psdstencil3/%E8%8F%9C%E5%8D%95%E4%B8%80/Kuwait-ID.zip';
+        $url = 'https://files.example.com/d/storage/private/designs/sample.zip';
         $actual = JLWA_Private_Download::resolve( $url, $this->settings );
-        $this->assertSame( '/_jlwa_private_openlist/psdstencil3/%E8%8F%9C%E5%8D%95%E4%B8%80/Kuwait-ID.zip', $actual['uri'] );
-        $this->assertSame( 'Kuwait-ID.zip', $actual['filename'] );
-        $this->assertStringNotContainsString( 'openlist-blog', $actual['uri'] );
+        $this->assertSame( '/_jlwa_private_openlist/designs/sample.zip', $actual['uri'] );
+        $this->assertSame( 'sample.zip', $actual['filename'] );
+        $this->assertStringNotContainsString( 'files.example.com', $actual['uri'] );
     }
 
     public function test_second_configured_host_and_unicode_filenames(): void {
-        $url = 'https://openlist-blog.jiuliu.org/d/google/付费资源/档案/封面合集.zip';
+        $url = 'https://files-alt.example.com/d/storage/private/档案/封面合集.zip';
         $mapped = JLWA_Private_Download::resolve( $url, $this->settings );
         $this->assertSame( '/_jlwa_private_openlist/%E6%A1%A3%E6%A1%88/%E5%B0%81%E9%9D%A2%E5%90%88%E9%9B%86.zip', $mapped['uri'] );
     }
 
     public function test_unrelated_public_images_or_other_hosts_are_not_intercepted(): void {
         foreach ( array(
-            'https://openlist-blog-cdn.jiuliu.org/d/google/图片/photo.jpg',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源-other/file.zip',
-            'https://openlist-blog-cdn.jiuliu.org.evil.example/d/google/付费资源/file.zip',
-            'https://another.example/d/google/付费资源/file.zip',
+            'https://files.example.com/d/storage/public-images/photo.jpg',
+            'https://files.example.com/d/storage/private-other/file.zip',
+            'https://files.example.com.evil.example/d/storage/private/file.zip',
+            'https://another.example/d/storage/private/file.zip',
         ) as $url ) {
             $this->assertNull( JLWA_Private_Download::resolve( $url, $this->settings ), $url );
         }
@@ -46,42 +48,78 @@ final class PrivateDownloadTest extends TestCase {
 
     public function test_malformed_protected_paths_fail_closed(): void {
         foreach ( array(
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/../图片/a.zip',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/%2e%2e/图片/a.zip',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/foo%2Fbar.zip',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/a%255csecret.zip',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/a.zip?token=secret',
-            'https://openlist-blog-cdn.jiuliu.org/d/google/付费资源/a.zip#fragment',
-            'https://user:pass@openlist-blog-cdn.jiuliu.org/d/google/付费资源/a.zip',
-            'ftp://openlist-blog-cdn.jiuliu.org/d/google/付费资源/a.zip',
-            'https://openlist-blog-cdn.jiuliu.org:5245/d/google/付费资源/a.zip',
+            'https://files.example.com/d/storage/private/',
+            'https://files.example.com/d/storage/private',
+            'https://files.example.com/d/storage/private/../图片/a.zip',
+            'https://files.example.com/d/storage/private/%2e%2e/图片/a.zip',
+            'https://files.example.com/d/storage/private/foo%2Fbar.zip',
+            'https://files.example.com/d/storage/private/a%255csecret.zip',
+            'https://files.example.com/d/storage/private/a.zip?token=secret',
+            'https://files.example.com/d/storage/private/a.zip#fragment',
+            'https://user:pass@files.example.com/d/storage/private/a.zip',
+            'ftp://files.example.com/d/storage/private/a.zip',
+            'https://files.example.com:5245/d/storage/private/a.zip',
         ) as $url ) {
             $this->assertFalse( JLWA_Private_Download::resolve( $url, $this->settings ), $url );
         }
     }
 
+    public function test_custom_delivery_host_is_validated_and_default_off(): void {
+        $this->assertSame( '', JLWA_Private_Download::defaults()['delivery_host'] );
+        $this->assertSame( 0, JLWA_Private_Download::defaults()['delivery_enabled'] );
+        $config = JLWA_Private_Download::sanitized( array(
+            'private_enabled' => 1,
+            'private_hosts' => 'files.example.com',
+            'private_source_prefix' => '/d/storage/private/',
+            'private_internal_prefix' => '/_jlwa_private_openlist/',
+            'delivery_host' => 'Download.EXAMPLE.COM',
+            'delivery_enabled' => 1,
+            'ticket_lifetime' => 9999,
+            'rate_limit' => 999,
+            'audit_enabled' => 1,
+        ) );
+        $this->assertSame( 'download.example.com', $config['delivery_host'] );
+        $this->assertSame( 1, $config['delivery_enabled'] );
+        $this->assertSame( 600, $config['ticket_lifetime'] );
+        $this->assertSame( 120, $config['rate_limit'] );
+        $this->assertSame( 0, $config['rate_enabled'] );
+        $this->assertSame( 1, $config['audit_enabled'] );
+        $ticket = str_repeat( 'a', 48 );
+        $this->assertSame( 'https://download.example.com/?jlwa_dl=' . $ticket, JLWA_Private_Download::ticket_url( $ticket, $config['delivery_host'] ) );
+        $this->assertSame( '', JLWA_Private_Download::ticket_url( 'invalid', $config['delivery_host'] ) );
+        $this->assertSame( '', JLWA_Private_Download::ticket_url( $ticket, 'https://download.example.com' ) );
+        $invalid = JLWA_Private_Download::sanitized( array(
+            'private_enabled' => 1,
+            'private_hosts' => 'files.example.com',
+            'private_source_prefix' => '/d/storage/private/',
+            'private_internal_prefix' => '/_jlwa_private_openlist/',
+            'delivery_host' => 'https://evil.example/path',
+            'delivery_enabled' => 1,
+        ) );
+        $this->assertSame( 0, $invalid['delivery_enabled'] );
+        $this->assertSame( '', $invalid['delivery_host'] );
+    }
+
     public function test_invalid_admin_settings_cannot_become_a_public_proxy(): void {
-        $this->assertSame( array(), JLWA_Private_Download::hosts( 'https://openlist-blog.jiuliu.org' ) );
+        $this->assertSame( array(), JLWA_Private_Download::hosts( 'https://files-alt.example.com' ) );
         $this->assertSame( '', JLWA_Private_Download::prefix( '//evil.org/x/' ) );
         $this->assertSame( '', JLWA_Private_Download::prefix( '/_bad/../secret/', true ) );
-        $this->assertSame( '', JLWA_Private_Download::prefix( '/d/google/图片/', true ) );
+        $this->assertSame( '', JLWA_Private_Download::prefix( '/d/storage/public-images/', true ) );
         $input = JLWA_Private_Download::sanitized( array(
             'private_enabled' => 1,
-            'private_hosts' => "OPENLIST-BLOG.JIULIU.ORG\nopenlist-blog.jiuliu.org",
-            'private_source_prefix' => '/d/google/付费资源/',
+            'private_hosts' => "FILES-ALT.EXAMPLE.COM\nfiles-alt.example.com",
+            'private_source_prefix' => '/d/storage/private/',
             'private_internal_prefix' => '/_jlwa_private_openlist/',
         ) );
-        $this->assertSame( "openlist-blog.jiuliu.org", $input['private_hosts'] );
+        $this->assertSame( "files-alt.example.com", $input['private_hosts'] );
         $this->assertSame( 1, $input['private_enabled'] );
         $invalid = JLWA_Private_Download::sanitized( array(
             'private_enabled' => 1,
             'private_hosts' => 'https://untrusted.example',
-            'private_source_prefix' => '/d/google/付费资源/',
+            'private_source_prefix' => '/d/storage/private/',
             'private_internal_prefix' => '/_jlwa_private_openlist/',
         ) );
         $this->assertSame( 0, $invalid['private_enabled'] );
-        $this->assertSame( JLWA_Private_Download::DEFAULT_HOSTS, $invalid['private_hosts'] );
+        $this->assertSame( '', $invalid['private_hosts'] );
     }
 }

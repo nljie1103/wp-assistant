@@ -8,8 +8,8 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class JLWA_Private_Download {
-    const DEFAULT_HOSTS = "openlist-blog-cdn.jiuliu.org\nopenlist-blog.jiuliu.org";
-    const DEFAULT_SOURCE = '/d/google/付费资源/';
+    const DEFAULT_HOSTS = '';
+    const DEFAULT_SOURCE = '/d/storage/private/';
     const DEFAULT_INTERNAL = '/_jlwa_private_openlist/';
 
     public static function defaults() {
@@ -18,6 +18,12 @@ class JLWA_Private_Download {
             'private_hosts' => self::DEFAULT_HOSTS,
             'private_source_prefix' => self::DEFAULT_SOURCE,
             'private_internal_prefix' => self::DEFAULT_INTERNAL,
+            'delivery_host' => '',
+            'delivery_enabled' => 0,
+            'ticket_lifetime' => 180,
+            'audit_enabled' => 1,
+            'rate_enabled' => 0,
+            'rate_limit' => 30,
         );
     }
 
@@ -54,6 +60,10 @@ class JLWA_Private_Download {
         $source = self::prefix( $options['private_source_prefix'] ?? $defaults['private_source_prefix'] );
         $internal = self::prefix( $options['private_internal_prefix'] ?? $defaults['private_internal_prefix'], true );
         $valid = (bool) ( $hosts && $source && $internal );
+        $delivery = strtolower( trim( (string) ( $options['delivery_host'] ?? '' ) ) );
+        $delivery_valid = '' === $delivery || ( self::hosts( $delivery ) === array( $delivery ) );
+        $ticket_lifetime = min( 600, max( 60, (int) ( $options['ticket_lifetime'] ?? 180 ) ) );
+        $rate_limit = min( 120, max( 10, (int) ( $options['rate_limit'] ?? 30 ) ) );
         // Never accept an enabled state with invalid host or path configuration.
         if ( ! $valid && function_exists( 'add_settings_error' ) ) {
             add_settings_error( 'jlwa_download_page_options', 'jlwa_private_invalid', '私有交付域名或路径无效：已保持安全交付关闭，请修正配置再启用。', 'error' );
@@ -63,6 +73,12 @@ class JLWA_Private_Download {
             'private_hosts' => $hosts ? implode( "\n", $hosts ) : $defaults['private_hosts'],
             'private_source_prefix' => $source ? $source : $defaults['private_source_prefix'],
             'private_internal_prefix' => $internal ? $internal : $defaults['private_internal_prefix'],
+            'delivery_host' => $delivery_valid ? $delivery : '',
+            'delivery_enabled' => ! empty( $options['delivery_enabled'] ) && $delivery_valid && '' !== $delivery && $valid ? 1 : 0,
+            'ticket_lifetime' => $ticket_lifetime,
+            'audit_enabled' => ! empty( $options['audit_enabled'] ) ? 1 : 0,
+            'rate_enabled' => ! empty( $options['rate_enabled'] ) ? 1 : 0,
+            'rate_limit' => $rate_limit,
         );
     }
 
@@ -113,6 +129,7 @@ class JLWA_Private_Download {
         // This hook is called by Zibll only after its paid/limit gate in download.php.
         // Keep normal downloads unchanged until the administrator explicitly enables it.
         add_filter( 'zibpay_download_file_local', array( __CLASS__, 'intercept' ), 30, 5 );
+        add_action( 'init', array( __CLASS__, 'redeem_ticket' ), 1 );
     }
 
     public static function intercept( $file_local, $file_url, $post_id, $down_id, $paid ) {
@@ -125,7 +142,92 @@ class JLWA_Private_Download {
         }
         // The Zibll hook has already run after a successful authorization check.
         // Never let a matching protected URL fall through to wp_redirect.
+        if ( ! empty( $settings['rate_enabled'] ) && ! self::rate_permits( $post_id, $settings ) ) {
+            self::audit( $post_id, $down_id, 'rate_limited', $settings );
+            status_header( 429 );
+            nocache_headers();
+            wp_die( '下载请求过于频繁，请稍后重新从文章下载按钮进入。', '请求过于频繁', array( 'response' => 429 ) );
+            exit;
+        }
+        self::audit( $post_id, $down_id, 'authorized', $settings );
+        if ( ! empty( $settings['delivery_enabled'] ) && ! empty( $settings['delivery_host'] ) ) {
+            self::issue_ticket( $match, $settings );
+            exit;
+        }
         self::deliver( $match );
+        exit;
+    }
+
+    /** Only count new paid-link activations; range requests to a ticket are not counted. */
+    public static function rate_permits( $post_id, $settings ) {
+        $user = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+        $key = 'jlwa_rl_' . hash( 'sha256', $user . ':' . (int) $post_id );
+        $count = (int) get_transient( $key );
+        if ( $count >= (int) $settings['rate_limit'] ) { return false; }
+        set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+        return true;
+    }
+
+    /** Bounded event log, never stores file URLs, raw IPs, tokens or cookies. */
+    public static function audit( $post_id, $down_id, $outcome, $settings ) {
+        if ( empty( $settings['audit_enabled'] ) ) { return; }
+        $rows = get_option( 'jlwa_private_download_events', array() );
+        if ( ! is_array( $rows ) ) { $rows = array(); }
+        $rows[] = array(
+            'time' => time(),
+            'post_id' => (int) $post_id,
+            'down_id' => (int) $down_id,
+            'user_id' => function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0,
+            'result' => in_array( $outcome, array( 'authorized', 'rate_limited' ), true ) ? $outcome : 'unknown',
+        );
+        update_option( 'jlwa_private_download_events', array_slice( $rows, -120 ), false );
+    }
+
+    /** The host is a user-configured alias of the SAME WordPress origin, not OpenList. */
+    public static function ticket_url( $ticket, $host ) {
+        if ( ! preg_match( '/^[a-f0-9]{48}$/D', (string) $ticket ) || self::hosts( $host ) !== array( $host ) ) { return ''; }
+        return 'https://' . $host . '/?jlwa_dl=' . $ticket;
+    }
+
+    protected static function issue_ticket( $match, $settings ) {
+        if ( headers_sent() ) { self::unavailable(); }
+        $ticket = bin2hex( random_bytes( 24 ) );
+        $life = (int) $settings['ticket_lifetime'];
+        $url = self::ticket_url( $ticket, $settings['delivery_host'] );
+        if ( ! $url || ! set_transient( 'jlwa_dl_' . $ticket, array(
+            'uri' => $match['uri'], 'filename' => $match['filename'],
+            'expires' => time() + $life, 'host' => $settings['delivery_host'],
+        ), $life ) ) { self::unavailable(); }
+        nocache_headers();
+        header( 'Referrer-Policy: no-referrer' );
+        header( 'Cache-Control: private, no-store, max-age=0' );
+        header( 'CDN-Cache-Control: no-store' );
+        header( 'Cloudflare-CDN-Cache-Control: no-store' );
+        // Domain is validated and HTTPS-only. No source address or file path in URL.
+        wp_redirect( $url, 302, 'Jiuliu WP Assistant' );
+        exit;
+    }
+
+    /** Short-lived opaque bearer. Reuse during TTL permits Range; no edge cache allowed. */
+    public static function redeem_ticket() {
+        if ( ! isset( $_GET['jlwa_dl'] ) ) { return; } // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $settings = class_exists( 'JLWA_Download_Page_Feature' ) ? JLWA_Download_Page_Feature::options() : array();
+        $ticket = is_string( $_GET['jlwa_dl'] ) ? wp_unslash( $_GET['jlwa_dl'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $host = strtolower( (string) ( $_SERVER['HTTP_HOST'] ?? '' ) );
+        $allowed = ! empty( $settings['private_enabled'] ) && ! empty( $settings['delivery_enabled'] ) && ! empty( $settings['delivery_host'] ) && $host === $settings['delivery_host'];
+        if ( ! $allowed || ! preg_match( '/^[a-f0-9]{48}$/D', $ticket ) ) { self::missing_ticket(); }
+        $data = get_transient( 'jlwa_dl_' . $ticket );
+        if ( ! is_array( $data ) || ! isset( $data['uri'], $data['filename'], $data['expires'], $data['host'] ) || $data['host'] !== $host || (int) $data['expires'] < time() ) { self::missing_ticket(); }
+        $prefix = self::prefix( $settings['private_internal_prefix'] ?? '', true );
+        if ( ! $prefix || 0 !== strpos( $data['uri'], $prefix ) || ! preg_match( '#^/_[a-zA-Z0-9_-]+/[a-zA-Z0-9%._~/-]+$#D', $data['uri'] ) || preg_match( '#(?:\.\.|//|%2f|%5c)#i', $data['uri'] ) ) { self::missing_ticket(); }
+        self::deliver( $data );
+        exit;
+    }
+
+    protected static function missing_ticket() {
+        nocache_headers();
+        header( 'CDN-Cache-Control: no-store' );
+        wp_die( '此下载链接已无效或过期，请返回原文章重新获取。', '下载链接不可用', array( 'response' => 404 ) );
         exit;
     }
 
@@ -145,6 +247,8 @@ class JLWA_Private_Download {
         header( 'Content-Type: application/octet-stream' );
         header( 'Content-Disposition: attachment; filename="' . $fallback . '"; filename*=UTF-8\'\'' . rawurlencode( $name ) );
         header( 'Cache-Control: private, no-store, max-age=0' );
+        header( 'CDN-Cache-Control: no-store' );
+        header( 'Cloudflare-CDN-Cache-Control: no-store' );
         header( 'X-Content-Type-Options: nosniff' );
         header( 'Referrer-Policy: no-referrer' );
         header( 'X-Robots-Tag: noindex, nofollow' );
