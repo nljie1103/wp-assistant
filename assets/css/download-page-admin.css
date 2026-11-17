@@ -39,3 +39,11 @@
 .jlwa-download-admin .jlwa-delivery-details>summary{cursor:pointer;font-weight:600;color:#344054}
 .jlwa-download-admin .jlwa-delivery-details[open]>summary{margin-bottom:10px}
 .jlwa-download-admin .jlwa-delivery-details .description{line-height:1.65;margin:0}
+
+
+/* Nginx action result is shown after the POST/redirect/get flow. */
+.jlwa-download-admin .jlwa-deploy-result{margin:16px 0;padding:12px 16px;border:1px solid #cdddf8;border-left:4px solid #4f46e5;border-radius:10px;background:#f8faff;scroll-margin-top:105px}
+.jlwa-download-admin .jlwa-deploy-result>summary{cursor:pointer;line-height:1.6}
+.jlwa-download-admin .jlwa-deploy-result>summary span{font-size:12px;color:#667085}
+.jlwa-download-admin .jlwa-deploy-result>pre{max-height:55vh;overflow:auto;margin:12px 0 0;padding:12px;border-radius:8px;background:#fff;font-size:12px;line-height:1.7}
+.jlwa-download-admin #jlwa-probe-result{scroll-margin-top:105px}

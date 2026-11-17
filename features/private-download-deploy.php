@@ -108,6 +108,14 @@ class JLWA_Private_Deploy {
         return array( 'ok' => true, 'message' => trim( (string) $stdout ) );
     }
 
+    /** Keep all deployment and anonymous-probe results on their own admin tab. */
+    public static function result_redirect_url( $type = 'deployment' ) {
+        $type = 'probe' === $type ? 'probe' : 'deployment';
+        $flag = 'probe' === $type ? 'jlwa_probe_result' : 'jlwa_deploy_result';
+        $anchor = 'probe' === $type ? 'jlwa-probe-result' : 'jlwa-deploy-result';
+        return admin_url( 'admin.php?page=jlwa-download-page&tab=deployment&' . $flag . '=1' ) . '#' . $anchor;
+    }
+
     public static function handle() {
         if ( ! current_user_can( 'manage_options' ) ) { wp_die( '没有管理权限。', '无权限', array( 'response' => 403 ) ); }
         $operation = isset( $_POST['jlwa_operation'] ) && is_string( $_POST['jlwa_operation'] ) ? sanitize_key( wp_unslash( $_POST['jlwa_operation'] ) ) : '';
@@ -137,7 +145,7 @@ class JLWA_Private_Deploy {
             'ok' => (bool) $result['ok'],
             'message' => substr( (string) $result['message'], 0, 4500 ),
         ), false );
-        wp_safe_redirect( admin_url( 'admin.php?page=jlwa-download-page' ) );
+        wp_safe_redirect( self::result_redirect_url( 'deployment' ), 303 );
         exit;
     }
 
@@ -184,7 +192,7 @@ class JLWA_Private_Deploy {
             }
         }
         update_option( 'jlwa_private_probe_result', $result, false );
-        wp_safe_redirect( admin_url( 'admin.php?page=jlwa-download-page' ) );
+        wp_safe_redirect( self::result_redirect_url( 'probe' ), 303 );
         exit;
     }
 
@@ -227,6 +235,23 @@ class JLWA_Private_Deploy {
             <p><strong>当前状态：</strong><?php echo esc_html( $phases[ $phase ] ?? '需要人工检查配置' ); ?></p>
             <?php if ( ! $result['ok'] ) : ?><p class="notice notice-warning" style="padding:10px"><?php echo esc_html( $result['message'] ); ?></p><?php endif; ?>
             <?php if ( ! empty( $status['docker_container_detected'] ) ) : ?><p>已识别与所填本地端口对应的 Docker 容器映射，并确认端口未对公网发布。</p><?php endif; ?>
+            <?php
+            // The redirect includes this flag only after handling a form POST.
+            // Display the latest result immediately instead of hiding it in
+            // a collapsed details block or sending users to the template tab.
+            $last = get_option( 'jlwa_nginx_last_result', array() );
+            $has_last = is_array( $last ) && ! empty( $last['time'] );
+            $show_last = isset( $_GET['jlwa_deploy_result'] ) && '1' === (string) $_GET['jlwa_deploy_result'];
+            if ( $has_last ) :
+            ?>
+                <details id="jlwa-deploy-result" class="jlwa-deploy-result" <?php echo $show_last ? 'open' : ''; ?>>
+                    <summary><strong><?php echo esc_html( ( ! empty( $last['ok'] ) ? '成功' : '失败' ) . '：' . ( $last['action'] ?? 'Nginx 操作' ) ); ?></strong> <span>最近一次部署操作结果（点击查看详细输出）</span></summary>
+                    <pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?php echo esc_html( ( ! empty( $last['ok'] ) ? '成功：' : '失败：' ) . ( $last['action'] ?? '' ) . "\n" . ( $last['message'] ?? '' ) ); ?></pre>
+                </details>
+            <?php elseif ( $show_last ) : ?>
+                <p id="jlwa-deploy-result" class="notice notice-warning" role="alert">本次操作没有找到可展示的结果，请检查管理员权限和日志。</p>
+            <?php endif; ?>
+
             <?php if ( ! $has_helper ) : ?>
                 <p><strong>已在终端看到 installed 的站长请不要重新安装。</strong> 当前仅表示 WordPress PHP 无法通过受限 sudo 读取助手状态。可在服务器终端进行<strong>只读诊断</strong>：</p>
                 <textarea class="large-text code" rows="2" readonly><?php echo esc_textarea( 'sudo -u www /usr/bin/sudo -n ' . self::BRIDGE . ' status' ); ?></textarea>
@@ -253,12 +278,6 @@ class JLWA_Private_Deploy {
                 <?php self::op_form( 'protect', '④ 封锁 OpenList 公网付费目录' ); ?>
                 <?php self::op_form( 'rollback', '恢复本次配置备份', '', true ); ?>
             <?php endif; ?>
-            <?php
-            $last = get_option( 'jlwa_nginx_last_result', array() );
-            if ( is_array( $last ) && ! empty( $last['time'] ) ) :
-            ?>
-                <details><summary>最近一次部署操作结果</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?php echo esc_html( ( ! empty( $last['ok'] ) ? '成功：' : '失败：' ) . ( $last['action'] ?? '' ) . "\n" . ( $last['message'] ?? '' ) ); ?></pre></details>
-            <?php endif; ?>
             <hr>
             <h4>🔍 已发布付费资源的公网匿名探测</h4>
             <p>选择一个已配置受保护文件直链的付费文章 ID，插件尝试以无 Cookie 的小型 Range 请求从每个设置的 OpenList 访问域名读取该文件，预期均返回 403。不会把真实文件 URL 显示在页面或保存到日志。</p>
@@ -269,7 +288,7 @@ class JLWA_Private_Deploy {
                 <button type="submit" class="button button-secondary">检查公开直链是否已封锁</button>
             </form>
             <?php $probe = get_option( 'jlwa_private_probe_result', array() ); if ( is_array( $probe ) && ! empty( $probe['time'] ) ) : ?>
-                <p><strong><?php echo ! empty( $probe['ok'] ) ? '本次探测通过：' : '本次探测未通过：'; ?></strong><?php echo esc_html( $probe['message'] ?? '' ); ?></p>
+                <p id="jlwa-probe-result" role="status"><strong><?php echo ! empty( $probe['ok'] ) ? '本次探测通过：' : '本次探测未通过：'; ?></strong><?php echo esc_html( $probe['message'] ?? '' ); ?></p>
             <?php endif; ?>
             <p><strong>提示：</strong>向导状态仅证明配置阶段；即使本次匿名探测得到 403，也不能代替已购账号、CDN 缓存及 OpenList API 的完整外部安全验收。</p>
         </section>

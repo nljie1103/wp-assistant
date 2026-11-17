@@ -149,6 +149,21 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( 'sudo -i' ) );
     }
 
+    public function test_nginx_operations_return_to_deployment_tab_and_result_anchor(): void {
+        $preview = JLWA_Private_Deploy::result_redirect_url( 'deployment' );
+        $probe = JLWA_Private_Deploy::result_redirect_url( 'probe' );
+        $this->assertSame( 'https://example.test/wp-admin/admin.php?page=jlwa-download-page&tab=deployment&jlwa_deploy_result=1#jlwa-deploy-result', $preview );
+        $this->assertSame( 'https://example.test/wp-admin/admin.php?page=jlwa-download-page&tab=deployment&jlwa_probe_result=1#jlwa-probe-result', $probe );
+        $this->assertSame( $preview, JLWA_Private_Deploy::result_redirect_url( 'invalid' ) );
+    }
+
+    public function test_nginx_result_redirect_is_used_for_both_deploy_and_probe(): void {
+        $code = file_get_contents( dirname( __DIR__ ) . '/features/private-download-deploy.php' );
+        $this->assertStringContainsString( "wp_safe_redirect( self::result_redirect_url( 'deployment' ), 303 )", $code );
+        $this->assertStringContainsString( "wp_safe_redirect( self::result_redirect_url( 'probe' ), 303 )", $code );
+        $this->assertStringNotContainsString( "wp_safe_redirect( admin_url( 'admin.php?page=jlwa-download-page' ) )", $code );
+    }
+
     public function test_one_line_autoinstall_is_generated_from_saved_site_settings(): void {
         $settings = JLWA_Private_Download::defaults();
         $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );

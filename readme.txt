@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.7.0
+Stable tag: 2.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.7.1 =
+* 修复 Nginx 自动部署预览、备份、回滚等操作完成后跳回下载页模板的问题：所有部署结果返回 Nginx 自动部署分类，公网探测也返回同一分类。
+* 操作结果在页面中自动展开并定位，不再默认折叠在按钮下方。保留最近操作详情，未执行操作时不弹出成功消息。
+* 提交完成后使用 HTTP 303 跳回只读结果页，避免浏览器刷新重复执行 POST；原有固定操作白名单、nonce、真实购买验证与公网封锁保护不变。
+* 增加跳转目标、后台表单处理与真实 WordPress 渲染回归测试。
+
 
 = 2.7.0 =
 * 修复 Nginx 受限部署助手终端成功安装后，WordPress 后台因 PHP open_basedir 路径限制误报“尚未安装”的问题。
