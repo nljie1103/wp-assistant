@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.6
+Stable tag: 2.6.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.7 =
+* 私有下载默认行为说明：不填写出口时从 pay-download 请求域名通过 X-Accel-Redirect 交付；填写出口时才签发跨域票据。
+* 媒体与链接按媒体、文章、多域名、SEO 和转换范围拆分顶部分类，移除说明。每个分类保存不重置其它设置。
+* 独立反代站点的可选 Nginx 静态缓存提供一行预览、备份部署、回滚命令；拒绝 PHP 主站、缓存冲突和反代循环。
+* 反调试界面统一顶部标签与中性卡片，自检可展开，支持键盘导航；原有防御功能不变。
+* 新增媒体设置分区保存和 Nginx 安全辅助脚本的完整回归测试，不改生产服务器和子比主题。
+
+
 
 = 2.6.6 =
 * 下载页设置改为顶部五个独立分类：下载页模板、私有安全交付、Nginx 自动部署、下载记录、说明，避免模板和安全设置在同一个超长页面。

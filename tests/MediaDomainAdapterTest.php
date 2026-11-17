@@ -1,11 +1,9 @@
 <?php
 /** Deterministic cross-domain asset tests: no live sites or CORS exceptions. */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-class JRMU_Settings {
-    public static function get_options() {
-        return $GLOBALS['jlwa_test_jrmu_options'];
-    }
-}
+if ( ! defined( 'JRMU_VERSION' ) ) { define( 'JRMU_VERSION', '4.2.0' ); }
+if ( ! defined( 'JRMU_OPTION_KEY' ) ) { define( 'JRMU_OPTION_KEY', 'jiuliu_relative_media_urls_options' ); }
+require_once dirname( __DIR__ ) . '/features/relative-media-urls/includes/class-jrmu-settings.php';
 require_once dirname( __DIR__ ) . '/features/relative-media-urls/includes/class-jrmu-domain-adapter.php';
 
 use PHPUnit\Framework\TestCase;
@@ -20,7 +18,7 @@ final class MediaDomainAdapterTest extends TestCase {
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['REQUEST_URI'] = '/';
         $GLOBALS['test_is_admin'] = false;
-        $GLOBALS['jlwa_test_jrmu_options'] = array(
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] = array(
             'domain_adaptation_enabled' => 1,
             'domain_allowed_hosts' => 'mirror.example.com',
             'domain_dynamic_siteurl' => 0,
@@ -42,7 +40,7 @@ final class MediaDomainAdapterTest extends TestCase {
 
     protected function tearDown(): void {
         $_SERVER = $this->savedServer;
-        unset( $GLOBALS['jlwa_test_jrmu_options'] );
+        unset( $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] );
         unset( $GLOBALS['jlwa_test_stored_options']['home'], $GLOBALS['jlwa_test_stored_options']['siteurl'] );
         $GLOBALS['test_is_admin'] = false;
     }
@@ -86,7 +84,7 @@ final class MediaDomainAdapterTest extends TestCase {
     }
 
     public function test_disabled_adaptation_keeps_asset_url(): void {
-        $GLOBALS['jlwa_test_jrmu_options']['domain_adaptation_enabled'] = 0;
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY]['domain_adaptation_enabled'] = 0;
         $url = 'https://origin.example.com/wp-content/themes/zibll/css/font-awesome.min.css';
         $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
     }

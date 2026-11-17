@@ -55,12 +55,30 @@
 
     var tabs = root.querySelectorAll('[data-tab]');
     var panels = root.querySelectorAll('[data-panel]');
-    tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (item) { item.classList.toggle('is-active', item === tab); });
-        panels.forEach(function (panel) { panel.classList.toggle('is-active', panel.getAttribute('data-panel') === tab.getAttribute('data-tab')); });
+    function activateTab(tab) {
+      if (!tab) return;
+      tabs.forEach(function (item) {
+        var selected = item === tab;
+        item.classList.toggle('is-active', selected);
+        item.setAttribute('aria-selected', selected ? 'true' : 'false');
+      });
+      panels.forEach(function (panel) { panel.classList.toggle('is-active', panel.getAttribute('data-panel') === tab.getAttribute('data-tab')); });
+      try { window.sessionStorage.setItem('jlwa-anti-debug-active-tab', tab.getAttribute('data-tab')); } catch (_) {}
+    }
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () { activateTab(tab); });
+      tab.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        var next = tabs[(index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        activateTab(next);
+        next.focus();
       });
     });
+    try {
+      var remembered = window.sessionStorage.getItem('jlwa-anti-debug-active-tab');
+      tabs.forEach(function (tab) { if (tab.getAttribute('data-tab') === remembered) activateTab(tab); });
+    } catch (_) {}
 
     var mode = root.querySelector('[data-jlwa-ad-mode]');
     if (mode) {

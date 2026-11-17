@@ -69,10 +69,11 @@ class JRMU_Admin {
 			return;
 		}
 
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'settings';
-		$allowed_tabs = array( 'settings', 'scanner', 'diagnostics', 'nginx', 'logs', 'help' );
+		$tab = isset( $_GET['tab'] ) && is_scalar( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'media';
+		if ( 'settings' === $tab || 'help' === $tab ) { $tab = 'media'; }
+		$allowed_tabs = array( 'media', 'content', 'domains', 'seo', 'scope', 'scanner', 'diagnostics', 'nginx', 'logs' );
 		if ( ! in_array( $tab, $allowed_tabs, true ) ) {
-			$tab = 'settings';
+			$tab = 'media';
 		}
 		?>
 		<div class="wrap jrmu-wrap">
@@ -100,11 +101,8 @@ class JRMU_Admin {
 					case 'logs':
 						$this->render_logs_tab();
 						break;
-					case 'help':
-						$this->render_help_tab();
-						break;
 					default:
-						$this->render_settings_tab();
+						$this->render_settings_tab( $tab );
 				}
 				?>
 			</div>
@@ -115,12 +113,15 @@ class JRMU_Admin {
 	/** Tabs。 */
 	private function render_tabs( $active ) {
 		$tabs = array(
-			'settings'    => '功能设置',
+			'media'       => '媒体库地址',
+			'content'     => '文章内容',
+			'domains'     => '多域名适配',
+			'seo'         => 'SEO Canonical',
+			'scope'       => '转换范围',
 			'scanner'     => '扫描 / 预览 / 修复',
 			'diagnostics' => '反代与缓存检测',
-			'nginx'       => 'Nginx 配置建议',
+			'nginx'       => 'Nginx 可选配置',
 			'logs'        => '转换日志',
-			'help'        => '说明',
 		);
 		echo '<h2 class="nav-tab-wrapper jrmu-tabs">';
 		foreach ( $tabs as $key => $label ) {
@@ -150,25 +151,31 @@ class JRMU_Admin {
 	}
 
 	/** 设置页。 */
-	private function render_settings_tab() {
+	private function render_settings_tab( $tab = 'media' ) {
 		$options = JRMU_Settings::get_options();
 		?>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'jrmu_settings_group' ); ?>
+			<input type="hidden" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[jrmu_settings_scope]" value="<?php echo esc_attr( $tab ); ?>">
 			<div class="jrmu-grid">
 				<div class="jrmu-main-card">
+					<?php if ( 'media' === $tab ) : ?>
 					<h2>一、媒体库地址</h2>
 					<table class="form-table" role="presentation">
 						<tr><th>已上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_existing_media_output]" value="1" <?php checked( $options['convert_existing_media_output'], 1 ); ?>> 转换已经上传媒体的输出地址</label><p class="description">影响媒体库、编辑器、附件 URL API、特色图、srcset 的输出，不移动文件，不改核心。关闭即可恢复输出。</p></td></tr>
 						<tr><th>未来上传媒体</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_future_media_output]" value="1" <?php checked( $options['convert_future_media_output'], 1 ); ?>> 从开启后，新上传媒体默认相对地址输出</label><p class="description">只影响开启之后的新附件。插件会给新附件打标记。</p></td></tr>
 					</table>
 
+					<?php endif; ?>
+					<?php if ( 'content' === $tab ) : ?>
 					<h2>二、文章内容地址</h2>
 					<table class="form-table" role="presentation">
 						<tr><th>未来保存文章</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_save]" value="1" <?php checked( $options['convert_post_on_save'], 1 ); ?>> 保存文章/页面时自动转换内容中的媒体地址</label><p class="description">会永久保存到文章正文/摘要，只影响开启后保存的内容。</p></td></tr>
 						<tr><th>前台临时输出</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[convert_post_on_frontend]" value="1" <?php checked( $options['convert_post_on_frontend'], 1 ); ?>> 前台显示文章时临时转换旧内容</label><p class="description">不修改数据库，适合先测试旧文章图片是否走反代。</p></td></tr>
 					</table>
 
+					<?php endif; ?>
+					<?php if ( 'domains' === $tab ) : ?>
 					<h2>三、多域名访问适配</h2>
 					<table class="form-table" role="presentation">
 						<tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">白名单入口的站内链接与 CSS/JS 等静态资源跟随当前域名；例如 Font Awesome 样式与其相对字体从同一个域名加载，避免跨域字体方块。仅改资源输出，不修改原主题或原文件。</p></td></tr>
@@ -179,20 +186,24 @@ class JRMU_Admin {
 						<tr><th>排除项</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_dynamic_siteurl]" value="1" <?php checked( $options['domain_dynamic_siteurl'], 1 ); ?>> 同时动态适配 siteurl</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_admin]" value="1" <?php checked( $options['domain_exclude_admin'], 1 ); ?>> 后台 wp-admin 保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_exclude_login]" value="1" <?php checked( $options['domain_exclude_login'], 1 ); ?>> 登录页保持原始站点地址</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_skip_system_endpoints]" value="1" <?php checked( $options['domain_skip_system_endpoints'], 1 ); ?>> REST API、Feed、Sitemap、XML 等保持原始站点地址</label></td></tr>
 					</table>
 
+					<?php endif; ?>
+					<?php if ( 'seo' === $tab ) : ?>
 					<h2>四、SEO Canonical 主域名</h2>
 					<table class="form-table" role="presentation">
 						<tr><th>Canonical</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_enabled]" value="1" <?php checked( $options['canonical_enabled'], 1 ); ?>> Canonical 统一使用主域名</label><p class="description">多入口访问时，用户点击可跟随当前域名，但 SEO 规范地址可以统一到主域名。</p></td></tr>
 						<tr><th>主域名</th><td><input type="text" class="regular-text" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_primary_host]" value="<?php echo esc_attr( $options['canonical_primary_host'] ); ?>" placeholder="blog.jiuliu.org"> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="https" <?php checked( $options['canonical_scheme'], 'https' ); ?>> https</label> <label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[canonical_scheme]" value="http" <?php checked( $options['canonical_scheme'], 'http' ); ?>> http</label></td></tr>
 					</table>
 
+					<?php endif; ?>
+					<?php if ( 'scope' === $tab ) : ?>
 					<h2>五、转换范围与扫描</h2>
 					<table class="form-table" role="presentation">
 						<tr><th>路径范围</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_uploads]" value="1" <?php checked( $options['target_uploads'], 1 ); ?>> /wp-content/uploads/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_themes]" value="1" <?php checked( $options['target_themes'], 1 ); ?>> /wp-content/themes/</label><br><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[target_plugins]" value="1" <?php checked( $options['target_plugins'], 1 ); ?>> /wp-content/plugins/</label></td></tr>
 						<tr><th>额外源站域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[extra_hosts]" rows="5" class="large-text code" placeholder="origin-blog.jiuliu.org&#10;旧域名.com"><?php echo esc_textarea( $options['extra_hosts'] ); ?></textarea><p class="description">用于识别旧源站链接、源站暴露和可转换媒体地址。</p></td></tr>
-					<tr><th>反向代理源站 URL</th><td><input type="url" class="regular-text code" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[origin_url]" value="<?php echo esc_attr( $options['origin_url'] ); ?>" placeholder="https://origin-blog.jiuliu.org"><p class="description">只用于生成 Nginx 配置建议。请填写真正的源站地址，不要填写当前反代入口，否则可能形成代理循环。</p></td></tr>
 						<tr><th>扫描限制</th><td><input type="number" min="10" max="1000" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_limit]" value="<?php echo esc_attr( $options['scan_limit'] ); ?>"> <label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[scan_postmeta]" value="1" <?php checked( $options['scan_postmeta'], 1 ); ?>> 扫描 postmeta，只读提示，不自动修改</label></td></tr>
 					</table>
-					<?php submit_button( '保存设置' ); ?>
+					<?php endif; ?>
+					<?php submit_button( '保存当前分类设置' ); ?>
 				</div>
 				<div class="jrmu-side-card">
 					<h2>当前状态</h2>
@@ -339,14 +350,68 @@ class JRMU_Admin {
 		<?php
 	}
 
-	/** Nginx 页。 */
+	/** Generate only whitelisted, safely shell-quoted root terminal commands. */
+	public static function media_nginx_command( $action, $settings, $plugin_root = '' ) {
+		if ( ! in_array( $action, array( 'preview', 'apply', 'rollback' ), true ) || ! is_array( $settings ) ) {
+			return '';
+		}
+		$target = JRMU_Settings::sanitize_single_host( $settings['media_nginx_target_host'] ?? '' );
+		$origin = JRMU_Settings::sanitize_origin_url( $settings['origin_url'] ?? '' );
+		if ( ! $target || ! preg_match( '/^[a-z0-9.-]+$/D', $target ) || ! $origin ) {
+			return '';
+		}
+		$origin_parts = wp_parse_url( $origin );
+		if ( ! is_array( $origin_parts ) || empty( $origin_parts['host'] ) || strtolower( $origin_parts['host'] ) === $target || ! in_array( $origin_parts['scheme'] ?? '', array( 'https', 'http' ), true )
+			|| ! empty( $origin_parts['query'] ) || ! empty( $origin_parts['fragment'] ) || ! in_array( $origin_parts['path'] ?? '', array( '', '/' ), true ) || ( isset( $origin_parts['port'] ) && ! in_array( (int) $origin_parts['port'], array( 80, 443 ), true ) ) || ! empty( $origin_parts['user'] ) || ! empty( $origin_parts['pass'] ) ) {
+			return '';
+		}
+		$allowed = JRMU_Settings::sanitize_host_lines( $settings['domain_allowed_hosts'] ?? '' );
+		if ( ! in_array( $target, array_filter( explode( "\n", $allowed ) ), true ) ) {
+			return '';
+		}
+		$plugin_root = $plugin_root ? $plugin_root : ( defined( 'JLWA_PLUGIN_DIR' ) ? JLWA_PLUGIN_DIR : dirname( JRMU_PLUGIN_DIR, 2 ) . '/' );
+		if ( ! is_string( $plugin_root ) || '' === $plugin_root || '/' !== $plugin_root[0] ) { return ''; }
+		$script = rtrim( $plugin_root, '/' ) . '/ops/jlwa-media-nginx-helper.py';
+		$command = 'sudo python3 ' . escapeshellarg( $script ) . ' ' . $action . ' --host ' . escapeshellarg( $target );
+		if ( 'rollback' !== $action ) {
+			$command .= ' --origin ' . escapeshellarg( $origin );
+		}
+		return $command;
+	}
+
+	/** Optional standalone reverse-proxy static cache (not required for URL rewriting). */
 	private function render_nginx_tab() {
-		$config = JRMU_Diagnostics::generate_nginx_config();
+		$options = JRMU_Settings::get_options();
+		$commands = array(
+			'preview' => self::media_nginx_command( 'preview', $options ),
+			'apply' => self::media_nginx_command( 'apply', $options ),
+			'rollback' => self::media_nginx_command( 'rollback', $options ),
+		);
 		?>
-		<h2>Nginx 反代缓存配置建议</h2>
-		<p>这是复制参考，不会自动修改服务器配置。宝塔里请先备份站点配置，再按你的源站域名调整 <code>proxy_pass</code>。</p>
-		<textarea class="large-text code jrmu-nginx" rows="36" readonly><?php echo esc_textarea( $config ); ?></textarea>
-		<p><button type="button" class="button jrmu-copy-nginx">复制配置</button></p>
+		<h2>Nginx 静态缓存：可选，不影响媒体地址转换</h2>
+		<p><strong>目前网站正常，就不用配置。</strong>“多域名适配”和“媒体 URL 转换”工作在 WordPress 层，Nginx 缓存只是给<strong>独立的反向代理入口</strong>优化静态 CSS、JS、图片和字体。Cloudflare 已经做静态缓存、或者多个域名直接共用同一个 WordPress 站点时，不要重复部署这套规则。</p>
+		<div class="notice notice-warning inline"><p><strong>自动部署严格限制：</strong>只接受已经明确代理到指定源站、没有 PHP/复杂静态规则的独立宝塔反代 vhost；只缓存无 Cookie、无授权、无查询参数的公开静态文件。不会自动改写整个 <code>location /</code>，更不会对登录、文章、订单、私有下载或 WebDAV 开启缓存。任何不符合条件的站点都会拒绝配置。</p></div>
+		<form method="post" action="options.php" class="jrmu-media-nginx-settings">
+			<?php settings_fields( 'jrmu_settings_group' ); ?>
+			<input type="hidden" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[jrmu_settings_scope]" value="nginx">
+			<table class="form-table"><tbody>
+			<tr><th>独立反代入口域名</th><td><input type="text" class="regular-text code" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[media_nginx_target_host]" value="<?php echo esc_attr( $options['media_nginx_target_host'] ); ?>" placeholder="proxy.example.com"><p class="description">先在“多域名适配”中把此域名加入白名单。该域名必须有自己独立的 Nginx 反代站点配置，不能是主 WordPress PHP 站点。</p></td></tr>
+			<tr><th>实际源站 URL</th><td><input type="url" class="regular-text code" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[origin_url]" value="<?php echo esc_attr( $options['origin_url'] ); ?>" placeholder="https://origin.example.com"><p class="description">真正的源站首页，不可填写反代入口自身，不能包含路径或查询参数；脚本会验证原 Nginx 的 proxy_pass 与它相同。</p></td></tr>
+			</tbody></table>
+			<?php submit_button( '保存反代站点参数' ); ?>
+		</form>
+		<?php if ( $commands['preview'] ) : ?>
+			<h3>1. 复制一行预览命令（不改动服务器）</h3>
+			<textarea id="jrmu-media-nginx-preview" class="large-text code" rows="2" readonly><?php echo esc_textarea( $commands['preview'] ); ?></textarea><p><button type="button" class="button jrmu-copy-command" data-copy-id="jrmu-media-nginx-preview">复制预览命令</button></p>
+			<h3>2. 通过预览后，可选执行自动备份部署命令</h3>
+			<textarea id="jrmu-media-nginx-apply" class="large-text code" rows="2" readonly><?php echo esc_textarea( $commands['apply'] ); ?></textarea><p><button type="button" class="button button-secondary jrmu-copy-command" data-copy-id="jrmu-media-nginx-apply">复制自动部署命令</button></p>
+			<h3>3. 如需恢复，复制一行回滚命令</h3>
+			<textarea id="jrmu-media-nginx-rollback" class="large-text code" rows="2" readonly><?php echo esc_textarea( $commands['rollback'] ); ?></textarea><p><button type="button" class="button jrmu-copy-command" data-copy-id="jrmu-media-nginx-rollback">复制回滚命令</button></p>
+			<p class="description">命令由插件自动填入当前安装路径及已保存参数，必须在站点服务器 sudo 终端执行。执行前先确认脚本来源可靠。自动部署会备份原 Nginx 配置并运行 <code>nginx -t</code>，失败恢复原文件；源站、反代指向相同主机或已有复杂规则时不会自动改。</p>
+		<?php else : ?>
+			<p class="notice notice-info inline" style="padding:12px">无需配置也可使用媒体与多域名功能。若要为独立 Nginx 反向代理站点加静态缓存，请先填写已加入白名单的反代域名和不同的源站 URL 并保存，页面才会生成一键命令。</p>
+		<?php endif; ?>
+		<p><a href="https://github.com/nljie1103/wp-assistant/blob/main/docs/media-nginx-optional.md" target="_blank" rel="noopener noreferrer">查看独立反代缓存适用条件与回滚说明</a>。原先包含整站动态反代的长代码不再作为新手部署推荐。</p>
 		<?php
 	}
 
@@ -361,16 +426,6 @@ class JRMU_Admin {
 		</tbody></table>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('确定清空日志吗？');"><input type="hidden" name="action" value="jrmu_clear_logs"><?php wp_nonce_field( 'jrmu_clear_logs' ); ?><?php submit_button( '清空日志', 'delete' ); ?></form>
 		<?php endif; ?>
-		<?php
-	}
-
-	/** 帮助页。 */
-	private function render_help_tab() {
-		?>
-		<h2>推荐使用顺序</h2>
-		<ol><li>先在“功能设置”里填写入口域名、源站域名，不要急着开启永久保存转换。</li><li>打开“扫描 / 预览 / 修复”，确认哪些链接会被处理。</li><li>先开启“前台临时输出”或“多域名访问适配”测试效果。</li><li>需要永久改库时，先备份数据库，再勾选文章执行。</li><li>如果改错，可用“根相对媒体 URL → 完整 URL”恢复。</li></ol>
-		<h2>多域名与图标字体</h2><p>在白名单里配置入口域名后，多域名适配会把主题/插件 CSS、JS 等站内资源输出地址改为当前访问域名。Font Awesome 等字体通常由 CSS 中的相对路径加载，因此可以保持同源；不需要修改子比主题源码。</p><p>如果仍显示图标方块，请先清除入口域名的整页缓存、CSS 缓存并强制刷新浏览器，确认字体文件从当前域名返回 HTTP 200/206。其它真正独立的 CDN 域名不被自动改写，仍需由该资源服务器提供合法的跨域字体响应头。</p>
-		<h2>边界说明</h2><p>插件不移动媒体文件、不接管存储、不改 WordPress 核心、不默认改数据库、不默认改 GUID。postmeta 只做只读提示，避免破坏序列化数据。</p>
 		<?php
 	}
 

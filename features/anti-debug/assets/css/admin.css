@@ -267,3 +267,24 @@
 .jlwa-ad-security-check li span{color:#617087;font-size:12px}
 .jlwa-ad-security-check li strong{font-size:13px;color:#243149}
 .jlwa-ad-security-check p{color:#68768b;line-height:1.65;margin:0 0 12px;font-size:12px}
+
+/* Unified WordPress admin design shared with Media and Download. */
+.jlwa-feature-host--anti-debug .jlwa-ad-admin{--ad-primary:var(--jlwa-primary,#4f46e5);--ad-violet:var(--jlwa-primary,#4f46e5);color:#1d2939}
+.jlwa-feature-host--anti-debug .jlwa-ad-boundary{grid-template-columns:38px minmax(0,1fr);gap:12px;padding:15px 18px;border-radius:12px;background:#fff;box-shadow:none;border-color:#e4e7ec}
+.jlwa-feature-host--anti-debug .jlwa-ad-boundary>div:first-child{width:36px;height:36px;border-radius:10px;background:#fef2f2;color:#b42318;box-shadow:none}
+.jlwa-feature-host--anti-debug .jlwa-ad-boundary .dashicons{font-size:19px;height:19px;width:19px}
+.jlwa-feature-host--anti-debug .jlwa-ad-form{border-radius:12px;border-color:#dce3ee;box-shadow:0 4px 18px rgba(31,41,55,.045);overflow:visible}
+.jlwa-feature-host--anti-debug .jlwa-ad-tabs{display:flex;flex-wrap:wrap;gap:0;padding:0 12px;border-bottom:1px solid #c3c4c7;background:#f8fafc;border-radius:12px 12px 0 0}
+.jlwa-feature-host--anti-debug .jlwa-ad-tabs .nav-tab{appearance:none;float:none;margin:10px 5px -1px 0;padding:10px 15px;border:1px solid #c3c4c7;border-radius:7px 7px 0 0;background:#f4f4f5;color:#455468;font-size:13px;font-weight:600;line-height:1.5;cursor:pointer}
+.jlwa-feature-host--anti-debug .jlwa-ad-tabs .nav-tab.is-active{background:#fff;color:#1d2327;border-bottom-color:#fff}
+.jlwa-feature-host--anti-debug .jlwa-ad-tabs .nav-tab:focus-visible{outline:2px solid var(--ad-primary);outline-offset:2px}
+.jlwa-feature-host--anti-debug .jlwa-ad-toolbar{padding:15px 20px;background:#fff}
+.jlwa-feature-host--anti-debug .jlwa-ad-option{border-radius:12px;min-height:84px;padding:15px;box-shadow:none}
+.jlwa-feature-host--anti-debug .jlwa-ad-option:hover{box-shadow:0 3px 12px rgba(31,41,55,.045)}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check{border-radius:12px;padding:0;background:#fff}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check>summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;cursor:pointer;list-style-position:inside}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check>summary strong{font-size:14px}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check>ul,.jlwa-feature-host--anti-debug .jlwa-ad-security-check>p,.jlwa-feature-host--anti-debug .jlwa-ad-security-check>a{margin-left:18px;margin-right:18px}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check>ul{margin-top:0}
+.jlwa-feature-host--anti-debug .jlwa-ad-security-check>a{margin-bottom:18px}
+@media(max-width:782px){.jlwa-feature-host--anti-debug .jlwa-ad-tabs{overflow-x:visible}.jlwa-feature-host--anti-debug .jlwa-ad-tabs .nav-tab{padding:9px 10px;font-size:12px}}

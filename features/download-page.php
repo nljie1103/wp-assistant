@@ -329,6 +329,7 @@ class JLWA_Download_Page_Feature {
                 <p class="description">付费目录将由 OpenList 公网 Nginx 拦截，只有 WordPress 经本地内部通道读取；公开图片目录不会被封锁。首次仍需站长在服务器终端执行一条授权命令。</p>
                 <hr>
                 <h4>下载出口域名（可选）</h4>
+                <p><strong>留空时：</strong>已购下载通过实际发起 <code>/pay-download/</code> 请求的域名直接使用 Nginx <code>X-Accel-Redirect</code> 交付，不签发跨域跳转票据，也不会从未经信任的 HTTP Host 自动创建新出口。多域名入口需要确认子比生成的下载按钮确实指向当前域名。</p>
                 <p>购买权限仍由子比在原站验证，开启后向指定的同一 WordPress 站点别名签发短期随机下载凭证。不显示 OpenList URL。必须先在 DNS、SSL 和站点配置中将这个别名指向同一 WordPress 网站并测试。</p>
                 <p><label for="jlwa-delivery-host"><strong>下载出口域名</strong>（不含 https://，例如 download.example.com）</label></p>
                 <input id="jlwa-delivery-host" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_host]" value="<?php echo esc_attr( $options['delivery_host'] ); ?>" placeholder="download.example.com">

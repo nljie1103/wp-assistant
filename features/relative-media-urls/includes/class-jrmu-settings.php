@@ -43,6 +43,7 @@ class JRMU_Settings {
 			'domain_scheme'                 => 'https',
 			'domain_allowed_hosts'          => '',
 			'origin_url'                    => '',
+			'media_nginx_target_host'       => '',
 
 			// SEO / canonical。
 			'canonical_enabled'             => 0,
@@ -108,6 +109,18 @@ class JRMU_Settings {
 		return $options;
 	}
 
+	/** Fields belonging to each independent admin configuration tab. */
+	public static function tab_fields() {
+		return array(
+			'media' => array( 'convert_existing_media_output', 'convert_future_media_output' ),
+			'content' => array( 'convert_post_on_save', 'convert_post_on_frontend' ),
+			'domains' => array( 'domain_adaptation_enabled', 'domain_dynamic_siteurl', 'domain_rewrite_frontend_links', 'domain_rewrite_mode', 'domain_exclude_admin', 'domain_exclude_login', 'domain_skip_system_endpoints', 'domain_mode', 'domain_scheme', 'domain_allowed_hosts' ),
+			'seo' => array( 'canonical_enabled', 'canonical_primary_host', 'canonical_scheme' ),
+			'scope' => array( 'target_uploads', 'target_themes', 'target_plugins', 'extra_hosts', 'scan_limit', 'scan_postmeta' ),
+			'nginx' => array( 'origin_url', 'media_nginx_target_host' ),
+		);
+	}
+
 	/**
 	 * 清洗设置。
 	 *
@@ -119,6 +132,21 @@ class JRMU_Settings {
 		$defaults = self::get_defaults();
 		$output   = array();
 		$input    = is_array( $input ) ? $input : array();
+		$scope    = isset( $input['jrmu_settings_scope'] ) && is_string( $input['jrmu_settings_scope'] ) ? $input['jrmu_settings_scope'] : '';
+		$groups   = self::tab_fields();
+		if ( isset( $groups[ $scope ] ) ) {
+			// Separate Settings API forms update only their own keys. An unchecked
+			// checkbox is absent from the request, so clear it only within this tab.
+			$submitted = $input;
+			$input = $old;
+			foreach ( $groups[ $scope ] as $key ) {
+				if ( array_key_exists( $key, $submitted ) ) {
+					$input[ $key ] = $submitted[ $key ];
+				} elseif ( in_array( $key, self::get_boolean_keys(), true ) ) {
+					$input[ $key ] = 0;
+				}
+			}
+		}
 
 		foreach ( self::get_boolean_keys() as $key ) {
 			$output[ $key ] = ! empty( $input[ $key ] ) ? 1 : 0;
@@ -148,6 +176,7 @@ class JRMU_Settings {
 
 		$output['domain_allowed_hosts']   = isset( $input['domain_allowed_hosts'] ) ? self::sanitize_host_lines( wp_unslash( $input['domain_allowed_hosts'] ) ) : '';
 		$output['origin_url']              = isset( $input['origin_url'] ) ? self::sanitize_origin_url( wp_unslash( $input['origin_url'] ) ) : '';
+		$output['media_nginx_target_host'] = isset( $input['media_nginx_target_host'] ) ? self::sanitize_single_host( wp_unslash( $input['media_nginx_target_host'] ) ) : '';
 		$output['extra_hosts']            = isset( $input['extra_hosts'] ) ? self::sanitize_host_lines( wp_unslash( $input['extra_hosts'] ) ) : '';
 		$output['canonical_primary_host'] = isset( $input['canonical_primary_host'] ) ? self::sanitize_single_host( wp_unslash( $input['canonical_primary_host'] ) ) : '';
 		$output['scan_limit']             = isset( $input['scan_limit'] ) ? max( 10, min( 1000, absint( $input['scan_limit'] ) ) ) : $defaults['scan_limit'];

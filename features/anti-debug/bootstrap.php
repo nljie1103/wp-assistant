@@ -266,8 +266,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					<div><strong>功能边界</strong><p>这是客户端阻碍工具，并非安全边界。浏览器菜单、禁用 JS、网络请求与已下载内容都无法可靠阻止。用于阻碍普通复制，真正的付费或私有内容必须经服务端授权校验；检测日志可能伪造、严格模式可能误伤正常用户。</p></div>
 				</section>
 
-				<section class="jlwa-ad-security-check" aria-label="安全能力自检">
-					<div><strong>安全能力自检</strong><small>分别核对客户端阻碍与真正的服务器授权</small></div>
+				<details class="jlwa-ad-security-check" aria-label="安全能力自检">
+					<summary><strong>安全能力自检</strong><small>查看客户端阻碍与服务器授权的区别</small></summary>
 					<ul>
 						<li><span>客户端反调试</span><strong><?php echo ! empty( $options['enabled'] ) ? '已启用（仍可绕过）' : '未启用'; ?></strong></li>
 						<li><span>服务器限制全文</span><strong><?php echo $server_restricted ? esc_html( '已启用 · ' . $server_scope ) : '未启用'; ?></strong></li>
@@ -276,11 +276,19 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					</ul>
 					<p>WordPress「所有已登录用户」不等于子比「已购买用户」或「付费会员」。真正的订单权限应由子比主题或服务端单独校验；公开浏览器检测日志只能作为线索，不能当作可信安全审计。</p>
 					<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-page-effects&tab=effects' ) ); ?>">检查服务端内容保护设置</a>
-				</section>
+				</details>
 
 				<form method="post" class="jlwa-ad-form">
 					<?php wp_nonce_field( 'jlwa_anti_debug_save', 'jlwa_anti_debug_nonce' ); ?>
 					<input type="hidden" name="jlwa_anti_debug_save" value="1">
+
+					<nav class="nav-tab-wrapper jlwa-ad-tabs" role="tablist" aria-label="反调试设置分区">
+						<button type="button" class="nav-tab is-active" role="tab" aria-selected="true" data-tab="overview">总体与范围</button>
+						<button type="button" role="tab" aria-selected="false" class="nav-tab" data-tab="detectors">探测器</button>
+						<button type="button" role="tab" aria-selected="false" class="nav-tab" data-tab="decision">判定与公共设置</button>
+						<button type="button" role="tab" aria-selected="false" class="nav-tab" data-tab="layers">分级防御链</button>
+						<button type="button" role="tab" aria-selected="false" class="nav-tab" data-tab="logs">触发日志</button>
+					</nav>
 
 					<div class="jlwa-ad-toolbar">
 						<label class="jlwa-ad-master"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><span></span><strong>启用反调试保护</strong></label>
@@ -294,15 +302,8 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						<button type="submit" class="button button-primary">保存全部设置</button>
 					</div>
 
-					<nav class="jlwa-ad-tabs" aria-label="反调试设置分区">
-						<button type="button" class="is-active" data-tab="overview">总体与范围</button>
-						<button type="button" data-tab="detectors">探测器</button>
-						<button type="button" data-tab="decision">判定与公共设置</button>
-						<button type="button" data-tab="layers">分级防御链</button>
-						<button type="button" data-tab="logs">触发日志</button>
-					</nav>
 
-					<section class="jlwa-ad-panel is-active" data-panel="overview">
+					<section class="jlwa-ad-panel is-active" data-panel="overview" role="tabpanel" id="jlwa-ad-panel-overview">
 						<div class="jlwa-ad-grid">
 							<?php $this->checkbox_card( 'scope[posts]', '保护文章页', '在单篇文章前台运行反调试检测。', ! empty( $options['scope']['posts'] ) ); ?>
 							<?php $this->checkbox_card( 'scope[pages]', '保护独立页面', '适用于下载页、会员页和专题页面。', ! empty( $options['scope']['pages'] ) ); ?>
@@ -316,7 +317,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						<label class="jlwa-ad-field"><span>排除路径</span><textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[scope][exclude_paths]" rows="5" placeholder="每行一个路径前缀"><?php echo esc_textarea( $options['scope']['exclude_paths'] ); ?></textarea><small>每行一个站内路径前缀，例如 <code>/checkout/</code>。登录和后台路径始终排除。</small></label>
 					</section>
 
-					<section class="jlwa-ad-panel" data-panel="detectors">
+					<section class="jlwa-ad-panel" data-panel="detectors" role="tabpanel" id="jlwa-ad-panel-detectors">
 						<div class="jlwa-ad-grid">
 							<?php $this->checkbox_card( 'detectors[shortcuts]', '快捷键入口', '拦截 F12、Ctrl/Cmd+U、Ctrl/Cmd+Shift+I/J/C 等，并作为高分信号。', ! empty( $options['detectors']['shortcuts'] ), 'shortcuts' ); ?>
 							<?php $this->checkbox_card( 'detectors[console_getter]', 'Console 求值', '利用控制台读取对象属性和格式化行为发现菜单打开的 DevTools。', ! empty( $options['detectors']['console_getter'] ), 'console_getter' ); ?>
@@ -334,7 +335,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						</div>
 					</section>
 
-					<section class="jlwa-ad-panel" data-panel="decision">
+					<section class="jlwa-ad-panel" data-panel="decision" role="tabpanel" id="jlwa-ad-panel-decision">
 						<div class="jlwa-ad-fields-4">
 							<?php $this->number_field( 'decision[threshold]', '触发分数', $options['decision']['threshold'], 30, 200, 5 ); ?>
 							<?php $this->number_field( 'decision[confirm_hits]', '连续确认次数', $options['decision']['confirm_hits'], 1, 6, 1 ); ?>
@@ -360,7 +361,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						</section>
 					</section>
 
-					<section class="jlwa-ad-panel" data-panel="layers">
+					<section class="jlwa-ad-panel" data-panel="layers" role="tabpanel" id="jlwa-ad-panel-layers">
 						<div class="jlwa-ad-danger-note"><strong>能力与限制</strong><p>本站只能阻止部分页面快捷键并在检测到调试迹象后响应，无法禁止访客通过 Chrome/Edge/Firefox 浏览器菜单手动打开开发者工具。管理员自动绕过、移动端与首页开关会影响脚本是否加载。高强度操作可能误伤正常访客，启用前请先验证紧急旁路地址。</p></div>
 
 						<section class="jlwa-ad-layer jlwa-ad-layer--1">
@@ -429,7 +430,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 						</section>
 					</section>
 
-					<section class="jlwa-ad-panel" data-panel="logs">
+					<section class="jlwa-ad-panel" data-panel="logs" role="tabpanel" id="jlwa-ad-panel-logs">
 						<div class="jlwa-ad-log-head"><div><h3>最近触发记录</h3><p>最多保留 <?php echo esc_html( (int) $options['logging']['max_entries'] ); ?> 条，访客地址只保存不可逆摘要。</p></div><a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=jlwa_anti_debug_clear_logs' ), 'jlwa_anti_debug_clear_logs' ) ); ?>">清空日志</a></div>
 						<div class="jlwa-ad-log-table-wrap">
 							<table class="widefat striped jlwa-ad-log-table"><thead><tr><th>时间</th><th>原因</th><th>分数</th><th>页面</th><th>访客</th></tr></thead><tbody>

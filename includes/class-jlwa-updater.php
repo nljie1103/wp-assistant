@@ -419,6 +419,7 @@ class JLWA_Updater {
 			'features/immersive-preloader/assets/js/preloader.js',
 			'features/relative-media-urls/bootstrap.php',
 			'features/relative-media-urls/includes/class-jrmu-domain-adapter.php',
+			'ops/jlwa-media-nginx-helper.py',
 			'readme.txt',
 			'uninstall.php',
 		);
