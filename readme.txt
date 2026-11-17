@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.2
+Stable tag: 3.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.3 =
+* 修复“页面特效”设置页顶部和页面底部同时出现两个“保存美化配置”按钮的问题，删除底部重复提交入口。
+* 继续保留顶部唯一保存工具栏与“直接测试前台特效”入口，不更改实际 WordPress 提交表单、Nonce、保存权限、参数处理及成功提示。
+* 新增页面特效保存按钮回归检查，防止未来重构中再次添加重复提交按钮；四个设置标签页及所有特效配置功能保持不变。
+
+
 
 = 3.0.2 =
 * 后台导航从左侧竖向栏整体调整为顶部横向菜单，控制台、六大功能区和系统更新均可直接点击，当前页面统一高亮。

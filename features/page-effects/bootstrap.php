@@ -982,7 +982,6 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
                         </section>
                     </div>
 
-                    <?php submit_button( '保存美化配置' ); ?>
                 </form>
             </div>
             <?php
