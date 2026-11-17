@@ -1,3 +1,10 @@
+## 2.7.2 — 2026-11-17
+
+- **修复浏览器拒绝已购下载**：启用私有交付并完成 Nginx 内部代理准备后，PHP 与 OpenList 各自提供 Content-Disposition，Nginx 经 X-Accel-Redirect 转发时可能同时输出两份，引发 Chrome 的 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION。修复后应用层先清除 Content-Disposition，由最终 OpenList 文件响应负责单一文件名字段；保留原有受限内部代理和访问授权。
+- **无需修改已安装 Nginx**：本次只更改 WordPress PHP 响应，不修改 root Nginx 部署助手及其管理的 Nginx 规则、备份哈希或回滚记录，也无需重建 Docker/OpenList。
+- **真实 HTTP 头回归**：新测试启动 PHP HTTP 服务，模拟子比主题预先发送的 Content-Disposition，调用插件私有交付后验证 PHP 不再携带该头、X-Accel-Redirect 仍指向内部路径、安全缓存头保留。纳入现有全量 CI。
+- **上线安全步骤**：修复前后均不能仅凭 prepare 成功就确认购买下载。实际下载、文件完整性、原始链接隐藏、公开图片访问确认完成后才可进入购买测试确认和公网源目录封锁。
+
 ## 2.7.1 — 2026-11-17
 
 - **修复后台跳错标签**：Nginx 预览、配置、确认、保护、回滚以及匿名公网探测完成后，以前统一返回缺少 tab 参数的下载页地址，导致显示默认“下载页模板”。现在明确跳回“下载页美化 → Nginx 自动部署”。

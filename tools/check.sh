@@ -18,6 +18,7 @@ phpunit --configuration phpunit.xml.dist --no-coverage
 node --test tests/js/*.test.js
 python3 -m unittest discover -s tests -p test_nginx_helper.py -v
 python3 -m unittest discover -s tests -p test_media_nginx_helper.py -v
+python3 -m unittest discover -s tests -p test_private_download_headers.py -v
 bash tests/private-deploy-status-open-basedir.test.sh
 bash tests/public-docs-privacy.test.sh
 python3 tools/version-policy.py check

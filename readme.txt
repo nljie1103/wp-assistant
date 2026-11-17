@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.7.1
+Stable tag: 2.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.7.2 =
+* 修复启用 OpenList Nginx 私有代理后，Chrome 下载出现 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION 的错误。
+* 私有下载接管现由 OpenList 最终文件响应提供 Content-Disposition，PHP 主动移除此前由子比主题输出的同名字段，防止 X-Accel-Redirect 代理链路重复响应头。
+* 保持子比购买鉴权、WordPress 内部 X-Accel-Redirect、no-store、下载日志和短期票据功能不变；无需重新安装或重置 root Nginx 部署助手。
+* 新增通过 PHP HTTP 服务器实测响应头的回归测试，校验没有 PHP Content-Disposition 且 X-Accel-Redirect 与安全缓存头正常。
+* 付费源目录公网封锁仍必须在真实下载与跨域代理验收之后手动执行。
+
+
 
 = 2.7.1 =
 * 修复 Nginx 自动部署预览、备份、回滚等操作完成后跳回下载页模板的问题：所有部署结果返回 Nginx 自动部署分类，公网探测也返回同一分类。

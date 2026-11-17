@@ -289,12 +289,19 @@ class JLWA_Private_Download {
 
     protected static function deliver( $match ) {
         if ( headers_sent() ) { self::unavailable(); }
-        $name = (string) $match['filename'];
-        $ext = pathinfo( $name, PATHINFO_EXTENSION );
-        $fallback = ( $ext && preg_match( '/^[A-Za-z0-9]{1,10}$/D', $ext ) ) ? 'download.' . $ext : 'download';
+        // X-Accel-Redirect serves the actual response through an internal
+        // Nginx proxy to OpenList. OpenList already provides the file's
+        // Content-Disposition. If PHP/Zibll also sends one, Nginx may emit
+        // BOTH headers, which Chromium rejects with:
+        // ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION.
+        //
+        // Remove any header prepared by Zibll, and let the final OpenList
+        // response provide its native filename. Do not change the root-owned
+        // Nginx helper or its managed config: production rollback integrity
+        // depends on the exact Nginx block digest remaining untouched.
+        header_remove( 'Content-Disposition' );
         header( 'X-Accel-Redirect: ' . $match['uri'] );
         header( 'Content-Type: application/octet-stream' );
-        header( 'Content-Disposition: attachment; filename="' . $fallback . '"; filename*=UTF-8\'\'' . rawurlencode( $name ) );
         header( 'Cache-Control: private, no-store, max-age=0' );
         header( 'CDN-Cache-Control: no-store' );
         header( 'Cloudflare-CDN-Cache-Control: no-store' );
