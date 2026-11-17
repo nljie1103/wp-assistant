@@ -69,7 +69,13 @@
           input.checked = false;
           input.disabled = true;
           syncCard(card);
-          confirmDanger('这是高风险防御动作，可能造成循环刷新、持续断点或页面无法正常关闭。请确认管理员绕过和紧急旁路地址已经可用。')
+          var confirmation = '这是高风险防御动作，可能造成循环刷新、持续断点或页面无法正常关闭。请确认管理员绕过和紧急旁路地址已经可用。';
+          if (input.name && input.name.indexOf('[active_console_probes]') !== -1) {
+            confirmation = '主动 Console 探针会定期打印可见调试对象与表格，可能影响速度、暴露检测实现，也不能保证检测浏览器菜单打开的开发者工具。确定在真实访客页面启用吗？';
+          } else if (input.name && input.name.indexOf('[active_debugger_probe]') !== -1) {
+            confirmation = 'Debugger 探针会主动执行 debugger 语句，可能把 Chrome 切换到 Sources 并暂停网页。这不是可靠的防破解机制。确定启用吗？';
+          }
+          confirmDanger(confirmation)
             .then(function (accepted) {
               input.disabled = false;
               input.checked = !!accepted;
@@ -118,7 +124,7 @@
         applyMode(mode.value, root);
         if (mode.value === 'strict') {
           window.setTimeout(function () {
-            showInformation('严格模式会启用窗口差值与 debugger 耗时探测。防御层仍由“分级防御链”单独决定，不会自动开启循环刷新或无限 debugger。');
+            showInformation('严格模式会启用更多检测信号，但主动 Console 输出和 Debugger 暂停探针仍须在“探测器”单独明确开启；否则保持静默。分级防御链不会自动开启循环刷新、无限 debugger 或关闭标签页。');
           }, 10);
         }
       });

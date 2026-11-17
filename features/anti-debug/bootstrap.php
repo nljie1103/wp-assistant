@@ -76,6 +76,10 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					'debugger_timing'      => 0,
 					'console_getter'       => 1,
 					'console_performance'  => 0,
+                    // These probes emit console entries or debugger pauses.
+                    // On existing installations they are now silent by default.
+                    'active_console_probes' => 0,
+                    'active_debugger_probe' => 0,
 					'debug_libraries'      => 1,
 					'focus_signal'         => 0,
 					'interval_ms'          => 1100,
@@ -318,13 +322,16 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 					</section>
 
 					<section class="jlwa-ad-panel" data-panel="detectors" role="tabpanel" id="jlwa-ad-panel-detectors">
+                        <p class="description"><strong>日常访问默认静默：</strong>网页不能可靠禁止通过浏览器菜单打开 DevTools，也不能保证关闭普通标签页。主动 Console 探针会输出可见日志，Debugger 探针可能直接暂停到 Sources；只有显式开启以下实验开关才能运行。真正的付费权限由服务端执行。</p>
 						<div class="jlwa-ad-grid">
-							<?php $this->checkbox_card( 'detectors[shortcuts]', '快捷键入口', '拦截 F12、Ctrl/Cmd+U、Ctrl/Cmd+Shift+I/J/C 等，并作为高分信号。', ! empty( $options['detectors']['shortcuts'] ), 'shortcuts' ); ?>
-							<?php $this->checkbox_card( 'detectors[console_getter]', 'Console 求值', '利用控制台读取对象属性和格式化行为发现菜单打开的 DevTools。', ! empty( $options['detectors']['console_getter'] ), 'console_getter' ); ?>
+							<?php $this->checkbox_card( 'detectors[active_console_probes]', '主动 Console 探针（可见输出）', '默认关闭，关闭后即使使用严格模式也不会主动输出 Console 求值对象及90行表格；启用后输出可见且无法保证探测可靠。', ! empty( $options['detectors']['active_console_probes'] ), 'dangerous' ); ?>
+                            <?php $this->checkbox_card( 'detectors[active_debugger_probe]', 'Debugger 暂停探针（可能中断）', '默认关闭，严格模式也不再强行触发 debugger 耗时探针。启用后可能跳转 Sources 并暂停。', ! empty( $options['detectors']['active_debugger_probe'] ), 'dangerous' ); ?>
+                            <?php $this->checkbox_card( 'detectors[shortcuts]', '快捷键入口', '拦截 F12、Ctrl/Cmd+U、Ctrl/Cmd+Shift+I/J/C 等，并作为高分信号。', ! empty( $options['detectors']['shortcuts'] ), 'shortcuts' ); ?>
+							<?php $this->checkbox_card( 'detectors[console_getter]', 'Console 求值', '只有开启上方主动 Console 探针后才运行；尝试从对象格式化检测 DevTools，不保证检测菜单和独立窗口。', ! empty( $options['detectors']['console_getter'] ), 'console_getter' ); ?>
 							<?php $this->checkbox_card( 'detectors[debug_libraries]', '页面调试库', '检测 eruda、vConsole、Firebug 等页面内调试工具。', ! empty( $options['detectors']['debug_libraries'] ), 'debug_libraries' ); ?>
 							<?php $this->checkbox_card( 'detectors[viewport]', '窗口差值', '识别停靠在左、右或底部的开发者工具；浏览器侧栏可能造成误判。', ! empty( $options['detectors']['viewport'] ), 'viewport' ); ?>
-							<?php $this->checkbox_card( 'detectors[debugger_timing]', 'Debugger 耗时', '低频测量断点造成的异常停顿；严格模式使用。', ! empty( $options['detectors']['debugger_timing'] ), 'debugger_timing' ); ?>
-							<?php $this->checkbox_card( 'detectors[console_performance]', 'Console 性能差', '比较控制台处理小型对象组的耗时，默认关闭。', ! empty( $options['detectors']['console_performance'] ), 'console_performance' ); ?>
+							<?php $this->checkbox_card( 'detectors[debugger_timing]', 'Debugger 耗时', '必须另外开启 Debugger 暂停探针才允许执行 debugger，严格模式默认也保持安静。', ! empty( $options['detectors']['debugger_timing'] ), 'debugger_timing' ); ?>
+							<?php $this->checkbox_card( 'detectors[console_performance]', 'Console 性能差', '必须另外开启主动 Console 探针，输出可见测试表格且容易误报。', ! empty( $options['detectors']['console_performance'] ), 'console_performance' ); ?>
 							<?php $this->checkbox_card( 'detectors[focus_signal]', '窗口失焦辅助', '只提供低分辅助，不会单独判定。', ! empty( $options['detectors']['focus_signal'] ), 'focus_signal' ); ?>
 						</div>
 						<div class="jlwa-ad-fields-4">
@@ -401,9 +408,9 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 							</div>
 							<div class="jlwa-ad-grid">
 								<?php $this->checkbox_card( 'response[layers][level3][enabled]', '启用第三级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level3']['enabled'] ) ); ?>
-								<?php $this->checkbox_card( 'response[layers][level3][redirect]', '跳转指定地址', '使用公共设置中的跳转地址。', ! empty( $options['response']['layers']['level3']['redirect'] ) ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][redirect]', '跳转指定地址', '使用公共设置中的跳转地址。比尝试关闭用户标签页更可预期，但依然只能对已运行 JavaScript 的浏览器生效。', ! empty( $options['response']['layers']['level3']['redirect'] ) ); ?>
 								<?php $this->checkbox_card( 'response[layers][level3][reload_loop]', '死循环刷新', '写入会话锁并按间隔反复刷新页面。', ! empty( $options['response']['layers']['level3']['reload_loop'] ), 'dangerous' ); ?>
-								<?php $this->checkbox_card( 'response[layers][level3][close_loop]', '循环尝试关闭', '浏览器可能拒绝，但会持续尝试。', ! empty( $options['response']['layers']['level3']['close_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level3][close_loop]', '尝试关闭页面（浏览器受限）', 'window.close() 无法可靠关闭用户自己打开的标签页，不能用作安全保证。', ! empty( $options['response']['layers']['level3']['close_loop'] ), 'dangerous' ); ?>
 								<?php $this->checkbox_card( 'response[layers][level3][persist_session]', '持久会话锁', '刷新后继续直接进入防御链。', ! empty( $options['response']['layers']['level3']['persist_session'] ), 'dangerous' ); ?>
 							</div>
 						</section>
@@ -420,10 +427,10 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 							</div>
 							<div class="jlwa-ad-grid">
 								<?php $this->checkbox_card( 'response[layers][level4][enabled]', '启用第四级', '允许执行本层勾选的动作。', ! empty( $options['response']['layers']['level4']['enabled'] ) ); ?>
-								<?php $this->checkbox_card( 'response[layers][level4][debugger_loop]', '无限 Debugger 循环', '持续触发 debugger 断点。', ! empty( $options['response']['layers']['level4']['debugger_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][debugger_loop]', '无限 Debugger 循环', '这是独立的第四级主动防御动作，启用后会持续触发可见 debugger 断点，不受上方耗时探针开关限制；普通浏览器可直接暂停或关闭此代码。', ! empty( $options['response']['layers']['level4']['debugger_loop'] ), 'dangerous' ); ?>
 								<?php $this->checkbox_card( 'response[layers][level4][clear_console]', '高速清空 Console', '持续清理控制台输出。', ! empty( $options['response']['layers']['level4']['clear_console'] ), 'dangerous' ); ?>
 								<?php $this->checkbox_card( 'response[layers][level4][reload_loop]', '死循环刷新', '极限层持续刷新并保持会话锁。', ! empty( $options['response']['layers']['level4']['reload_loop'] ), 'dangerous' ); ?>
-								<?php $this->checkbox_card( 'response[layers][level4][close_loop]', '循环关闭页面', '按高频间隔持续尝试关闭窗口。', ! empty( $options['response']['layers']['level4']['close_loop'] ), 'dangerous' ); ?>
+								<?php $this->checkbox_card( 'response[layers][level4][close_loop]', '尝试关闭页面（浏览器受限）', '循环调用 window.close() 仍受浏览器限制，不保证关闭标签页。', ! empty( $options['response']['layers']['level4']['close_loop'] ), 'dangerous' ); ?>
 								<?php $this->checkbox_card( 'response[layers][level4][hard_lock]', '页面硬锁', '禁用页面滚动、选择、点击和触摸。', ! empty( $options['response']['layers']['level4']['hard_lock'] ), 'dangerous' ); ?>
 								<?php $this->checkbox_card( 'response[layers][level4][persist_session]', '持久会话锁', '刷新或重进页面后继续直接执行防御。', ! empty( $options['response']['layers']['level4']['persist_session'] ), 'dangerous' ); ?>
 							</div>
@@ -631,7 +638,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				$out['scope'][ $key ] = empty( $raw['scope'][ $key ] ) ? 0 : 1;
 			}
 			$out['scope']['exclude_paths'] = isset( $raw['scope']['exclude_paths'] ) ? sanitize_textarea_field( $raw['scope']['exclude_paths'] ) : '';
-			foreach ( array( 'shortcuts', 'viewport', 'debugger_timing', 'console_getter', 'console_performance', 'debug_libraries', 'focus_signal' ) as $key ) {
+			foreach ( array( 'shortcuts', 'viewport', 'debugger_timing', 'console_getter', 'console_performance', 'debug_libraries', 'focus_signal', 'active_console_probes', 'active_debugger_probe' ) as $key ) {
 				$out['detectors'][ $key ] = empty( $raw['detectors'][ $key ] ) ? 0 : 1;
 			}
 			$out['detectors']['interval_ms'] = $this->bounded_int( $raw, array( 'detectors', 'interval_ms' ), 450, 5000, 1100 );

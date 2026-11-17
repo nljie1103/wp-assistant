@@ -426,7 +426,8 @@
   }
 
   function detectDebuggerTiming() {
-    if (!detectors.debugger_timing || document.hidden) return;
+    // Intentional debugger statements are noisy and pause devtools.
+    if (!bool(detectors.active_debugger_probe) || !detectors.debugger_timing || document.hidden) return;
     var start = now();
     try { Function('debugger')(); } catch (error) {}
     var elapsed = now() - start;
@@ -434,7 +435,8 @@
   }
 
   function detectConsoleGetter() {
-    if (!detectors.console_getter || document.hidden || Date.now() - lastConsoleProbeAt < 3800) return;
+    // Proactive console.log is visible when DevTools opens.
+    if (!bool(detectors.active_console_probes) || !detectors.console_getter || document.hidden || Date.now() - lastConsoleProbeAt < 3800) return;
     lastConsoleProbeAt = Date.now();
     var token = ++consoleProbeToken;
     var touched = false;
@@ -452,7 +454,8 @@
   }
 
   function detectConsolePerformance() {
-    if (!detectors.console_performance || document.hidden || !safeConsole.table || Date.now() - lastPerformanceProbeAt < 6500) return;
+    // Console.table prints a large array, so require explicit owner opt-in.
+    if (!bool(detectors.active_console_probes) || !detectors.console_performance || document.hidden || !safeConsole.table || Date.now() - lastPerformanceProbeAt < 6500) return;
     lastPerformanceProbeAt = Date.now();
     var rows = [];
     for (var i = 0; i < 90; i++) rows.push({ i: i, k: 'jlwa-' + i, v: i * 3 });

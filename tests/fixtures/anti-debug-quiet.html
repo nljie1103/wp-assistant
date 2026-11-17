@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>反调试严格模式静默测试</title></head>
+<body>
+<h1>浏览器反调试静默回归</h1>
+<p>用真实 Chrome 浏览器加载全部严格模式检测器，但保持两个主动探针开关关闭。</p>
+<pre id="jlwa-anti-debug-browser-result">等待首次检测...</pre>
+<script>
+window.__probe = { log: 0, table: 0, debuggerStatements: 0 };
+(function () {
+  var record = window.__probe;
+  var originalLog = console.log, originalTable = console.table;
+  var OriginalFunction = window.Function;
+  console.log = function () { record.log++; originalLog.apply(console, arguments); };
+  console.table = function () { record.table++; originalTable.apply(console, arguments); };
+  window.Function = function () {
+    if (arguments[0] === 'debugger') record.debuggerStatements++;
+    return OriginalFunction.apply(null, arguments);
+  };
+})();
+window.JLWA_ANTI_DEBUG = {
+  mode: 'strict',
+  detectors: {
+    shortcuts: 1, viewport: 1, debugger_timing: 1,
+    console_getter: 1, console_performance: 1,
+    debug_libraries: 1, focus_signal: 1, interval_ms: 1100,
+    viewport_threshold: 220, viewport_ratio: 18,
+    debugger_threshold: 180, performance_threshold: 110,
+    active_console_probes: 0, active_debugger_probe: 0
+  },
+  decision: { threshold: 85, confirm_hits: 2, hit_window_ms: 4200, score_decay: 12, detector_cooldown_ms: 1800 },
+  response: { layers: {}, auto_recover: 1 },
+  logging: { enabled: false }, runtime: { allow_mobile: true, allow_mobile_risky: true }
+};
+</script>
+<script src="../../features/anti-debug/assets/js/frontend.js"></script>
+<script>
+setTimeout(function () {
+  var result = document.getElementById('jlwa-anti-debug-browser-result');
+  var p = window.__probe;
+  result.textContent = JSON.stringify(p);
+  result.setAttribute('data-pass', p.log === 0 && p.table === 0 && p.debuggerStatements === 0 ? 'true' : 'false');
+}, 2300);
+</script>
+</body></html>

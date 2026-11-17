@@ -1,3 +1,11 @@
+## 3.0.4 — 2026-11-17
+
+- **反调试安全边界审查**：Chrome 菜单、禁用 JavaScript、开发者工具断点都可以绕过客户端“禁止查看源代码”手段；当前原有的 F12 拦截与四级响应只是障碍，不代替服务器授权。后台明确告知浏览器普遍不允许普通网页通过 window.close 自动关闭用户自己的标签页。
+- **移除默认主动探针噪音**：原平衡模式的 console_getter 每约 3.8 秒调用一次 console.log，严格模式额外调用 console.table 打印 90 行并进行 debugger 时间检测。现在默认不运行这些会暴露自身的主动探针，已保存的严格模式站点也会静默；其余非主动探测与手动选定防御层不改变。
+- **两个明确授权开关**：新建独立的 active_console_probes / active_debugger_probe，默认 0，严格模式不会自动打开；仅当网站管理员明确确认风险后，才允许主动打印 Console getter/table 或执行 Function('debugger')。第四级由管理员手动启用的无限 Debugger 循环独立保留，不被偷偷关闭。
+- **安全保护分层**：区分用户可控制的前端行为与 WordPress 服务端正文限制、Zibll 购买资格和 Nginx/OpenList 私有下载授权。原有订单、数据、路径、root 授权文件及 Nginx 部署不改动。提供单独安全说明 docs/anti-debug-security.md，包含无 JavaScript、缓存、REST/RSS、匿名用户及已购 ZIP 测试建议。
+- **测试**：新增严格模式静默/明确授权探针/Debugger 动态断点/后端默认配置回归；确保 CLI 和多版本 PHP 检查兼容，不再把可见 Console 日志误认为攻击证据。
+
 ## 3.0.3 — 2026-11-17
 
 - 修复页面特效的双保存按钮：旧版 xjpe-settings-form 同时输出顶部 .xjpe-savebar 保存按钮和底部 WordPress submit_button()，两者提交相同表单。现删除底部重复按钮，只保留上方一个保存入口及原前台预览链接。

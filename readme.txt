@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.3
+Stable tag: 3.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.4 =
+* 安全审查反调试的 JavaScript 限制、DevTools 菜单绕过、浏览器关闭窗口限制和 Console 探针暴露问题。
+* 默认静默：新站和既有保存严格模式的站点不再定期输出 /jlwa/ Console getter 对象、90行表格，也不主动执行会切换 DevTools Sources 的 debugger 耗时探针。
+* 新增两项独立明确确认的实验开关，管理员自愿允许可见 Console 探针或 debugger 暂停，原 F12/窗口差值/调试库探测/四级防御链按现有设置继续运行。
+* 区分第四级手动启用的无限 Debugger 循环与新的耗时探针，后台准确说明普通网页无法可靠自动关闭用户标签页。
+* 新增严格模式静默测试、明确开启探针测试，以及禁用 JS 后的服务端内容权限与子比/私有下载保护边界说明。
+* 原有 WordPress 角色、Zibll 订单权限、OpenList 私有文件路由及 Nginx 辅助程序不变。
+
+
 
 = 3.0.3 =
 * 修复“页面特效”设置页顶部和页面底部同时出现两个“保存美化配置”按钮的问题，删除底部重复提交入口。
