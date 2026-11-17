@@ -11,7 +11,12 @@
   var isMobileRuntime = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua) || isIPadDesktop || isCoarseSmallScreen;
   var allowMobile = runtime.allow_mobile === true || runtime.allow_mobile === 1 || runtime.allow_mobile === '1';
   var allowMobileRisky = runtime.allow_mobile_risky === true || runtime.allow_mobile_risky === 1 || runtime.allow_mobile_risky === '1';
-  var storageKey = 'jlwa_ad_lock_v2';
+  // v2 locks may survive upgrades for minutes and reproduce redirect loops.
+  // v3 records the originating path and never carries a lock into login.
+  var storageKey = 'jlwa_ad_lock_v3';
+  var redirectGuardKey = 'jlwa_ad_redirect_guard_v1';
+  var authPauseUntil = 0;
+  var authPaused = false;
 
   // Server-side wp_is_mobile() cannot reliably identify iPadOS desktop mode.
   // Apply a second browser-side gate and clear stale false-positive locks.
@@ -57,6 +62,58 @@
   var clipboardLocked = false;
   var safeConsole = window.console || { log: function () {}, clear: function () {}, table: function () {} };
 
+  // Zibll opens a login popup on top of the current article. The original
+  // script treated its resize/focus changes as suspicious while login worked.
+  // Never run defensive actions during an authentication interaction.
+  function isAuthPath() {
+    var path = String((window.location && window.location.pathname) || '');
+    return /(?:^|\/)(?:wp-login\.php|user-sign)(?:\/|$)|(?:^|\/)user\/(?:login|register|forgot|reset)(?:\/|$)/i.test(path);
+  }
+
+  function hasVisibleLoginForm() {
+    if (!document.querySelectorAll) return false;
+    var fields = document.querySelectorAll('input[type="password"], input[autocomplete="current-password"], input[autocomplete="new-password"]');
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      if (field.disabled || typeof field.getClientRects !== 'function' || !field.getClientRects().length) continue;
+      if (!field.closest || field.closest('form, [role="dialog"], .modal, .sign-modal, .signin-modal')) return true;
+    }
+    return false;
+  }
+
+  function authenticating() {
+    return isAuthPath() || Date.now() < authPauseUntil || hasVisibleLoginForm();
+  }
+
+  function clearSuspiciousState() {
+    if (active) {
+      clearDefenseEffects(true);
+      active = false;
+    }
+    clearPersistentLock();
+    score = 0;
+    reasons = Object.create(null);
+    lastSignal = Object.create(null);
+    thresholdHits = [];
+    viewportHits = 0;
+    logSent = false;
+  }
+
+  function pauseForAuthentication() {
+    authPauseUntil = Date.now() + 12000;
+    clearSuspiciousState();
+    authPaused = true;
+  }
+
+  function authStartHandler(event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    if (target.closest('.signin-loader, a[href*="/user-sign"], a[href*="/wp-login.php"], [data-target*="signin"], [data-target*="login"], [data-toggle*="signin"], [data-toggle*="login"]')) {
+      pauseForAuthentication();
+    }
+  }
+
+
   function now() {
     return window.performance && performance.now ? performance.now() : Date.now();
   }
@@ -80,6 +137,10 @@
 
   function signal(name, points) {
     if (destroyed) return;
+    if (authenticating()) {
+      pauseForAuthentication();
+      return;
+    }
     var time = Date.now();
     var cooldown = int(decision.detector_cooldown_ms, 1800);
     if (lastSignal[name] && time - lastSignal[name] < cooldown) return;
@@ -104,8 +165,17 @@
     var threshold = int(decision.threshold, 85);
     var windowMs = int(decision.hit_window_ms, 4200);
     thresholdHits = thresholdHits.filter(function (stamp) { return time - stamp <= windowMs; });
-    if (score >= threshold && thresholdHits.length >= int(decision.confirm_hits, 2)) {
-      activate(recentReasons(time), false);
+    var fresh = recentReasons(time);
+    // Strict mode previously treated repeated viewport changes, or viewport
+    // plus a focus blip, as confirmed DevTools. These are common during login
+    // and browser resizing. Require a high-confidence signal: an explicit
+    // devtools shortcut, or two distinct reasons including a stronger probe.
+    var strong = fresh.some(function (reason) {
+      return ['shortcut', 'debug_library', 'console_getter', 'debugger_timing'].indexOf(reason) >= 0;
+    });
+    if (score >= threshold && thresholdHits.length >= int(decision.confirm_hits, 2) &&
+        strong && (fresh.indexOf('shortcut') >= 0 || fresh.length >= 2)) {
+      activate(fresh, false);
     }
   }
 
@@ -154,7 +224,10 @@
   function schedule(fn, delay) {
     var id = window.setTimeout(function () {
       layerTimers = layerTimers.filter(function (item) { return item !== id; });
-      if (active && !destroyed) fn();
+      if (active && !destroyed) {
+        if (authenticating()) { pauseForAuthentication(); return; }
+        fn();
+      }
     }, Math.max(0, int(delay, 0)));
     layerTimers.push(id);
   }
@@ -162,6 +235,7 @@
   function repeat(fn, interval) {
     var id = window.setInterval(function () {
       if (!active || destroyed) return;
+      if (authenticating()) { pauseForAuthentication(); return; }
       fn();
     }, clamp(int(interval, 500), 80, 10000));
     loopTimers.push(id);
@@ -225,7 +299,9 @@
   function setPersistentLock(minutes, source) {
     try {
       var expires = Date.now() + clamp(int(minutes, 10), 1, 1440) * 60000;
-      sessionStorage.setItem(storageKey, JSON.stringify({ expires: expires, source: source || 'layer' }));
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        expires: expires, source: source || 'layer', path: window.location.pathname || '/'
+      }));
     } catch (error) {}
   }
 
@@ -233,12 +309,25 @@
     try { sessionStorage.removeItem(storageKey); } catch (error) {}
   }
 
+  function wasReloaded() {
+    // Persistent defense state may survive an intentional page refresh but
+    // MUST NOT survive a new navigation or a completed login redirect.
+    try {
+      if (window.performance && window.performance.getEntriesByType) {
+        var navigation = window.performance.getEntriesByType('navigation');
+        if (navigation.length) return navigation[0].type === 'reload';
+      }
+      return !!(window.performance && window.performance.navigation && window.performance.navigation.type === 1);
+    } catch (error) { return false; }
+  }
+
   function getPersistentLock() {
     try {
       var raw = sessionStorage.getItem(storageKey);
       if (!raw) return null;
       var parsed = JSON.parse(raw);
-      if (!parsed || !parsed.expires || parsed.expires < Date.now()) {
+      if (!parsed || !parsed.expires || parsed.expires < Date.now() ||
+          !parsed.path || parsed.path !== (window.location.pathname || '/') || authenticating()) {
         sessionStorage.removeItem(storageKey);
         return null;
       }
@@ -275,7 +364,22 @@
 
   function redirect() {
     var url = String(response.redirect_url || '');
-    if (url) window.location.replace(url);
+    if (!url || authenticating()) return;
+    // Never redirect to the current URL. A repeating server-side auth flow
+    // can also send users back to the original article and trigger again.
+    // Cap automatic protection redirects to one per 15-second session window.
+    try {
+      var destination = new URL(url, window.location.href);
+      var current = new URL(window.location.href);
+      if (destination.href === current.href) return;
+      var last = JSON.parse(sessionStorage.getItem(redirectGuardKey) || 'null');
+      if (last && last.at && Date.now() - last.at < 15000) return;
+      sessionStorage.setItem(redirectGuardKey, JSON.stringify({ at: Date.now(), destination: destination.href }));
+    } catch (error) {
+      // If the guard cannot be stored, do not start unbounded redirects.
+      return;
+    }
+    window.location.replace(url);
   }
 
   function runLevel1(triggerReasons) {
@@ -329,6 +433,7 @@
 
   function activate(triggerReasons, persistent) {
     if (active || destroyed) return;
+    if (authenticating()) { pauseForAuthentication(); return; }
     active = true;
     activatedAt = Date.now();
     lastSuspiciousAt = Date.now();
@@ -484,6 +589,19 @@
 
   function tick() {
     if (destroyed) return;
+    if (authenticating()) {
+      clearSuspiciousState();
+      authPaused = true;
+      timer = window.setTimeout(tick, clamp(int(detectors.interval_ms, 1100), 450, 5000));
+      return;
+    }
+    if (authPaused) {
+      // A popup changes viewport geometry and focus history. Re-baseline
+      // after it closes instead of carrying those values into detection.
+      authPaused = false;
+      updateBaseline(true);
+      clearSuspiciousState();
+    }
     if (!document.hidden) {
       detectViewport();
       detectDebugLibraries();
@@ -502,7 +620,7 @@
   }
 
   function shortcutHandler(event) {
-    if (!detectors.shortcuts) return;
+    if (!detectors.shortcuts || authenticating()) return;
     var target = event.target;
     var editing = !!(target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]'));
     var code = event.keyCode || event.which || 0;
@@ -526,7 +644,19 @@
 
   function init() {
     if (!document.documentElement) return;
+    // Legacy v2 session locks were not bound to a page and could poison
+    // subsequent logins even after a false positive.
+    try { sessionStorage.removeItem('jlwa_ad_lock_v2'); } catch (error) {}
+    // A fresh navigation (including post-login redirect back to the same
+    // article) must start clean; only an actual reload may resume a lock.
+    if (!wasReloaded()) clearPersistentLock();
     var storedLock = getPersistentLock();
+    document.addEventListener('click', authStartHandler, true);
+    document.addEventListener('focusin', function (event) {
+      if (event.target && (event.target.type === 'password' ||
+          event.target.autocomplete === 'current-password' ||
+          event.target.autocomplete === 'new-password')) pauseForAuthentication();
+    }, true);
     updateBaseline(true);
     window.addEventListener('keydown', shortcutHandler, true);
     document.addEventListener('keydown', shortcutHandler, true);

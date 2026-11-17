@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>严格模式 Zibll 登录兼容真实浏览器测试</title>
+<style>body{font:14px system-ui;padding:32px}.login-modal{padding:15px;border:1px solid #ddd;margin:16px 0;width:300px}.login-modal[hidden]{display:none}output{display:block;margin-top:25px;font-family:monospace}</style>
+<script>
+window.JLWA_ANTI_DEBUG={
+  mode:'strict',
+  detectors:{shortcuts:1,viewport:1,debugger_timing:1,console_getter:1,console_performance:1,
+    debug_libraries:1,focus_signal:1,interval_ms:450,viewport_threshold:120,viewport_ratio:8,
+    active_console_probes:0,active_debugger_probe:0},
+  decision:{threshold:80,confirm_hits:2,hit_window_ms:4200,score_decay:1,detector_cooldown_ms:1800},
+  response:{layers:{
+    level1:{enabled:1,delay_ms:0,overlay:1,blur:1},
+    level3:{enabled:1,delay_ms:2000,redirect:1}
+  },redirect_url:'https://blog.jiuliu.org/user-sign?tab=signin',auto_recover:1,recover_delay_ms:800},
+  logging:{enabled:false}
+};
+</script>
+<script src="../../features/anti-debug/assets/js/frontend.js"></script>
+</head>
+<body>
+<h1>严格模式：不应该干扰 Zibll 登录</h1>
+<button type="button" class="signin-loader" id="signin">打开登录界面</button>
+<div id="login" class="login-modal" role="dialog" aria-label="登录" aria-modal="true" hidden>
+  <form id="login-form"><label>邮箱 <input type="email" name="email" autocomplete="username"></label>
+  <label>密码 <input type="password" name="pass" autocomplete="current-password"></label>
+  <button type="submit">登录</button></form>
+</div>
+<output id="result" role="status">等待模拟登录...</output>
+<script>
+var button=document.querySelector('#signin');
+button.addEventListener('click',function(){
+  document.querySelector('#login').hidden=false;
+  document.querySelector('input[type="password"]').focus();
+  setTimeout(function(){
+    var protectedNow=document.documentElement.classList.contains('jlwa-ad-active');
+    var visible=!document.querySelector('#login').hidden;
+    document.querySelector('#result').textContent=JSON.stringify({loginVisible:visible,antiDebugActive:protectedNow});
+    document.querySelector('#result').dataset.pass=String(visible&&!protectedNow);
+  },1800);
+});
+document.querySelector('#login-form').addEventListener('submit',function(event){
+  event.preventDefault();
+  document.querySelector('#result').textContent='登录提交事件正常执行';
+  document.querySelector('#result').dataset.pass='true';
+});
+</script>
+</body>
+</html>

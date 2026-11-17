@@ -318,7 +318,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 							<?php $this->checkbox_card( 'scope[admin_bypass]', '管理员自动绕过', '管理员登录后不加载检测脚本。', ! empty( $options['scope']['admin_bypass'] ) ); ?>
 							<?php $this->checkbox_card( 'scope[logged_in_bypass]', '全部登录用户绕过', '适合只防外部访客的网站。', ! empty( $options['scope']['logged_in_bypass'] ) ); ?>
 						</div>
-						<label class="jlwa-ad-field"><span>排除路径</span><textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[scope][exclude_paths]" rows="5" placeholder="每行一个路径前缀"><?php echo esc_textarea( $options['scope']['exclude_paths'] ); ?></textarea><small>每行一个站内路径前缀，例如 <code>/checkout/</code>。登录和后台路径始终排除。</small></label>
+						<label class="jlwa-ad-field"><span>其他排除路径</span><textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[scope][exclude_paths]" rows="5" placeholder="每行一个路径前缀"><?php echo esc_textarea( $options['scope']['exclude_paths'] ); ?></textarea><small>每行一个站内路径前缀，例如 <code>/checkout/</code>。登录页 <code>/user-sign</code>、<code>/wp-login.php</code> 与后台路径始终排除，即使修改此列表也不会关闭这些必要的兼容规则。</small></label>
 					</section>
 
 					<section class="jlwa-ad-panel" data-panel="detectors" role="tabpanel" id="jlwa-ad-panel-detectors">
@@ -538,6 +538,11 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				return false;
 			}
 			$path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			// Zibll redirects /wp-login.php to /user-sign. Older installations
+			// may not have either path in their user-edited exclusion list.
+			if ( $this->is_authentication_path( $path ) ) {
+				return false;
+			}
 			foreach ( preg_split( '/\r\n|\r|\n/', (string) $scope['exclude_paths'] ) as $excluded ) {
 				$excluded = trim( $excluded );
 				if ( '' !== $excluded && 0 === strpos( (string) $path, $excluded ) ) {
@@ -559,6 +564,17 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 				return ! empty( $scope['archives'] );
 			}
 			return false;
+		}
+
+		/** These authentication paths must never load client defenses. */
+		private function is_authentication_path( $path ) {
+			$path = strtolower( rawurldecode( (string) $path ) );
+			// Match path segments, including WordPress subdirectory installs.
+			// Do not accidentally exempt /user-sign-article.
+			return (bool) preg_match(
+				'~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset)(?:/|$)~',
+				$path
+			);
 		}
 
 		/** Public, rate-limited event log endpoint. */

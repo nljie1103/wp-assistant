@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.4
+Stable tag: 3.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,17 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.5 =
+* 修复严格模式常见的登录页错误拦截：Zibll 子比主题 /wp-login.php 自动跳转至 /user-sign 时，旧版可能在真实登录页执行反调试。
+* 登录路由作为核心豁免独立于可编辑的路径排除列表，旧配置同样兼容；支持 WordPress 子目录，并使用完整路径段以避免误排普通文章。
+* 点击登录入口或展示真实密码表单时自动暂停防御、撤销误报覆盖层和未执行的高等级动作；恢复后重新计算视口基线。
+* 严格模式不再以窗口缩放或失焦弱信号直接触发重定向，至少要求明确快捷键或两个不同信号含一个较强探针。
+* 升级会清理旧的跨页面会话锁，新的锁绑定页面路径且只有真正刷新时恢复；防止登录后返回文章再次误锁。
+* 第三级重定向避免跳到当前 URL，并限制连续自动跳转以避免循环。
+* PHP 订单鉴权、OpenList/Nginx 私有下载、原始四级防御用户设置均不改变，新增登录兼容性与误报测试。
+
+
 
 = 3.0.4 =
 * 安全审查反调试的 JavaScript 限制、DevTools 菜单绕过、浏览器关闭窗口限制和 Console 探针暴露问题。
