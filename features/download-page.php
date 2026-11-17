@@ -53,6 +53,15 @@ class JLWA_Download_Page_Feature {
 
     public function sanitize( $input ) {
         $input = is_array( $input ) ? $input : array();
+        $errors = JLWA_Private_Download::validation_errors( $input );
+        if ( $errors ) {
+            foreach ( $errors as $index => $message ) {
+                add_settings_error( self::OPTION_KEY, 'jlwa_download_validation_' . $index, $message, 'error' );
+            }
+            // Reject this entire submission atomically. Keep the last working config.
+            // Returning defaults here could silently overwrite a live source path.
+            return get_option( self::OPTION_KEY, self::defaults() );
+        }
         $templates = array( 'technology', 'business', 'vip', 'aurora', 'editorial', 'midnight' );
         $modes = array( 'auto', 'featured', 'first', 'random', 'default' );
         return array(
@@ -61,6 +70,38 @@ class JLWA_Download_Page_Feature {
             'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
             'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
         ) + JLWA_Private_Download::sanitized( $input );
+    }
+
+    /** Show the Settings API result inside the custom feature panel after its PRG redirect. */
+    public static function save_feedback() {
+        if ( ! isset( $_GET['settings-updated'] ) || 'true' !== (string) $_GET['settings-updated'] ) {
+            return;
+        }
+        $notices = get_settings_errors();
+        $failures = array();
+        $confirmed = false;
+        foreach ( (array) $notices as $notice ) {
+            if ( ! is_array( $notice ) || ! in_array( $notice['setting'] ?? '', array( self::OPTION_KEY, 'general' ), true ) ) {
+                continue;
+            }
+            if ( 'error' === ( $notice['type'] ?? '' ) ) {
+                $failures[] = (string) ( $notice['message'] ?? '设置未保存，请检查输入。' );
+            }
+            if ( in_array( $notice['type'] ?? '', array( 'success', 'updated' ), true ) ) {
+                $confirmed = true;
+            }
+        }
+        if ( $failures ) {
+            echo '<div class="notice notice-error jlwa-download-save-notice" role="alert" id="jlwa-download-save-feedback"><p><strong>保存失败：原设置已保留。</strong></p><ul>';
+            foreach ( $failures as $message ) {
+                echo '<li>' . esc_html( $message ) . '</li>';
+            }
+            echo '</ul></div>';
+        } elseif ( $confirmed ) {
+            echo '<div class="notice notice-success jlwa-download-save-notice is-dismissible" role="status" id="jlwa-download-save-feedback"><p><strong>下载页设置保存成功。</strong> 已更新到 WordPress 数据库；Nginx 自动部署和公网源站封锁需另外执行并验证。</p></div>';
+        } else {
+            echo '<div class="notice notice-warning jlwa-download-save-notice" role="alert" id="jlwa-download-save-feedback"><p><strong>无法确认本次保存结果。</strong> WordPress 未返回可核实的设置消息，请刷新页面核对配置。</p></div>';
+        }
     }
 
     public function enqueue_admin_assets( $hook = '' ) {
@@ -191,7 +232,9 @@ class JLWA_Download_Page_Feature {
             'default' => '始终使用默认图片',
         );
         ?>
-        <div class="jlwa-download-admin"><form action="options.php" method="post"><?php settings_fields( 'jlwa_download_page' ); ?>
+        <div class="jlwa-download-admin">
+        <?php self::save_feedback(); ?>
+        <form action="options.php" method="post"><?php settings_fields( 'jlwa_download_page' ); ?>
             <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，新增主题不复制支付代码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
             <div class="jlwa-download-section"><h3>选择完整页面模板</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
             <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>六种视觉方案都自动识别横图、方图和竖图，并适配封面比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>

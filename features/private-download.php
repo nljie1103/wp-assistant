@@ -53,6 +53,41 @@ class JLWA_Private_Download {
         return $value;
     }
 
+    /**
+     * Validate fields before the Settings API updates its option.
+     * Invalid submissions must not silently substitute sample paths or hosts.
+     *
+     * @return array<int,string> User-readable error messages (without echoing credentials).
+     */
+    public static function validation_errors( $input ) {
+        $input = is_array( $input ) ? $input : array();
+        $errors = array();
+        $defaults = self::defaults();
+        $hosts = trim( (string) ( $input['private_hosts'] ?? $defaults['private_hosts'] ) );
+        $source = (string) ( $input['private_source_prefix'] ?? $defaults['private_source_prefix'] );
+        $internal = (string) ( $input['private_internal_prefix'] ?? $defaults['private_internal_prefix'] );
+        $delivery = strtolower( trim( (string) ( $input['delivery_host'] ?? '' ) ) );
+        if ( '' !== $hosts && ! self::hosts( $hosts ) ) {
+            $errors[] = '「受保护源站域名」格式错误：每行仅填写域名，不要包含 https://、端口或路径。';
+        }
+        if ( ! self::prefix( $source ) ) {
+            $errors[] = '「公开源路径前缀」格式错误：请填写以 / 开始和结束的原始目录路径，例如 /d/storage/private/。不要使用 % 编码形式。';
+        }
+        if ( ! self::prefix( $internal, true ) ) {
+            $errors[] = '「WordPress Nginx 私有内部入口」格式错误：请填写 /_jlwa_private_openlist/ 这样的内部路径。';
+        }
+        if ( '' !== $delivery && self::hosts( $delivery ) !== array( $delivery ) ) {
+            $errors[] = '「下载出口域名」格式错误：只能填写一个域名，不带协议、端口或路径。';
+        }
+        if ( ! empty( $input['private_enabled'] ) && '' === $hosts ) {
+            $errors[] = '启用私有交付之前，必须填写至少一个受保护的 OpenList 源站域名。';
+        }
+        if ( ! empty( $input['delivery_enabled'] ) && '' === $delivery ) {
+            $errors[] = '启用自定义下载出口之前，必须填写下载出口域名。';
+        }
+        return $errors;
+    }
+
     public static function sanitized( $options ) {
         $options = is_array( $options ) ? $options : array();
         $defaults = self::defaults();

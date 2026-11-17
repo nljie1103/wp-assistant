@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.3
+Stable tag: 2.6.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.4 =
+* 修复下载页设置保存后没有任何结果提示的问题。WordPress Settings API 保存成功时显示明确确认，失败时显示具体错误字段及原因。
+* 修复私有源路径输入 URL 编码、源站域名、内部代理路径或下载出口域名格式错误时悄悄重置为默认示例值的问题。错误提交整体拒绝，保留之前正常工作的配置。
+* 在插件后台适配成功、错误通知样式，不改变子比主题、支付订单、OpenList 或服务器 Nginx 配置。
+* 增加保存成功、错误字段和原配置保留的自动化测试。
+
+
 
 = 2.6.3 =
 * 付费文件安全交付新增 Nginx 部署向导：随插件提供受限 root-owned 帮助程序，首次管理员授权后支持预览、备份、分阶段启用、nginx -t、自动恢复和回滚；保留人工真实买家验收关卡。
