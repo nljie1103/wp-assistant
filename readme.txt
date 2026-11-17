@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.8
+Stable tag: 2.6.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.9 =
+* 修复 OpenList 安全交付的一键安装命令 install-auto 已找到 Nginx 站点但因缺失 host 参数导致 AttributeError 终止的问题。
+* 自动安装与手动安装共用准确的源站域名参数校验，保留中文付费目录与原有受限 Nginx 权限策略。
+* 安装前先完成 Nginx、Docker/本地端口和权限检查；失败不会留下错误授权，部分写入失败会清理本次新增的配置。
+* 新增实际自动安装命令、完整模拟安装、错误端口无写入、部分写入恢复、手动安装回归测试；不修改子比主题和现有生产配置。
+
+
 
 = 2.6.8 =
 * 多域名主题及插件 CSS/JS、字体同源改写调整为独立选项，默认关闭。常规多域名功能不再强制注册静态资源改写钩子。

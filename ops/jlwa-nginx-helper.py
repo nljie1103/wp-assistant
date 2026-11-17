@@ -206,38 +206,67 @@ def init_install(args):
     if not PORT_RE.fullmatch(args.port) or not 1 <= int(args.port) <= 65535:
         fatal("invalid loopback port")
     source = validate_source(args.source)
-    host = args.host.lower()
+    # install uses --host; install-auto uses --openlist-host.
+    # Resolve either spelling here so both CLI modes share the same installer.
+    host = (getattr(args, "host", "") or getattr(args, "openlist_host", "")).lower()
     if not HOST_RE.fullmatch(host):
         fatal("OpenList host must be a plain DNS name")
     if not re.fullmatch(r"[a-z_][a-z0-9_-]{0,30}", args.php_user):
         fatal("invalid PHP service user")
     import pwd
     pwd.getpwnam(args.php_user)
+    # Complete all checks before creating any persistent install files.
+    # Refuse pre-existing or half-installed infrastructure rather than overwriting it.
+    if CONFIG.exists() or CONFIG.is_symlink():
+        fatal("already installed: inspect existing root-approved manifest")
+    if TARGET.exists() or TARGET.is_symlink() or SUDOERS.exists() or SUDOERS.is_symlink():
+        fatal("existing helper/sudoers installation found; inspect it manually")
     run_nginx(check=True)
-    CONFIG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
     verify_local_only_port(int(args.port))
     container_id = detect_docker_container(int(args.port), getattr(args, "container", "") or "")
     manifest = {"wordpress_vhost": wp, "openlist_vhost": files,
                 "port": int(args.port), "source": source,
                 "host": host, "php_user": args.php_user,
                 "docker_container_detected": bool(container_id)}
-    if CONFIG.exists():
-        fatal("already installed: remove only after manual review and backup")
-    write_file(CONFIG, json.dumps(manifest, ensure_ascii=False), 0o600)
-    # Copy binary OUT of WordPress: no PHP or plugin update can alter the root-owned helper.
+    # Copy binary OUT of WordPress: subsequent plugin updates cannot modify
+    # the root-owned helper without another explicit administrator action.
     source_script = Path(__file__).resolve()
     content = source_script.read_text(encoding="utf-8")
-    write_file(TARGET, content, 0o755)
     sudoers = (
         "Cmnd_Alias JLWA_NGINX = " + ", ".join(str(TARGET) + " " + op
         for op in ("status", "preview", "prepare", "confirm", "protect", "rollback")) + "\n"
         + args.php_user + " ALL=(root) NOPASSWD: JLWA_NGINX\n"
         + "Defaults!JLWA_NGINX !requiretty\n"
     )
-    write_file(SUDOERS, sudoers, 0o440)
+    # Validate sudoers syntax before installing anything, then create the
+    # three installation files atomically and clean up only files created here
+    # if an I/O or permission problem interrupts the process.
     if shutil.which("visudo"):
-        subprocess.run(["visudo", "-cf", str(SUDOERS)], check=True, timeout=10)
+        fd, sudoers_candidate = tempfile.mkstemp(prefix="jlwa-sudoers-")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(sudoers)
+            os.chmod(sudoers_candidate, 0o440)
+            subprocess.run(["visudo", "-cf", sudoers_candidate], check=True, timeout=10)
+        finally:
+            if os.path.exists(sudoers_candidate):
+                os.unlink(sudoers_candidate)
+
+    created = []
+    try:
+        CONFIG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+        for path, contents, mode in (
+            (TARGET, content, 0o755),
+            (CONFIG, json.dumps(manifest, ensure_ascii=False), 0o600),
+            (SUDOERS, sudoers, 0o440),
+        ):
+            write_file(path, contents, mode)
+            created.append(path)
+    except Exception:
+        for path in reversed(created):
+            path.unlink(missing_ok=True)
+        raise
     print("installed; admin operations restricted to status/preview/prepare/confirm/protect/rollback")
 
 

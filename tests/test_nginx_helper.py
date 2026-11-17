@@ -1,4 +1,8 @@
 import importlib.util
+import sys
+import json
+import contextlib
+import io
 from pathlib import Path
 import unittest
 import tempfile
@@ -134,6 +138,159 @@ class NginxHelperTests(unittest.TestCase):
         with patch.object(mod.shutil, "which", return_value="/usr/bin/docker"), patch.object(mod.subprocess, "run", side_effect=exposed):
             with self.assertRaises(ValueError):
                 mod.detect_docker_container(5244)
+
+    def test_install_auto_exact_cli_performs_complete_install_without_nginx_writes(self):
+        """Regresses the missing args.host AttributeError in real argparse -> installer."""
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            vhosts = directory / "vhosts"
+            vhosts.mkdir()
+            wordpress_file = vhosts / "site.example.com.conf"
+            openlist_file = vhosts / "files.example.com.conf"
+            wordpress_file.write_text(WP_VHOST)
+            openlist_file.write_text(OPENLIST_VHOST)
+            config = directory / "etc" / "approved.json"
+            target = directory / "bin" / "jlwa-nginx-helper"
+            sudoers = directory / "sudoers" / "jlwa-nginx-helper"
+            target.parent.mkdir()
+            sudoers.parent.mkdir()
+            state = directory / "state"
+            cmd = [
+                "jlwa-nginx-helper.py", "install-auto",
+                "--wordpress-host", "site.example.com",
+                "--openlist-host", "files.example.com",
+                "--port", "5245",
+                "--source", "/d/google/付费资源/",
+                "--php-user", "www",
+            ]
+            with (
+                patch.object(mod, "VHOST_DIR", vhosts),
+                patch.object(mod, "CONFIG", config),
+                patch.object(mod, "TARGET", target),
+                patch.object(mod, "SUDOERS", sudoers),
+                patch.object(mod, "STATE", state),
+                patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch("pwd.getpwnam", return_value=SimpleNamespace(pw_uid=33)),
+                patch.object(mod, "run_nginx") as nginx,
+                patch.object(mod, "verify_local_only_port") as verify,
+                patch.object(mod, "detect_docker_container", return_value="abc123") as docker,
+                patch.object(mod.shutil, "which", return_value=None),
+                patch.object(sys, "argv", cmd),
+                contextlib.redirect_stdout(io.StringIO()) as output,
+            ):
+                mod.main()
+            manifest = json.loads(config.read_text())
+            self.assertEqual("files.example.com", manifest["host"])
+            self.assertEqual("/d/google/付费资源/", manifest["source"])
+            self.assertEqual(5245, manifest["port"])
+            self.assertTrue(manifest["docker_container_detected"])
+            self.assertEqual(str(wordpress_file), manifest["wordpress_vhost"])
+            self.assertEqual(str(openlist_file), manifest["openlist_vhost"])
+            self.assertTrue(target.is_file())
+            self.assertIn("NOPASSWD: JLWA_NGINX", sudoers.read_text())
+            self.assertIn("installed;", output.getvalue())
+            self.assertEqual(WP_VHOST, wordpress_file.read_text())
+            self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
+            nginx.assert_called_once_with(check=True)
+            verify.assert_called_once_with(5245)
+            docker.assert_called_once_with(5245, "")
+
+    def test_install_auto_preflight_failure_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            cmd = [
+                "helper", "install-auto", "--wordpress-host", "site.example.com",
+                "--openlist-host", "files.example.com", "--port", "5245",
+                "--source", "/d/google/付费资源/", "--php-user", "www",
+            ]
+            paths = (directory / "approved.json", directory / "helper", directory / "sudoers", directory / "state")
+            with (
+                patch.object(mod, "CONFIG", paths[0]),
+                patch.object(mod, "TARGET", paths[1]),
+                patch.object(mod, "SUDOERS", paths[2]),
+                patch.object(mod, "STATE", paths[3]),
+                patch.object(mod, "discover_vhost", side_effect=lambda host: "/mock/" + host + ".conf"),
+                patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch("pwd.getpwnam", return_value=SimpleNamespace(pw_uid=33)),
+                patch.object(mod, "run_nginx"),
+                patch.object(mod, "verify_local_only_port", side_effect=ValueError("unsafe public port")),
+                patch.object(sys, "argv", cmd),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with self.assertRaisesRegex(ValueError, "unsafe public port"):
+                    mod.main()
+            for path in paths:
+                self.assertFalse(path.exists(), str(path))
+
+    def test_install_partial_write_failure_removes_only_new_install_files(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            target = directory / "helper"
+            config = directory / "etc" / "approved.json"
+            sudoers = directory / "sudoers"
+            state = directory / "state"
+            sudoers.mkdir()
+            real_write = mod.write_file
+            def flaky_write(path, data, mode=None):
+                if Path(path) == config:
+                    raise OSError("simulated disk failure")
+                return real_write(path, data, mode)
+            args = SimpleNamespace(
+                wordpress_vhost="/mock/wp.conf",
+                openlist_vhost="/mock/files.conf",
+                openlist_host="files.example.com",
+                port="5245",
+                source="/d/google/付费资源/",
+                php_user="www",
+                container="",
+            )
+            with (
+                patch.object(mod, "CONFIG", config),
+                patch.object(mod, "TARGET", target),
+                patch.object(mod, "SUDOERS", sudoers / "helper"),
+                patch.object(mod, "STATE", state),
+                patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch("pwd.getpwnam", return_value=SimpleNamespace(pw_uid=33)),
+                patch.object(mod, "run_nginx"),
+                patch.object(mod, "verify_local_only_port"),
+                patch.object(mod, "detect_docker_container", return_value=""),
+                patch.object(mod.shutil, "which", return_value=None),
+                patch.object(mod, "write_file", side_effect=flaky_write),
+            ):
+                with self.assertRaisesRegex(OSError, "simulated disk failure"):
+                    mod.init_install(args)
+            self.assertFalse(target.exists())
+            self.assertFalse(config.exists())
+            self.assertFalse((sudoers / "helper").exists())
+
+    def test_manual_install_also_accepts_host_without_auto_detection(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            cmd = [
+                "helper", "install", "--wordpress-vhost", "/mock/site.conf",
+                "--openlist-vhost", "/mock/files.conf", "--host", "files.example.com",
+                "--port", "5244", "--source", "/d/storage/private/", "--php-user", "www",
+            ]
+            with (
+                patch.object(mod, "CONFIG", directory / "approved.json"),
+                patch.object(mod, "TARGET", directory / "helper"),
+                patch.object(mod, "SUDOERS", directory / "sudoers"),
+                patch.object(mod, "STATE", directory / "state"),
+                patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch("pwd.getpwnam", return_value=SimpleNamespace(pw_uid=33)),
+                patch.object(mod, "run_nginx"),
+                patch.object(mod, "verify_local_only_port"),
+                patch.object(mod, "detect_docker_container", return_value=""),
+                patch.object(mod.shutil, "which", return_value=None),
+                patch.object(sys, "argv", cmd),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                mod.main()
+            self.assertEqual("files.example.com", json.loads((directory / "approved.json").read_text())["host"])
 
     def test_no_real_host_or_IP_hardcoded(self):
         code = source.read_text()

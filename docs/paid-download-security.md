@@ -10,6 +10,12 @@
 - 通过 Nginx 拦截的是公网入口。仅隐藏域名、限制 `Referer`、检查前端 `Host` 都不可信；按真实网络来源限制 IP 则有作用，前提是信任链和反代配置正确。
 - 禁止访问付费目录不等于关闭整个 OpenList。公开图片应在别的公开目录，WebDAV 仍可使用原有账号；OpenList API、其它端口、历史缓存必须单独验收。
 
+## 自动安装报错处理
+
+若旧版执行 install-auto 时出现 AttributeError: 'Namespace' object has no attribute 'host'，这是旧安装程序将自动模式的 --openlist-host 误当成手动模式 --host 导致的程序缺陷。错误发生在系统授权及 Nginx 写入之前。请升级到 v2.6.9 或更高版本，重新复制当前后台生成的完整命令。不要手动修改 Python 脚本，也不要为解决此错误开放 Nginx 文件权限。
+
+此外，自动安装要求 OpenList 的宿主机端口可通过 127.0.0.1 访问，并且不允许监听 0.0.0.0 等公网地址。如果安全检查拒绝端口映射，需先调整 Docker/宝塔绑定并确认文件数据正常，再重新执行。
+
 ## 2. 推荐：后台填本机端口，复制一条命令
 
 不需要手动寻找 WordPress 和 OpenList 两份 Nginx 配置文件，也不必先知道 Docker 容器名。
