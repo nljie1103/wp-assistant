@@ -239,6 +239,15 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertStringContainsString( "--openlist-host 'files.example.com'", $command );
         $this->assertStringContainsString( "--port '5244'", $command );
         $this->assertStringContainsString( "--source '/d/storage/private/'", $command );
+        $this->assertStringNotContainsString( '--public-images', $command );
+        $settings['openlist_public_images'] = '/d/storage/图片/';
+        $direct = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
+        $this->assertStringContainsString( "--public-images '/d/storage/图片/'", $direct );
+        $this->assertStringNotContainsString( 'upgrade-images-only', $direct );
+        $settings['openlist_public_images'] = '/d/storage/private/';
+        $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );
+        $settings['openlist_public_images'] = '/d/storage/图片/';
+
         $this->assertStringNotContainsString( '--wordpress-vhost', $command );
         $this->assertStringNotContainsString( '--openlist-vhost', $command );
         $settings['openlist_container'] = 'my-openlist';

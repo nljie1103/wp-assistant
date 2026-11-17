@@ -196,6 +196,111 @@ class NginxHelperTests(unittest.TestCase):
             verify.assert_called_once_with(5245)
             docker.assert_called_once_with(5245, "")
 
+    def test_first_install_images_only_uses_standard_protect_not_upgrade(self):
+        """A customer installing the latest version gets the final policy in
+        their first root install; WordPress only uses normal six operations."""
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            vhosts = directory / "vhosts"
+            vhosts.mkdir()
+            wp_file = vhosts / "site.example.com.conf"
+            openlist_file = vhosts / "files.example.com.conf"
+            wp_file.write_text(WP_VHOST)
+            openlist_file.write_text(OPENLIST_VHOST)
+            config = directory / "etc" / "approved.json"
+            helper = directory / "bin" / "jlwa-nginx-helper"
+            sudoers = directory / "sudoers" / "jlwa-nginx-helper"
+            helper.parent.mkdir()
+            sudoers.parent.mkdir()
+            state = directory / "state"
+            images = "/d/storage/图片/"
+            install = [
+                "jlwa-nginx-helper.py", "install-auto",
+                "--wordpress-host", "site.example.com",
+                "--openlist-host", "files.example.com",
+                "--port", "5244", "--source", "/d/storage/private/",
+                "--php-user", "www", "--public-images", images,
+            ]
+            with (
+                patch.object(mod, "VHOST_DIR", vhosts),
+                patch.object(mod, "CONFIG", config),
+                patch.object(mod, "TARGET", helper),
+                patch.object(mod, "SUDOERS", sudoers),
+                patch.object(mod, "STATE", state),
+                patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                patch.object(mod, "read_manifest", side_effect=lambda: json.loads(config.read_text())),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch("pwd.getpwnam", return_value=SimpleNamespace(pw_uid=33)),
+                patch.object(mod, "run_nginx") as nginx,
+                patch.object(mod, "verify_local_only_port"),
+                patch.object(mod, "detect_docker_container", return_value=""),
+                patch.object(mod.shutil, "which", return_value=None),
+            ):
+                with patch.object(sys, "argv", install), contextlib.redirect_stdout(io.StringIO()):
+                    mod.main()
+                authorized = json.loads(config.read_text())
+                self.assertEqual("images_only", authorized["public_access_policy"])
+                self.assertEqual(images, authorized["public_images"])
+                self.assertEqual(WP_VHOST, wp_file.read_text())
+                self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
+                for operation in ("status", "preview", "prepare", "confirm", "protect"):
+                    with patch.object(sys, "argv", ["helper", operation]), contextlib.redirect_stdout(io.StringIO()) as output:
+                        mod.main()
+                    if operation == "status":
+                        self.assertEqual("images_only", json.loads(output.getvalue())["public_access_policy"])
+                    if operation == "preview":
+                        self.assertIn('if ($uri ~ ', output.getvalue())
+                        self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
+                    if operation == "prepare":
+                        self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
+                    if operation == "protect":
+                        self.assertIn("approved image directory", output.getvalue())
+                final = openlist_file.read_text()
+                self.assertIn('if ($uri ~ ', final)
+                self.assertNotIn("location ^~ /d/storage/private/", final)
+                self.assertIn('internal;', wp_file.read_text())
+                result = json.loads((state / "state.json").read_text())
+                self.assertEqual("protected", result["phase"])
+                self.assertTrue(result["confirmed"])
+                self.assertTrue(Path(result["backups"]["wp"]).exists())
+                self.assertTrue(Path(result["backups"]["openlist"]).exists())
+                self.assertEqual("images_only", json.loads(config.read_text())["public_access_policy"])
+                with patch.object(sys, "argv", ["helper", "rollback"]), contextlib.redirect_stdout(io.StringIO()):
+                    mod.main()
+                self.assertEqual(WP_VHOST, wp_file.read_text())
+                self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
+                self.assertEqual("rolled_back", json.loads((state / "state.json").read_text())["phase"])
+
+    def test_first_install_rejects_invalid_image_whitelist_before_writes(self):
+        with tempfile.TemporaryDirectory() as root:
+            d = Path(root)
+            wp, files, manifest, helper, sudoers = (
+                d / "wp.conf", d / "files.conf", d / "approved.json",
+                d / "helper", d / "sudoers",
+            )
+            wp.write_text(WP_VHOST)
+            files.write_text(OPENLIST_VHOST)
+            for invalid in ("/d/storage/private/", "/d/storage/private/inside/",
+                            "/d/another/images/", "/p/storage/images/",
+                            "/d/storage/images%2F/"):
+                args = SimpleNamespace(
+                    wordpress_vhost=str(wp), openlist_vhost=str(files),
+                    port="5244", source="/d/storage/private/",
+                    host="files.example.com", php_user="www",
+                    container="", public_images=invalid,
+                )
+                with (
+                    patch.object(mod, "CONFIG", manifest),
+                    patch.object(mod, "TARGET", helper),
+                    patch.object(mod, "SUDOERS", sudoers),
+                    patch.object(mod, "validate_vhost", side_effect=lambda value: value),
+                ):
+                    with self.assertRaises(ValueError, msg=invalid):
+                        mod.init_install(args)
+                self.assertFalse(manifest.exists(), invalid)
+                self.assertFalse(helper.exists(), invalid)
+                self.assertFalse(sudoers.exists(), invalid)
+
     def test_install_auto_preflight_failure_writes_nothing(self):
         with tempfile.TemporaryDirectory() as root:
             directory = Path(root)

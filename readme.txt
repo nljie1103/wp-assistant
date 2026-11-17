@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.7.3
+Stable tag: 2.7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.7.4 =
+* Nginx 全新安装直接配置完整公网文件策略，不再先安装付费目录黑名单再执行白名单升级命令。
+* 后台保存唯一公开图片目录后，自动生成的首次安装命令直接包含 --public-images，并在 root 清单内固定图片白名单。
+* 标准流程仍是预览、配置 WordPress 内部代理、真实购买测试、确认和应用公网封锁；第四步一次写入完整文件白名单。
+* 未设置公开图片目录时保留付费目录封锁兼容模式，并在首次安装页面明确提示其余目录仍可能公开。
+* 将已安装旧版的白名单迁移入口收起到兼容区域，不妨碍最新版本新站首装；保留已有站点状态和历史备份。
+* 新增全新安装到保护完成及回滚的端到端测试，验证与旧版迁移不相互依赖。
+
+
 
 = 2.7.3 =
 * 新增可选 OpenList 公网文件白名单：在 /d/、/p/ 全部挂载中默认禁止文件直连，只允许管理员指定的图片目录及其文件公开访问。

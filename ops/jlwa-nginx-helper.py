@@ -206,6 +206,10 @@ def init_install(args):
     if not PORT_RE.fullmatch(args.port) or not 1 <= int(args.port) <= 65535:
         fatal("invalid loopback port")
     source = validate_source(args.source)
+    # First-time installers can approve the final public file policy directly:
+    # no extra "upgrade" step is needed after the paid download passes testing.
+    images_arg = getattr(args, "public_images", "") or ""
+    approved_images = validate_public_images(images_arg, {"source": source}) if images_arg else ""
     # install uses --host; install-auto uses --openlist-host.
     # Resolve either spelling here so both CLI modes share the same installer.
     host = (getattr(args, "host", "") or getattr(args, "openlist_host", "")).lower()
@@ -227,7 +231,10 @@ def init_install(args):
     manifest = {"wordpress_vhost": wp, "openlist_vhost": files,
                 "port": int(args.port), "source": source,
                 "host": host, "php_user": args.php_user,
-                "docker_container_detected": bool(container_id)}
+                "docker_container_detected": bool(container_id),
+                "public_access_policy": "images_only" if approved_images else "paid_only"}
+    if approved_images:
+        manifest["public_images"] = approved_images
     # Copy binary OUT of WordPress: subsequent plugin updates cannot modify
     # the root-owned helper without another explicit administrator action.
     source_script = Path(__file__).resolve()
@@ -623,6 +630,7 @@ def main():
     installer.add_argument("--host", required=True)
     installer.add_argument("--php-user", default="www")
     installer.add_argument("--container", default="")
+    installer.add_argument("--public-images", default="")
     automatic = commands.add_parser("install-auto")
     automatic.add_argument("--wordpress-host", required=True)
     automatic.add_argument("--openlist-host", required=True)
@@ -630,6 +638,7 @@ def main():
     automatic.add_argument("--source", required=True)
     automatic.add_argument("--php-user", default="www")
     automatic.add_argument("--container", default="")
+    automatic.add_argument("--public-images", default="")
     for op in ("status", "preview", "prepare", "confirm", "protect", "rollback"):
         commands.add_parser(op)
     for op in ("preview-images-only", "upgrade-images-only"):
@@ -698,7 +707,11 @@ def main():
             mutate("openlist", config, state)
             state["phase"] = "protected"
             save_state(state)
-            print("public OpenList paid-file route blocked; verify external/CDN/API bypasses independently")
+            if config.get("public_access_policy") == "images_only":
+                print("public OpenList file routes now allow only the approved image directory; "
+                      "verify real images, paid downloads, CDN and API separately")
+            else:
+                print("public OpenList paid-file route blocked; verify external/CDN/API bypasses independently")
         elif args.op == "rollback":
             rollback(config, state)
 

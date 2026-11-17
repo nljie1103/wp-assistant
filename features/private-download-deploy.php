@@ -28,6 +28,13 @@ class JLWA_Private_Deploy {
         $source = JLWA_Private_Download::prefix( $settings['private_source_prefix'] ?? '' );
         $port = trim( (string) ( $settings['openlist_host_port'] ?? '' ) );
         $container = trim( (string) ( $settings['openlist_container'] ?? '' ) );
+        $images_raw = trim( (string) ( $settings['openlist_public_images'] ?? '' ) );
+        $images = JLWA_Private_Download::prefix( $images_raw );
+        $mount = $source ? '/' . implode( '/', array_slice( explode( '/', trim( $source, '/' ) ), 0, 2 ) ) . '/' : '';
+        if ( '' !== $images_raw && ( ! $images || ! $mount || 0 !== strpos( $images, $mount ) ||
+            $images === $mount || 0 === strpos( $images, $source ) || 0 === strpos( $source, $images ) ) ) {
+            return '';
+        }
         $wordpress_host = strtolower( (string) $wordpress_host );
         $plugin_dir = (string) $plugin_dir;
         if ( ! $hosts || ! $source || ! preg_match( '/^[0-9]{1,5}$/D', $port ) || (int) $port < 1 || (int) $port > 65535
@@ -48,6 +55,10 @@ class JLWA_Private_Deploy {
         if ( '' !== $container ) {
             $args[] = '--container';
             $args[] = $container;
+        }
+        if ( $images ) {
+            $args[] = '--public-images';
+            $args[] = $images;
         }
         $command = 'sudo python3 ' . escapeshellarg( $script ) . ' install-auto';
         foreach ( $args as $index => $arg ) {
@@ -171,6 +182,13 @@ class JLWA_Private_Deploy {
                 || ( $options['private_internal_prefix'] ?? '' ) !== JLWA_Private_Download::DEFAULT_INTERNAL ) {
                 wp_die( '插件的私有源目录或域名与系统授权配置不一致，禁止启用公网封锁，请检查设置。', '配置不匹配', array( 'response' => 400 ) );
             }
+            // A saved settings change never rewrites the root-approved
+            // manifest. Refuse to run step ④ against a stale public policy.
+            $approved_images = (string) ( $approved['approved_public_images'] ?? '' );
+            $configured_images = trim( (string) ( $options['openlist_public_images'] ?? '' ) );
+            if ( $configured_images !== $approved_images ) {
+                wp_die( '当前公开图片目录与首次 root 安装时授权的策略不一致；请检查已安装助手的只读状态，不要重复执行第④步。修改 WordPress 设置不会自动修改 root 授权。', '公网策略不一致', array( 'response' => 400 ) );
+            }
         }
         $result = self::call( $operation );
         // Admin-only diagnostic; never put actual paths or remote output into URL params.
@@ -268,6 +286,13 @@ class JLWA_Private_Deploy {
             <h3>🛡️ Nginx 安全部署向导</h3>
             <p>一套 OpenList 即使绑定多个域名，也只维护一份源站站点规则。默认不修改任何系统文件。首次使用需要服务器管理员授权一次；之后所有操作都在九流 WP 助手后台执行。</p>
             <p><strong>当前状态：</strong><?php echo esc_html( $phases[ $phase ] ?? '需要人工检查配置' ); ?></p>
+            <?php if ( $has_helper ) : ?>
+                <p><strong>已授权公网文件策略：</strong><?php if ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                    仅公开图片目录 <code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>；其余所有 <code>/d/</code>、<code>/p/</code> 文件路由禁止公网访问（第④步执行后生效）。
+                <?php else : ?>
+                    仅封锁当前付费资源目录；如需仅开放图片，请使用下方的旧部署兼容工具或在首次安装前先设置图片目录。
+                <?php endif; ?></p>
+            <?php endif; ?>
             <?php if ( ! $result['ok'] ) : ?><p class="notice notice-warning" style="padding:10px"><?php echo esc_html( $result['message'] ); ?></p><?php endif; ?>
             <?php if ( ! empty( $status['docker_container_detected'] ) ) : ?><p>已识别与所填本地端口对应的 Docker 容器映射，并确认端口未对公网发布。</p><?php endif; ?>
             <?php
@@ -292,7 +317,13 @@ class JLWA_Private_Deploy {
                 <textarea class="large-text code" rows="2" readonly><?php echo esc_textarea( 'sudo -u www /usr/bin/sudo -n ' . self::BRIDGE . ' status' ); ?></textarea>
                 <p class="description">若输出 JSON，说明助手已安装，重点检查 WordPress 站点 PHP-FPM 的 <code>proc_open</code>、运行用户和 sudoers；若提示需要密码或不允许操作，请核对 PHP 实际运行用户。<strong>不要 chmod 777、不要授权全权 sudo、不要重复执行安装。</strong></p>
                 <details><summary>尚未首次安装？展开查看安装命令</summary>
-                <p>首次安装时，插件自动读取 WordPress 域名和已保存的 OpenList 域名、目录与本机端口，无需手工寻找 Nginx 配置文件。</p>
+                <p>首次安装时，插件会从已保存设置一次确定公网访问策略、WordPress 域名、OpenList 域名及本地端口，无需单独安装旧规则再升级。</p>
+                <?php $initial_options = JLWA_Download_Page_Feature::options(); ?>
+                <?php if ( ! empty( $initial_options['openlist_public_images'] ) ) : ?>
+                    <p><strong>本次首次安装将直接采用「仅图片公开」策略：</strong><code><?php echo esc_html( $initial_options['openlist_public_images'] ); ?></code>。第④步一次写入完整白名单。</p>
+                <?php else : ?>
+                    <p class="notice notice-warning" style="padding:10px"><strong>尚未选择公开图片目录：</strong>按当前配置安装后，公网只封锁付费资源目录，其它 OpenList 文件目录不会被封锁。如需仅图片公开，请先去「<a href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-download-page&tab=advanced' ) ); ?>">交付高级设置</a>」填写图片目录并保存，再复制安装命令。</p>
+                <?php endif; ?>
                 <?php
                 $command = self::installer_command( JLWA_Download_Page_Feature::options() );
                 if ( $command ) :
@@ -310,13 +341,13 @@ class JLWA_Private_Deploy {
                 <?php self::op_form( 'preview', '① 预览配置差异' ); ?>
                 <?php self::op_form( 'prepare', '② 自动备份并配置内部代理' ); ?>
                 <?php self::op_form( 'confirm', '③ 确认已购用户下载测试' ); ?>
-                <?php self::op_form( 'protect', '④ 封锁 OpenList 公网付费目录' ); ?>
+                <?php self::op_form( 'protect', '④ 应用公网文件访问保护规则' ); ?>
                 <?php self::op_form( 'rollback', '恢复本次配置备份', '', true ); ?>
             <?php endif; ?>
 
             <?php if ( $has_helper && 'protected' === $phase ) : ?>
                 <hr>
-                <h4>🔐 公网文件白名单：仅开放图片</h4>
+                <h4>🔐 公网文件访问策略</h4>
                 <?php if ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
                     <p><strong>已启用图片白名单：</strong>公网 /d/、/p/ 仅允许以下目录及其文件：<code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>。请继续检查真实图片、旧文件直链与已购下载。</p>
                     <details style="margin:12px 0">
@@ -326,6 +357,8 @@ class JLWA_Private_Deploy {
                         <button class="button button-secondary" type="button" onclick="var e=document.getElementById('jlwa-images-rollback');e.focus();e.select();document.execCommand('copy')">复制白名单回退命令</button>
                     </details>
                 <?php else : ?>
+                    <details style="margin:12px 0">
+                        <summary><strong>旧部署兼容：将原有付费目录封锁调整为图片白名单</strong></summary>
                     <p>当前仍是<strong>仅封锁付费目录</strong>。如果其它 OpenList 目录也不能公开，请在“<a href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-download-page&tab=advanced' ) ); ?>">交付高级设置</a>”填写<strong>唯一公开图片目录</strong>并保存，再运行下面两个需要 root 明确授权的命令。默认只预览，不会静默修改系统配置。</p>
                     <?php
                     $image_options = JLWA_Download_Page_Feature::options();
@@ -343,6 +376,7 @@ class JLWA_Private_Deploy {
                     <?php else : ?>
                         <p class="notice notice-warning" style="padding:10px">先在“交付高级设置”填写一个不与付费目录重叠的唯一公开图片路径并保存，才会生成白名单预览命令。</p>
                     <?php endif; ?>
+                    </details>
                 <?php endif; ?>
             <?php endif; ?>
             <hr>
