@@ -33,6 +33,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build and verify Vue 3 admin resources
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          git diff --exit-code -- assets/vue/admin.js assets/vue/admin.css
       - run: bash tools/check.sh
 
   release:
@@ -54,6 +59,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build and verify Vue 3 admin resources
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          git diff --exit-code -- assets/vue/admin.js assets/vue/admin.css
       - name: Verify code quality before publishing
         run: bash tools/check.sh
       - name: Resolve and cross-check release version
@@ -115,6 +125,11 @@ jobs:
             --exclude '.github/' \
             --exclude 'tools/' \
             --exclude 'tests/' \
+            --exclude 'node_modules/' \
+            --exclude 'src/' \
+            --exclude 'package.json' \
+            --exclude 'package-lock.json' \
+            --exclude 'vite.config.mjs' \
             --exclude 'phpunit.xml.dist' \
             --exclude 'RELEASE_NOTES_*.md' \
             --exclude '__pycache__/' \
@@ -125,6 +140,12 @@ jobs:
           sha256sum "jiuliu-wp-assistant-$VERSION.zip" > "jiuliu-wp-assistant-$VERSION.zip.sha256.txt"
           unzip -t "jiuliu-wp-assistant-$VERSION.zip" >/dev/null
           unzip -Z1 "jiuliu-wp-assistant-$VERSION.zip" | grep -Fxq 'jiuliu-wp-assistant/jiuliu-wp-assistant.php'
+          unzip -Z1 "jiuliu-wp-assistant-$VERSION.zip" | grep -Fxq 'jiuliu-wp-assistant/assets/vue/admin.js'
+          unzip -Z1 "jiuliu-wp-assistant-$VERSION.zip" | grep -Fxq 'jiuliu-wp-assistant/assets/vue/admin.css'
+          if unzip -Z1 "jiuliu-wp-assistant-$VERSION.zip" | grep -Eq '^jiuliu-wp-assistant/(node_modules|src)/'; then
+            echo "::error::Build-only source or node_modules leaked into the public plugin ZIP"
+            exit 1
+          fi
       - name: Publish tagged immutable release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -30,5 +30,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build and verify Vue 3 admin resources
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          git diff --exit-code -- assets/vue/admin.js assets/vue/admin.css
       - name: Run plugin checks
         run: bash tools/check.sh

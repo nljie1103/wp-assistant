@@ -105,6 +105,12 @@ class JLWA_Admin {
 		wp_enqueue_style( 'jlwa-admin-content', JLWA_PLUGIN_URL . 'assets/css/admin-content.css', array( 'jlwa-admin' ), JLWA_VERSION );
 		wp_enqueue_script( 'jlwa-admin', JLWA_PLUGIN_URL . 'assets/js/admin.js', array(), JLWA_VERSION, true );
 		wp_enqueue_script( 'jlwa-admin-content', JLWA_PLUGIN_URL . 'assets/js/admin-content.js', array( 'jlwa-admin' ), JLWA_VERSION, true );
+		// Prebuilt Vue 3 + Reka UI management shell. The original feature forms
+		// remain outside Vue roots, so WordPress nonces, POSTs, and feature JS
+		// continue working without migration or database changes.
+		wp_enqueue_style( 'jlwa-vue-admin', JLWA_PLUGIN_URL . 'assets/vue/admin.css', array( 'jlwa-admin-content' ), JLWA_VERSION );
+		wp_enqueue_script( 'jlwa-vue-admin', JLWA_PLUGIN_URL . 'assets/vue/admin.js', array( 'jlwa-admin-content' ), JLWA_VERSION, true );
+		wp_localize_script( 'jlwa-vue-admin', 'JLWA_V3', $this->vue_config( $page ) );
 		wp_localize_script(
 			'jlwa-admin',
 			'JLWA_ADMIN',
@@ -113,6 +119,62 @@ class JLWA_Admin {
 				'nonce'   => wp_create_nonce( 'jlwa_update_nonce' ),
 				'page'    => $page,
 			)
+		);
+	}
+
+	/** Public page metadata only: all URLs come from WordPress admin_url(). */
+	protected function vue_config( $page ) {
+		$features = JLWA_Feature_Registry::features();
+		$active = JLWA_Feature_Registry::key_from_slug( $page );
+		if ( '' === $active ) {
+			$active = 'jlwa-update-center' === $page ? 'system' : 'dashboard';
+		}
+		$entries = array( array(
+			'key' => 'dashboard',
+			'label' => '控制台',
+			'description' => '站点总览与功能状态',
+			'href' => admin_url( 'admin.php?page=' . JLWA_MENU_SLUG ),
+		) );
+		$modules = array();
+		foreach ( $features as $key => $feature ) {
+			$state = JLWA_Feature_Registry::state( $key );
+			$entry = array(
+				'key' => $key,
+				'label' => $feature['label'],
+				'description' => $feature['description'],
+				'eyebrow' => $feature['eyebrow'],
+				'href' => admin_url( 'admin.php?page=' . $feature['slug'] ),
+				'enabled' => ! empty( $state['enabled'] ),
+				'ready' => ! empty( $state['ready'] ),
+				'status' => $state['label'],
+			);
+			$entries[] = $entry;
+			$modules[] = $entry;
+		}
+		$entries[] = array(
+			'key' => 'system',
+			'label' => '系统与更新',
+			'description' => '版本检查、更新与插件完整性',
+			'href' => admin_url( 'admin.php?page=jlwa-update-center' ),
+		);
+		$title = '控制台';
+		$subtitle = '管理站点功能与运行状态。';
+		if ( 'system' === $active ) {
+			$title = '系统与更新';
+			$subtitle = '检查版本、更新完整插件和验证安装状态。';
+		} elseif ( isset( $features[ $active ] ) ) {
+			$title = $features[ $active ]['label'];
+			$subtitle = $features[ $active ]['description'];
+		}
+		return array(
+			'active' => $active,
+			'title' => $title,
+			'subtitle' => $subtitle,
+			'version' => JLWA_VERSION,
+			'homeUrl' => admin_url( 'admin.php?page=' . JLWA_MENU_SLUG ),
+			'updateUrl' => admin_url( 'admin.php?page=jlwa-update-center' ),
+			'entries' => $entries,
+			'modules' => $modules,
 		);
 	}
 
@@ -213,8 +275,10 @@ class JLWA_Admin {
 				$attention[ $key ] = $states[ $key ];
 			}
 		}
-		$this->shell_start( 'dashboard', '统一控制台', '查看实际启用情况、依赖检查与快捷配置入口。' );
+		$this->shell_start( 'dashboard', '控制台', '查看实际启用情况、依赖检查与快捷配置入口。' );
 		?>
+		<div id="jlwa-vue-dashboard" aria-label="Vue 3 功能总览"></div>
+		<div class="jlwa-v3-dashboard-fallback">
 		<section class="jlwa-hero jlwa-hero--overview">
 			<div class="jlwa-hero__copy">
 				<span class="jlwa-kicker">站点功能概况</span>
@@ -276,6 +340,7 @@ class JLWA_Admin {
 				</article>
 			<?php endforeach; ?>
 		</div>
+		</div><!-- /jlwa-v3-dashboard-fallback -->
 		<?php
 		$this->shell_end();
 	}
@@ -376,24 +441,27 @@ class JLWA_Admin {
 	/** @param string $active Active key. @param string $title Title. @param string $subtitle Subtitle. */
 	protected function shell_start( $active, $title, $subtitle ) {
 		?>
-		<div class="wrap jlwa-app jlwa-app--<?php echo esc_attr( $active ); ?>">
-			<header class="jlwa-appbar">
-				<a class="jlwa-brand" href="<?php echo esc_url( admin_url( 'admin.php?page=' . JLWA_MENU_SLUG ) ); ?>"><span class="jlwa-brand__mark"><span class="dashicons dashicons-superhero-alt"></span></span><span><strong>九流WP助手</strong><small>Unified WordPress Toolkit</small></span></a>
-				<nav class="jlwa-appnav" aria-label="九流WP助手功能导航">
+		<div class="wrap jlwa-app jlwa-v3 jlwa-app--<?php echo esc_attr( $active ); ?>">
+			<div id="jlwa-vue-sidebar">
+				<nav class="jlwa-v3-fallback-nav" aria-label="九流WP助手功能导航">
+					<strong>九流 WP 助手</strong>
 					<?php $this->render_nav_item( 'dashboard', JLWA_MENU_SLUG, '控制台', 'dashicons-dashboard', $active ); ?>
 					<?php foreach ( JLWA_Feature_Registry::features() as $key => $feature ) : ?>
 						<?php $this->render_nav_item( $key, $feature['slug'], $feature['short_label'], $feature['icon'], $active ); ?>
 					<?php endforeach; ?>
-					<?php $this->render_nav_item( 'system', 'jlwa-update-center', '系统', 'dashicons-update-alt', $active ); ?>
+					<?php $this->render_nav_item( 'system', 'jlwa-update-center', '系统与更新', 'dashicons-update-alt', $active ); ?>
 				</nav>
-				<span class="jlwa-appbar__version">v<?php echo esc_html( JLWA_VERSION ); ?></span>
-			</header>
-			<div class="jlwa-page-heading"><div><span>JIULIU ASSISTANT</span><h1><?php echo esc_html( $title ); ?></h1><p><?php echo esc_html( $subtitle ); ?></p></div></div>
-			<main class="jlwa-main">
+			</div>
+			<div class="jlwa-v3-workspace">
+				<div id="jlwa-vue-toolbar"></div>
+				<header class="jlwa-page-heading jlwa-v3-fallback-heading">
+					<div><span>JIULIU WORKSPACE</span><h1><?php echo esc_html( $title ); ?></h1><p><?php echo esc_html( $subtitle ); ?></p></div>
+				</header>
+				<main class="jlwa-main" id="jlwa-main-content">
 		<?php
 	}
 
-	protected function shell_end() { echo '</main></div>'; }
+	protected function shell_end() { echo '</main></div></div>'; }
 
 	/** @param string $key Key. @param string $slug Slug. @param string $label Label. @param string $icon Icon. @param string $active Active. */
 	protected function render_nav_item( $key, $slug, $label, $icon, $active ) {

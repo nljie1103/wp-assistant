@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.7.4
+Stable tag: 3.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,17 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.0 =
+* 统一管理后台升级为 Vue 3 + Reka UI（shadcn-vue 风格）：全新侧边导航、现代化控制台、暗色与浅色主题、移动端抽屉和快捷搜索命令面板。
+* 重新设计六个功能模块的管理页面外观、卡片、表单、状态、按钮与设置区域，继续复用原有 PHP 功能处理器、WordPress 设置和 AJAX 行为。
+* 搜索命令可直接导航功能页面并快速定位当前页面的真实设置标题；控制台功能筛选、统计、状态、模块入口都为实际数据与交互，不是静态装饰。
+* 默认界面包已经离线预构建，无需 WordPress 服务器安装 Node.js 或访问第三方 JS CDN；Vue、Reka UI 和 Lucide 图标均打入安装包。
+* 保留原有六项模块、页面特效与预加载前台渲染、反调试、媒体链接管理、AI 摘要、下载页模板、子比订单与 Nginx/OpenList 私有交付。
+* 安全下载、root 授权清单与 Nginx 操作维持原有服务端接口，PHP 表单保留在 Vue 根节点之外，防止前端框架接管导致 Nonce/POST/主题事件失效。
+* 提供无 JavaScript 时的传统导航及控制台回退、构建资源完整性回归、Node.js 组件逻辑单测和自动化构建与正式 ZIP 双重检查。
+
+
 
 = 2.7.4 =
 * Nginx 全新安装直接配置完整公网文件策略，不再先安装付费目录黑名单再执行白名单升级命令。

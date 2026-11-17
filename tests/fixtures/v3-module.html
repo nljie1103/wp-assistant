@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>九流 WP 助手 v3.0.0 UI / 本地隔离测试页</title>
+<style>
+html,body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#18181b;background:#f6f7fa}
+#wpadminbar{height:32px;display:flex;align-items:center;padding-left:20px;background:#1d2327;color:#fff;font-size:12px}
+#adminmenumain{width:150px;position:absolute;top:32px;bottom:0;background:#1d2327;color:#c3c4c7;font-size:12px;padding:18px 5px;box-sizing:border-box}
+#adminmenumain div{padding:10px}
+#wpcontent{margin-left:150px;padding:20px}
+.wrap{box-sizing:border-box}
+</style>
+<link rel="stylesheet" href="../../assets/vue/admin.css">
+<script>
+window.onerror=function(msg,url,line,col,error){document.body.insertAdjacentHTML('beforeend','<pre id="js-error">SCRIPT ERROR: '+String(msg)+' '+String(url)+' '+line+':'+col+'</pre>');};
+window.addEventListener('unhandledrejection',function(evt){document.body.insertAdjacentHTML('beforeend','<pre id="js-error">PROMISE ERROR: '+String(evt.reason)+'</pre>');});
+window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<pre id="js-status">JS loaded: '+String(!!window.JLWA_V3)+' | mounted:'+String(!!document.querySelector(".jlwa-vue-ready"))+'</pre>');},800)});
+window.JLWA_V3={
+ active:"dashboard", title:"控制台",subtitle:"查看实际启用情况、依赖检查与快捷配置入口。",
+ version:"3.0.0",
+ homeUrl:"/tests/fixtures/v3-dashboard.html", updateUrl:"/tests/fixtures/v3-module.html?system",
+ entries: [
+ {key:"dashboard",label:"控制台",description:"站点总览与功能状态",href:"/tests/fixtures/v3-dashboard.html"},
+ {key:"page-effects",label:"页面特效管理",description:"鼠标特效和页面美化",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"anti-debug",label:"反调试与内容保护",description:"保护页面资源",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"ai-summary",label:"AI 文章摘要",description:"使用 AI 提供自动摘要",href:"/tests/fixtures/v3-module.html",ready:false,enabled:false,status:"待配置密钥"},
+ {key:"preloader",label:"沉浸式预加载",description:"页面开屏效果和动画",href:"/tests/fixtures/v3-module.html",ready:true,enabled:false,status:"未启用"},
+ {key:"media-urls",label:"媒体与多域名链接",description:"替换和扫描图片链接",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"download-page",label:"子比下载页与私有交付",description:"WordPress 订单、Nginx 和 OpenList",href:"/tests/fixtures/v3-module.html",ready:true,enabled:true,status:"已启用"},
+ {key:"system",label:"系统与更新",description:"版本检查",href:"/tests/fixtures/v3-module.html?system"}
+ ],
+ modules: [],
+};
+window.JLWA_V3.active='download-page';
+window.JLWA_V3.title='子比下载页与私有交付';
+window.JLWA_V3.subtitle='下载页模板、子比购买权限与 Nginx/OpenList 安全交付';
+window.JLWA_V3.modules=window.JLWA_V3.entries.filter(x=>!["system","dashboard"].includes(x.key)).map(x=>({...x,eyebrow:"站点功能"}));
+</script>
+<script defer src="../../assets/vue/admin.js"></script>
+</head>
+<body class="jlwa-admin-screen">
+<div id="wpadminbar">WordPress　　九流 WP 助手　　控制台　　/　　离线测试预览</div>
+<div id="adminmenumain"><div>控制台</div><div>文章</div><div>页面</div><div>外观</div><div>插件</div><div>设置</div><div>九流 WP 助手</div></div>
+<div id="wpcontent">
+<div class="wrap jlwa-app jlwa-v3 jlwa-app--dashboard">
+<div id="jlwa-vue-sidebar"><nav class="jlwa-v3-fallback-nav">正在加载 Vue 3 管理界面...</nav></div>
+<div class="jlwa-v3-workspace"><div id="jlwa-vue-toolbar"></div>
+<header class="jlwa-page-heading jlwa-v3-fallback-heading"><h1>控制台</h1></header>
+<main class="jlwa-main" id="jlwa-main-content">
+<section class="jlwa-feature-intro jlwa-feature-intro--download-page"><span class="jlwa-feature-intro__icon">🔒</span><div><h2>子比下载页与私有交付设置中心</h2><p>原 WordPress 设置与购买流程由 PHP 处理。</p></div><div class="jlwa-feature-intro__meta">已启用</div></section>
+<div class="jlwa-feature-canvas"><div class="jlwa-feature-host jlwa-feature-host--download-page">
+<nav class="nav-tab-wrapper"><a class="nav-tab nav-tab-active" href="#download">模板管理</a><a class="nav-tab" href="#security">私有交付</a><a class="nav-tab" href="#advanced">高级设置</a></nav>
+<section class="jlwa-download-section">
+<h2>下载页模板</h2><p>本区域的设置表单为浏览器静态测试，实际插件仍使用原 WordPress 表单。</p>
+<form id="jlwa-test-form" method="post">
+<label>模板标题 <input type="text" name="template_title" value="默认下载模板"></label>
+<label>下载模式 <select name="mode"><option selected value="safe">私有下载</option><option value="public">普通下载</option></select></label>
+<label><input type="checkbox" name="private_enabled" value="1" checked> 启用私有交付拦截</label>
+<h3>付费资源访问保护</h3>
+<label>OpenList 本机端口 <input type="number" name="port" value="5245"></label>
+<label>保护源目录 <input type="text" value="/d/storage/private/" name="source"></label>
+<p class="submit"><button class="button button-primary" type="submit">保存设置</button></p>
+</form>
+<p id="jlwa-test-save-status" role="status">未保存测试设置</p>
+</section>
+</div></div>
+<script>
+document.getElementById('jlwa-test-form').addEventListener('submit',function(e){e.preventDefault();document.getElementById('jlwa-test-save-status').textContent='原生 WordPress 风格表单 submit 事件已保留：'+String(new FormData(e.target).get('template_title'));});
+</script>
+</main></div></div>
+</div>
+</body></html>

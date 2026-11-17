@@ -132,6 +132,23 @@ def tags():
     return sorted(set(versions))
 
 
+def valid_transition(previous, current):
+    """Allow strict decimal carry OR an explicit major-zero release.
+
+    Normal minor/patch changes can never skip (e.g. 2.7.4 -> 2.7.6).
+    A purposefully designed major release may start 3.0.0 without requiring
+    2.7.5 ... 2.9.9 first. The user must still change the versioned release
+    notes and keep tags immutable.
+    """
+    previous = parse(previous) if isinstance(previous, str) else tuple(previous)
+    current = parse(current) if isinstance(current, str) else tuple(current)
+    expected = next_version('{}.{}.{}'.format(*previous))
+    actual = '{}.{}.{}'.format(*current)
+    return actual == expected or (
+        current[0] == previous[0] + 1 and current[1:] == (0, 0)
+    )
+
+
 def verify_history():
     current = parse(check())
     previous = tags()
@@ -140,10 +157,11 @@ def verify_history():
     latest = previous[-1]
     expected = next_version('{}.{}.{}'.format(*latest))
     actual = '{}.{}.{}'.format(*current)
-    if actual != expected:
-        fail('版本递增规则错误：上版 v{}，下版必须为 v{}，实际为 v{}'.format(
-            '{}.{}.{}'.format(*latest), expected, actual))
-    print('历史标签进位校验通过：v{} → v{}'.format('{}.{}.{}'.format(*latest), actual))
+    if not valid_transition(latest, current):
+        fail('版本递增规则错误：上版 v{}，下版须为 v{}（连续进位）或显式升主版本 v{}.0.0，实际为 v{}'.format(
+            '{}.{}.{}'.format(*latest), expected, latest[0] + 1, actual))
+    kind = '独立大版本' if current[0] > latest[0] and actual != expected else '连续进位'
+    print('历史标签版本校验通过（{}）：v{} → v{}'.format(kind, '{}.{}.{}'.format(*latest), actual))
 
 
 def main():

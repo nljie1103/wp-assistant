@@ -6,16 +6,17 @@ count_php=0
 while IFS= read -r -d '' file; do
   php -l "$file" >/dev/null
   count_php=$((count_php + 1))
-done < <(find . -name '*.php' -type f -not -path './vendor/*' -not -path './.git/*' -print0)
+done < <(find . -name '*.php' -type f -not -path './vendor/*' -not -path './node_modules/*' -not -path './.git/*' -print0)
 printf 'PHP syntax: %s files OK\n' "$count_php"
 count_js=0
 while IFS= read -r -d '' file; do
   node --check "$file"
   count_js=$((count_js + 1))
-done < <(find . -name '*.js' -type f -not -path './vendor/*' -not -path './.git/*' -print0)
+done < <(find . -name '*.js' -type f -not -path './vendor/*' -not -path './node_modules/*' -not -path './.git/*' -print0)
 printf 'JavaScript syntax: %s files OK\n' "$count_js"
 phpunit --configuration phpunit.xml.dist --no-coverage
-node --test tests/js/*.test.js
+node --test tests/js/*.test.js tests/js/*.test.mjs
+node tools/check-vue-build.mjs
 python3 -m unittest discover -s tests -p test_nginx_helper.py -v
 python3 -m unittest discover -s tests -p test_media_nginx_helper.py -v
 python3 -m unittest discover -s tests -p test_private_download_headers.py -v
