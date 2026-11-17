@@ -15,7 +15,11 @@ class JLWA_Download_Page_Feature {
 
     private function __construct() {
         add_action( 'admin_init', array( $this, 'register_setting' ) );
+        // Block unpurchased download-page requests before *any* template emits
+        // preview images, post metadata or resource link markup.
+        add_action( 'template_redirect', array( $this, 'guard_paid_download_page' ), 0 );
         add_action( 'template_redirect', array( $this, 'maybe_render' ), 1 );
+        add_action( 'wp_footer', array( $this, 'render_purchase_required_notice' ), 20 );
     }
 
     public static function defaults() {
@@ -74,15 +78,79 @@ class JLWA_Download_Page_Feature {
 
     private function compatible() { return self::is_compatible(); }
 
-    private function target_request() {
-        if ( is_admin() || wp_doing_ajax() || empty( $_GET['post'] ) ) { return false; } // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $post_id = absint( wp_unslash( $_GET['post'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    /**
+     * Detect a real published Zibll paid-download page, not just a random
+     * ?post= parameter on any public article.
+     */
+    private function target_post_id() {
+        if ( is_admin() || wp_doing_ajax() || ! isset( $_GET['post'] ) || ! is_scalar( $_GET['post'] ) ) {
+            return 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        }
+        $raw_id = (string) wp_unslash( $_GET['post'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( ! preg_match( '/^[1-9][0-9]*$/D', $raw_id ) ) { return 0; }
+        $post_id = absint( $raw_id );
+        if ( ! $post_id ) { return 0; }
         $post = get_post( $post_id );
         $meta = get_post_meta( $post_id, 'posts_zibpay', true );
-        if ( ! $post || 'publish' !== $post->post_status || ! is_array( $meta ) || '2' !== (string) ( $meta['pay_type'] ?? '' ) ) { return false; }
+        if ( ! $post || 'publish' !== $post->post_status || ! is_array( $meta ) || '2' !== (string) ( $meta['pay_type'] ?? '' ) ) {
+            return 0;
+        }
         $page_id = get_queried_object_id();
         $slug = $page_id ? str_replace( '\\', '/', (string) get_page_template_slug( $page_id ) ) : '';
-        return 'download.php' === basename( $slug ) || false !== strpos( $slug, 'pages/download.php' ) || (bool) apply_filters( 'jlwa_download_page_force_request', false, $post_id );
+        $is_download = 'download.php' === basename( $slug ) ||
+            ( function_exists( 'is_page' ) && is_page( 'download' ) ) ||
+            (bool) apply_filters( 'jlwa_download_page_force_request', false, $post_id );
+        return $is_download ? $post_id : 0;
+    }
+
+    private function target_request() { return $this->target_post_id() > 0; }
+
+    /** Consult the same source of truth as the Zibll paid download template. */
+    public static function has_purchase_rights( $post_id ) {
+        return function_exists( 'zibpay_is_paid' ) && ! empty( zibpay_is_paid( $post_id ) );
+    }
+
+    public static function purchase_redirect_url( $post_id ) {
+        $permalink = get_permalink( $post_id );
+        if ( ! $permalink ) { return ''; }
+        return add_query_arg( 'jlwa_purchase_required', (string) absint( $post_id ), $permalink ) . '#posts-pay';
+    }
+
+    /** True only on the product article which received our notice query flag. */
+    private function is_purchase_notice_request() {
+        if ( is_admin() || ! isset( $_GET['jlwa_purchase_required'] ) || ! is_scalar( $_GET['jlwa_purchase_required'] ) ) { return false; } // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $value = (string) wp_unslash( $_GET['jlwa_purchase_required'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        return preg_match( '/^[1-9][0-9]*$/D', $value ) && is_singular() && absint( $value ) === (int) get_queried_object_id();
+    }
+
+    /** Run even when the visual download-page skin is disabled. */
+    public function guard_paid_download_page() {
+        $post_id = $this->target_post_id();
+        if ( ! $post_id ) {
+            // A purchase warning is per-visitor and must not be shared by page caches.
+            if ( $this->is_purchase_notice_request() ) { nocache_headers(); }
+            return;
+        }
+        if ( self::has_purchase_rights( $post_id ) ) { return; }
+        $destination = self::purchase_redirect_url( $post_id );
+        nocache_headers();
+        if ( ! $destination ) {
+            wp_die( '尚未购买商品，请先购买后再访问下载页。', '需要购买权限', array( 'response' => 403 ) );
+            exit;
+        }
+        wp_safe_redirect( $destination, 302, 'Jiuliu WP Assistant' );
+        exit;
+    }
+
+    /** A server-rendered notice on the original post, not on the secret page. */
+    public function render_purchase_required_notice() {
+        if ( ! $this->is_purchase_notice_request() ) { return; }
+        ?>
+        <div id="jlwa-purchase-required" role="alert" aria-live="assertive" style="position:fixed;z-index:2147483000;top:24px;left:50%;transform:translateX(-50%);box-sizing:border-box;width:calc(100% - 32px);max-width:520px;padding:16px 44px 16px 20px;background:#fff7ed;color:#7c2d12;border:1px solid #fdba74;border-radius:12px;box-shadow:0 12px 35px rgba(0,0,0,.17);font-size:15px;line-height:1.65;text-align:left">
+            <strong>尚未购买商品</strong>：请先购买商品，再来访问下载页。
+            <button type="button" aria-label="关闭提示" onclick="this.parentNode.remove()" style="position:absolute;right:10px;top:8px;border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button>
+        </div>
+        <?php
     }
 
     public function maybe_render() {
@@ -138,7 +206,8 @@ class JLWA_Download_Page_Feature {
                 <input id="jlwa-private-source" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_source_prefix]" value="<?php echo esc_attr( $options['private_source_prefix'] ); ?>">
                 <p><label for="jlwa-private-internal"><strong>WordPress Nginx 私有内部入口</strong>（须和 Nginx 配置完全一致）</label></p>
                 <input id="jlwa-private-internal" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_internal_prefix]" value="<?php echo esc_attr( $options['private_internal_prefix'] ); ?>">
-                <p>部署示例与验收清单：插件包内 <code>docs/paid-download-security.md</code>。不要求修改子比主题、不更换 WebDAV 密码，也不会修改历史文章地址。</p>
+                <p><a class="button button-secondary" href="<?php echo esc_url( 'https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md' ); ?>" target="_blank" rel="noopener noreferrer">📘 查看 WordPress Nginx + OpenList 详细配置教程</a></p>
+                <p>教程包括宝塔配置文件位置、完整 Nginx 代码、每一步测试命令和故障回滚方法。升级不修改子比订单、WebDAV 密码或文章下载地址。</p>
             </section>
             <?php submit_button( '保存下载页设置' ); ?>
         </form></div>

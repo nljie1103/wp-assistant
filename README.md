@@ -11,7 +11,7 @@
 [![Stars](https://img.shields.io/github/stars/nljie1103/wp-assistant?style=for-the-badge&logo=github&color=f4c542)](https://github.com/nljie1103/wp-assistant/stargazers)
 [![GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e?style=for-the-badge)](LICENSE)
 
-[📥 下载最新版](https://github.com/nljie1103/wp-assistant/releases/latest) · [✨ 功能一览](#features) · [🚀 快速开始](#quick-start) · [🖼️ 实际界面](#screenshots) · [🔧 故障排查](#troubleshooting)
+[📥 下载最新版](https://github.com/nljie1103/wp-assistant/releases/latest) · [✨ 功能一览](#features) · [🚀 快速开始](#quick-start) · [🔐 安全部署](#paid-download-setup) · [🖼️ 实际界面](#screenshots) · [🔧 故障排查](#troubleshooting)
 
 </div>
 
@@ -28,7 +28,7 @@
 | 🤖 **AI 文章摘要** | 多服务商与模型、按服务商/模型保存 API Key、管理员按需显示已存密钥、连接测试、缓存及摘要外观 |
 | 🌌 **沉浸式预加载** | 12 种开屏（含极光光幕、极简聚焦）、自定义 Logo、展示时长上限、首屏关键资源策略、移动端与减少动画适配 |
 | 🔗 **媒体与链接** | 多入口域名适配、相对媒体 URL、反向代理诊断、历史内容扫描与确认后修复 |
-| 📦 **下载页美化** | 6 种资源页外观、横竖封面自适应；沿用子比权限和订单，新增可选 OpenList 付费资源私有下载交付 |
+| 📦 **下载页美化** | 6 种资源页外观；未购买用户访问付费下载页自动提示并返回原文，OpenList 安全交付可选配置 |
 
 **不是所有模块都默认启用。** 总览页区分“模块已加载”“功能已启用”和“依赖未满足”，并提示下一步操作。各模块有独立开关与设置，但共用主插件版本。
 
@@ -59,13 +59,16 @@
 
 **更新：** 可通过插件的“系统与更新”检查完整发布包，也可以从 GitHub Release 获取官方 ZIP。在线更新会执行版本与 SHA-256 检查、暂存和回滚流程；服务器文件权限、磁盘空间与其他故障仍可能影响恢复，因此生产环境必须保留自己的备份。
 
-### 🔐 子比付费资源安全交付（可选，默认关闭）
+<a id="paid-download-setup"></a>
 
-针对 OpenList 文件直链可绕过子比购买流程的问题，新增**私有下载交付**：用户正常通过 `/pay-download/` 触发子比原生权限检查；授权成功后由 Nginx 内部代理获取 OpenList 文件，浏览器不再接收原始存储 URL。该功能不更换支付网关、订单系统或九流采集器的 WebDAV 凭据。
+## 🔐 付费资源安全部署
 
-**安全开关不是源站访问控制。** 必须先配置 WordPress 的 Nginx `internal` 下载入口并实测已购文件，再封锁 OpenList 公网 `/d/google/付费资源/`（包括 CDN 和其他旁路）。在公开源站未封锁之前，知道旧直链的人仍可能不购买直接下载；仅安装本版本不能宣称漏洞已修复。公开图片 `/d/google/图片/` 保持原方式显示。
+未获得子比购买权限的访客会被引导回文章购买区域；如需避免 OpenList 文件原始直链泄露，还必须配置 **WordPress 内部下载通道 + OpenList 公网目录拦截**。插件的私有交付开关默认关闭。
 
-完整 Nginx 样例、切换顺序、恢复方案和 10 项验收标准见 [📘 OpenList 付费资源安全交付](docs/paid-download-security.md)。**不要直接打开 OpenList 的全局“签名所有”**；那可能同时影响公开图片。受保护目录内仍需公开展示的预览图应先迁移到公开图片目录。
+**[📘 查看完整教程：宝塔 Nginx、OpenList、Cloudflare、验收和回滚 →](docs/paid-download-security.md)**
+
+教程单独维护，README 不重复铺设配置代码；保留现有支付订单、WebDAV 账号、图片公开目录与历史付费文章。
+
 
 **版本规范：** 九流 WP 助手所有功能域跟随统一主版本，版本号每段满十进一：`2.5.9 → 2.6.0`、`2.6.9 → 2.7.0`、`2.9.9 → 3.0.0`。历史 v2.5.10、v2.5.11 为已发布的旧版本，保留历史记录但不会延续这种编号。模块内部的旧版本常量仅用于数据库设置兼容或迁移，不代表独立插件更新。
 

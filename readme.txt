@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.1
+Stable tag: 2.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
-6. 下载页美化：科技蓝紫、简洁商务、VIP、流光极光、杂志留白、曜石夜幕六套子比下载页视觉方案，以及可选的 OpenList 付费资源私有交付；该项需要额外部署 Nginx 内部通道和源站目录封锁，默认关闭。
+6. 下载页美化：六种子比资源页；未获购买权限者禁止打开资源下载页，跳回文章并提示；可选 OpenList 私有交付需配套 Nginx 内部通道和公网封锁。
 
 == Installation ==
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.2 =
+* 子比下载页新增服务端未购买拦截：已登录或游客未获购买资格时不会呈现资源页，自动返回原文章购买区，并显示未购买提示；已购买用户正常进入。
+* 不依赖下载页美化开关；原文章权限仍使用子比 zibpay_is_paid，非付费文章不受干扰。
+* README 新增精简的安全部署教程入口；独立教程详细列明宝塔 WordPress/OpenList Nginx 配置文件、实际代码、步骤、验收、Cloudflare 缓存和回滚。
+* 后台「付费资源 · 私有安全交付」提供一键打开完整教程的链接；私有交付默认关闭，服务器配置需另行部署。
+
+
 
 = 2.6.1 =
 * 增加子比权限验证后的 OpenList 私有下载交付，通过 X-Accel-Redirect 调用 Nginx 内部通道，不再把命中的付费文件重定向到公开源站。
