@@ -10,6 +10,18 @@
 - 通过 Nginx 拦截的是公网入口。仅隐藏域名、限制 `Referer`、检查前端 `Host` 都不可信；按真实网络来源限制 IP 则有作用，前提是信任链和反代配置正确。
 - 禁止访问付费目录不等于关闭整个 OpenList。公开图片应在别的公开目录，WebDAV 仍可使用原有账号；OpenList API、其它端口、历史缓存必须单独验收。
 
+## 安装成功但后台仍显示“尚未安装”
+
+在部分宝塔 PHP-FPM 环境里，open_basedir 会限制 WordPress PHP 访问 root 管理的 /usr/local/sbin 路径。旧版由 is_file 判断是否安装，因此可能误报。**从 v2.7.0 开始，后台通过已授权的 sudo 命令查询 helper 的真实 status。**
+
+如果终端已经输出 installed，请不要重复运行安装命令。更新插件后直接刷新“Nginx 自动部署”。
+
+如果提示“安装状态尚未确认”，可从系统管理员终端执行只读诊断命令：
+
+    sudo -u www /usr/bin/sudo -n /usr/local/sbin/jlwa-nginx-helper status
+
+返回包含 phase 的 JSON，说明 root 助手已允许 www 用户查询。若提示需要密码或权限错误，核对 PHP-FPM 运行用户与安装时指定的 --php-user；如果 PHP 禁用了 proc_open，不要盲目开启所有命令执行函数或扩大 sudo 权限，先核实当前站点 PHP-FPM 的最小授权。
+
 ## 自动安装报错处理
 
 若旧版执行 install-auto 时出现 AttributeError: 'Namespace' object has no attribute 'host'，这是旧安装程序将自动模式的 --openlist-host 误当成手动模式 --host 导致的程序缺陷。错误发生在系统授权及 Nginx 写入之前。请升级到 v2.6.9 或更高版本，重新复制当前后台生成的完整命令。不要手动修改 Python 脚本，也不要为解决此错误开放 Nginx 文件权限。

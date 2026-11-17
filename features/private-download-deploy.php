@@ -66,17 +66,28 @@ class JLWA_Private_Deploy {
         if ( ! in_array( $operation, self::ACTIONS, true ) ) {
             return array( 'ok' => false, 'message' => '不支持的部署操作。' );
         }
-        if ( ! is_file( self::BRIDGE ) || ! function_exists( 'proc_open' ) ) {
-            return array( 'ok' => false, 'message' => '未安装受限 Nginx 部署助手。可先执行一次性授权步骤，也可使用手动部署教程。' );
+        // A Baota/PHP-FPM site may set open_basedir to its website directory.
+        // is_file('/usr/local/sbin/...') can then return false even though the
+        // root-owned helper is correctly installed. PHP must NEVER need to
+        // read the privileged executable: only sudo may execute it.
+        if ( ! function_exists( 'proc_open' ) ) {
+            return array( 'ok' => false, 'message' => 'PHP 运行环境禁用了 proc_open，无法查询已安装的受限助手。请检查当前站点 PHP-FPM 的 disable_functions；不要重复安装或放宽 Nginx 文件权限。' );
         }
+
         $pipes = array();
-        $process = @proc_open(
-            array( 'sudo', '-n', self::BRIDGE, $operation ),
-            array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ),
-            $pipes
-        );
+        try {
+            // Array form avoids invoking a shell and accepts only whitelisted ops.
+            // Absolute sudo path also works when PHP-FPM has a restricted PATH.
+            $process = @proc_open(
+                array( '/usr/bin/sudo', '-n', self::BRIDGE, $operation ),
+                array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ),
+                $pipes
+            );
+        } catch ( \Throwable $error ) {
+            return array( 'ok' => false, 'message' => 'PHP 无法启动受限助手，请检查 proc_open 是否允许执行 sudo，以及 PHP-FPM 的运行权限。' );
+        }
         if ( ! is_resource( $process ) ) {
-            return array( 'ok' => false, 'message' => '无法启动部署助手，请检查 PHP proc_open 和受限 sudo 授权。' );
+            return array( 'ok' => false, 'message' => 'PHP 无法启动受限助手，请检查 PHP-FPM 的 proc_open 与 sudo 授权。' );
         }
         fclose( $pipes[0] );
         $stdout = stream_get_contents( $pipes[1], 32768 );
@@ -84,7 +95,17 @@ class JLWA_Private_Deploy {
         fclose( $pipes[1] );
         fclose( $pipes[2] );
         $code = proc_close( $process );
-        return array( 'ok' => 0 === $code, 'message' => trim( 0 === $code ? $stdout : $stderr ) );
+        if ( 0 !== $code ) {
+            $detail = trim( (string) $stderr );
+            if ( '' === $detail ) {
+                $detail = trim( (string) $stdout );
+            }
+            return array(
+                'ok' => false,
+                'message' => '无法通过 sudo 查询部署助手（退出码 ' . (int) $code . '）。' . ( '' !== $detail ? '系统信息：' . $detail : '请检查 PHP-FPM 用户与 sudoers 授权。' ),
+            );
+        }
+        return array( 'ok' => true, 'message' => trim( (string) $stdout ) );
     }
 
     public static function handle() {
@@ -183,13 +204,17 @@ class JLWA_Private_Deploy {
 
     public static function render_panel() {
         if ( ! current_user_can( 'manage_options' ) ) { return; }
-        $has_helper = is_file( self::BRIDGE );
-        $result = $has_helper ? self::call( 'status' ) : array( 'ok' => false, 'message' => '尚未安装受限部署助手' );
-        $status = $result['ok'] ? json_decode( $result['message'], true ) : null;
+        // Query the privileged helper, not the PHP file-access sandbox.
+        $result = self::call( 'status' );
+        $status = ! empty( $result['ok'] ) ? json_decode( $result['message'], true ) : null;
         $status = is_array( $status ) ? $status : array();
-        $phase = $status['phase'] ?? 'not_installed';
+        $has_helper = ! empty( $result['ok'] ) && isset( $status['phase'] ) && is_string( $status['phase'] );
+        if ( ! $has_helper && ! empty( $result['ok'] ) ) {
+            $result = array( 'ok' => false, 'message' => '受限助手返回无效状态；请在终端检查 sudo -n 授权与状态输出。' );
+        }
+        $phase = $has_helper ? $status['phase'] : 'unknown';
         $phases = array(
-            'not_installed' => '尚未授权安装（可手动配置）',
+            'unknown' => '安装状态尚未确认（不代表未安装）',
             'new' => '授权完成，尚未配置',
             'wp_prepared' => '内部通道已配置，等待真实购买测试',
             'protected' => '规则已写入，仍需公网/CDN/API 外部验收',
@@ -203,7 +228,11 @@ class JLWA_Private_Deploy {
             <?php if ( ! $result['ok'] ) : ?><p class="notice notice-warning" style="padding:10px"><?php echo esc_html( $result['message'] ); ?></p><?php endif; ?>
             <?php if ( ! empty( $status['docker_container_detected'] ) ) : ?><p>已识别与所填本地端口对应的 Docker 容器映射，并确认端口未对公网发布。</p><?php endif; ?>
             <?php if ( ! $has_helper ) : ?>
-                <p><strong>首次授权只需一条命令：</strong>插件自动读取当前 WordPress 域名、插件绝对路径、已保存的 OpenList 域名和付费目录。你只需在上面的设置里填写 <strong>OpenList 宿主机本地端口</strong> 并保存；Docker 容器名称可以留空，安装程序会尝试按端口识别。</p>
+                <p><strong>已在终端看到 installed 的站长请不要重新安装。</strong> 当前仅表示 WordPress PHP 无法通过受限 sudo 读取助手状态。可在服务器终端进行<strong>只读诊断</strong>：</p>
+                <textarea class="large-text code" rows="2" readonly><?php echo esc_textarea( 'sudo -u www /usr/bin/sudo -n ' . self::BRIDGE . ' status' ); ?></textarea>
+                <p class="description">若输出 JSON，说明助手已安装，重点检查 WordPress 站点 PHP-FPM 的 <code>proc_open</code>、运行用户和 sudoers；若提示需要密码或不允许操作，请核对 PHP 实际运行用户。<strong>不要 chmod 777、不要授权全权 sudo、不要重复执行安装。</strong></p>
+                <details><summary>尚未首次安装？展开查看安装命令</summary>
+                <p>首次安装时，插件自动读取 WordPress 域名和已保存的 OpenList 域名、目录与本机端口，无需手工寻找 Nginx 配置文件。</p>
                 <?php
                 $command = self::installer_command( JLWA_Download_Page_Feature::options() );
                 if ( $command ) :
@@ -216,6 +245,7 @@ class JLWA_Private_Deploy {
                     <p class="notice notice-warning" style="padding:12px">请先在上方填写受保护源站域名、公开源路径和 OpenList 本机端口，点击“保存下载页设置”，刷新后将自动生成一条可复制的完整命令。</p>
                 <?php endif; ?>
                 <p><a href="https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md" target="_blank" rel="noopener noreferrer">查看简明部署教程</a>。根目录配置文件只有 root 可读取；插件不会为方便自动化而放开 Nginx 文件权限。</p>
+                </details>
             <?php else : ?>
                 <?php self::op_form( 'preview', '① 预览配置差异' ); ?>
                 <?php self::op_form( 'prepare', '② 自动备份并配置内部代理' ); ?>

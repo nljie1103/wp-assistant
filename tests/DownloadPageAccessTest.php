@@ -132,6 +132,23 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertStringNotContainsString( 'download?post=', $url );
     }
 
+    public function test_privileged_helper_status_does_not_depend_on_php_open_basedir_file_visibility(): void {
+        // Regression: Baota PHP-FPM often cannot stat /usr/local/sbin because
+        // open_basedir is limited to the website. The root helper may still
+        // be installed and reachable through the approved sudo command.
+        $code = file_get_contents( dirname( __DIR__ ) . '/features/private-download-deploy.php' );
+        $this->assertStringNotContainsString( 'is_file( self::BRIDGE )', $code );
+        $this->assertStringContainsString( "self::call( 'status' )", $code );
+        $this->assertStringContainsString( 'function_exists( \'proc_open\' )', $code );
+        $this->assertStringContainsString( "array( '/usr/bin/sudo', '-n', self::BRIDGE, \$operation )", $code );
+        $this->assertStringContainsString( '安装状态尚未确认（不代表未安装）', $code );
+    }
+
+    public function test_deployment_helper_operation_whitelist_remains_closed(): void {
+        $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( 'install-auto' ) );
+        $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( 'sudo -i' ) );
+    }
+
     public function test_one_line_autoinstall_is_generated_from_saved_site_settings(): void {
         $settings = JLWA_Private_Download::defaults();
         $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );

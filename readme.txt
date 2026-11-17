@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.9
+Stable tag: 2.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.7.0 =
+* 修复 Nginx 受限部署助手终端成功安装后，WordPress 后台因 PHP open_basedir 路径限制误报“尚未安装”的问题。
+* 不再以 PHP is_file 判断 root 管理的助手是否存在，改用固定 sudo -n 命令查询真实 status。
+* 区分 PHP proc_open 禁用、sudo 执行失败和已授权状态；查询失败时显示只读诊断并隐藏 Nginx 变更操作。
+* 增加受限 open_basedir 下的 PHP 执行回归测试；已安装的 root 助手不必重新安装。
+* 不修改线上 Nginx、OpenList、Docker、WebDAV 或子比主题与订单。
+
+
 
 = 2.6.9 =
 * 修复 OpenList 安全交付的一键安装命令 install-auto 已找到 Nginx 站点但因缺失 host 参数导致 AttributeError 终止的问题。

@@ -1,3 +1,10 @@
+## 2.7.0 — 2026-11-17
+
+- **修复安装状态误判**：宝塔 PHP-FPM 的 open_basedir 可能使 PHP is_file 无法查看 /usr/local/sbin 中的 root helper，旧版因此错误判断“尚未安装”。新版直接使用已授权的 sudo -n status 查询助手真实状态。
+- **反馈与最小权限**：明确区分 PHP 禁用 proc_open、sudo 授权异常与成功读取状态。仅成功解析有效状态的情况下才展示部署及封锁按钮；失败时提供只读诊断，不要求用户重复安装或放宽 root 文件权限。
+- **完整回归**：新增受限 PHP open_basedir 环境检查、操作白名单与隔离 WordPress 后台渲染验证。
+- **兼容边界**：更新插件不修改已有 root helper、Nginx、Docker、OpenList、WebDAV 或子比主题与订单。
+
 ## 2.6.9 — 2026-11-17
 
 - **修复一键安装 AttributeError**：install-auto 只提供 --openlist-host，先前调用共享安装器时错误读取仅手动模式存在的 args.host。现统一兼容两种参数，消除自动模式在匹配站点后的中途崩溃。
