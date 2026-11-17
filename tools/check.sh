@@ -16,6 +16,7 @@ done < <(find . -name '*.js' -type f -not -path './vendor/*' -not -path './.git/
 printf 'JavaScript syntax: %s files OK\n' "$count_js"
 phpunit --configuration phpunit.xml.dist --no-coverage
 node --test tests/js/*.test.js
+bash tests/public-docs-privacy.test.sh
 python3 tools/version-policy.py check
 bash tests/version-policy.test.sh
 bash tests/release-format.test.sh
