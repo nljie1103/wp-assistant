@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, DialogDescription } from 'reka-ui'
-import { Menu, Search, Moon, Sun, Command, ArrowRight, RefreshCw, ShieldCheck, Check, CircleAlert, X, Keyboard, LayoutDashboard, Settings, Sparkles, Bot, Images, Download } from 'lucide-vue-next'
+import { Search, Moon, Sun, Command, ArrowRight, RefreshCw, ShieldCheck, Check, CircleAlert, X, Keyboard, LayoutDashboard, Settings, Sparkles, Bot, Images, Download } from 'lucide-vue-next'
 import { collectPageHeadings, searchItems } from '../registry.mjs'
 
 const props = defineProps<{ entries: any[]; state: any; active: string; title: string; subtitle: string; version: string }>()
@@ -58,7 +58,6 @@ function toggleTheme() {
 <template>
   <header class="jlwa-ui-topbar">
     <div class="jlwa-ui-topbar-left">
-      <button type="button" class="jlwa-ui-icon-button jlwa-ui-menu-button" @click="state.sidebarOpen = true" aria-label="打开功能导航"><Menu :size="19"/></button>
       <div class="jlwa-ui-breadcrumbs" aria-label="页面位置">
         <span>工作台</span><span class="jlwa-ui-breadcrumb-sep">/</span><strong>{{ title }}</strong>
       </div>

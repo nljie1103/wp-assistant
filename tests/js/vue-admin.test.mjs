@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { safeNavigationEntries, searchItems, collectPageHeadings, PAGE_ICONS } from '../../src/admin/registry.mjs'
 
 test('Vue navigation preserves safe WordPress admin URLs and six module keys', () => {
@@ -45,4 +46,21 @@ test('in-page search produces links to existing heading DOM objects without movi
   assert.equal(results[1].target, headings[1])
   assert.equal(results[1].group, '页面内设置')
   assert.deepEqual(collectPageHeadings(null), [])
+})
+
+test('top navigation is horizontal, complete, scrollable and has an accessible active tab', () => {
+  const css = readFileSync(new URL('../../src/admin/style.css', import.meta.url), 'utf8')
+  const vue = readFileSync(new URL('../../src/admin/components/TopNavigation.vue', import.meta.url), 'utf8')
+  const app = readFileSync(new URL('../../src/admin/main.ts', import.meta.url), 'utf8')
+  for (const key of ['dashboard', 'page-effects', 'anti-debug', 'ai-summary', 'preloader', 'media-urls', 'download-page', 'system']) {
+    assert.ok(vue.includes(key), 'Navigation includes ' + key)
+  }
+  assert.match(vue, /jlwa-ui-top-navigation/)
+  assert.match(vue, /jlwa-ui-horizontal-nav/)
+  assert.match(vue, /aria-current/)
+  assert.match(vue, /aria-label="功能导航"/)
+  assert.match(css, /overflow-x:auto/)
+  assert.match(css, /grid-template-rows: auto minmax\(0, 1fr\)/)
+  assert.ok(!vue.includes('sidebarOpen'), 'No mobile drawer or hidden links')
+  assert.ok(app.includes('createApp(TopNavigation'), 'Vue mounts horizontal navigation in existing header root')
 })

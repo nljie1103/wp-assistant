@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.1
+Stable tag: 3.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.2 =
+* 后台导航从左侧竖向栏整体调整为顶部横向菜单，控制台、六大功能区和系统更新均可直接点击，当前页面统一高亮。
+* 顶部品牌、版本、使用文档与搜索入口统一排版；调整 WordPress 插件主工作区为全宽，表单、卡片和日志不再为左侧导航留空。
+* 窄屏采用可横向滑动、键盘可聚焦的菜单，不隐藏功能入口；进入功能页面时自动将当前选项滚入可视区。
+* 保留 Ctrl/Cmd+K 全局搜索、深色模式、未保存提醒、移动端响应、原有六大模块内所有设置与交互。
+* Vue 未能加载时提供可用的顶部横向 PHP 导航回退；没有修改子比订单、Nginx/OpenList 私有交付及数据库配置。
+
+
 
 = 3.0.1 =
 * 全局统一六大功能区的板块、选卡、表单、按钮、筛选标签、日志表格、状态徽标、通知和弹窗视觉与交互。

@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>九流 WP 助手 v3.0.1 UI / 本地隔离测试页</title>
+<title>九流 WP 助手 v3.0.2 UI / 本地隔离测试页</title>
 <style>
 html,body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#18181b;background:#f6f7fa}
 #wpadminbar{height:32px;display:flex;align-items:center;padding-left:20px;background:#1d2327;color:#fff;font-size:12px}
 #adminmenumain{width:150px;position:absolute;top:32px;bottom:0;background:#1d2327;color:#c3c4c7;font-size:12px;padding:18px 5px;box-sizing:border-box}
 #adminmenumain div{padding:10px}
 #wpcontent{margin-left:150px;padding:20px}
+@media(max-width:782px){#adminmenumain{display:none}#wpcontent{margin-left:0;padding:8px}}
 .wrap{box-sizing:border-box}
 </style>
 <link rel="stylesheet" href="../../assets/vue/admin.css">
@@ -19,7 +20,7 @@ window.addEventListener('unhandledrejection',function(evt){document.body.insertA
 window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){document.body.insertAdjacentHTML('beforeend','<pre id="js-status">JS loaded: '+String(!!window.JLWA_V3)+' | mounted:'+String(!!document.querySelector(".jlwa-vue-ready"))+'</pre>');},800)});
 window.JLWA_V3={
  active:"dashboard", title:"控制台",subtitle:"查看实际启用情况、依赖检查与快捷配置入口。",
- version:"3.0.1",
+ version:"3.0.2",
  homeUrl:"/tests/fixtures/v3-dashboard.html", updateUrl:"/tests/fixtures/v3-dashboard.html?system",
  entries: [
  {key:"dashboard",label:"控制台",description:"站点总览与功能状态",href:"/tests/fixtures/v3-dashboard.html"},
@@ -42,11 +43,39 @@ window.JLWA_V3.modules=window.JLWA_V3.entries.filter(x=>!["system","dashboard"].
 <div id="adminmenumain"><div>控制台</div><div>文章</div><div>页面</div><div>外观</div><div>插件</div><div>设置</div><div>九流 WP 助手</div></div>
 <div id="wpcontent">
 <div class="wrap jlwa-app jlwa-v3 jlwa-app--dashboard">
-<div id="jlwa-vue-sidebar"><nav class="jlwa-v3-fallback-nav">正在加载 Vue 3 管理界面...</nav></div>
+<div id="jlwa-vue-topnav"><nav class="jlwa-v3-fallback-nav">正在加载 Vue 3 管理界面...</nav></div>
 <div class="jlwa-v3-workspace"><div id="jlwa-vue-toolbar"></div><div id="jlwa-vue-dialog-host"></div>
 <header class="jlwa-page-heading jlwa-v3-fallback-heading"><h1>控制台</h1></header>
 <main class="jlwa-main" id="jlwa-main-content"><div id="jlwa-vue-dashboard"></div>
 <div class="jlwa-v3-dashboard-fallback"><h2>原 WordPress PHP 回退界面</h2></div>
 </main></div></div>
 </div>
+<script>
+window.setTimeout(function () {
+  var app = document.querySelector('.jlwa-v3');
+  var topnav = document.getElementById('jlwa-vue-topnav');
+  var items = document.querySelectorAll('.jlwa-ui-horizontal-nav a');
+  var nav = document.querySelector('.jlwa-ui-horizontal-nav');
+  var content = document.querySelector('.jlwa-v3-workspace');
+  var test = document.createElement('output');
+  test.id = 'jlwa-layout-audit';
+  test.textContent = JSON.stringify({
+    width: innerWidth,
+    navItems: items.length,
+    navY: Math.round(topnav?.getBoundingClientRect().top || -1),
+    contentY: Math.round(content?.getBoundingClientRect().top || -1),
+    appWidth: Math.round(app?.getBoundingClientRect().width || 0),
+    appScrollWidth: app?.scrollWidth,
+    appClientWidth: app?.clientWidth,
+    navWidth: nav?.clientWidth,
+    navScrollWidth: nav?.scrollWidth,
+    overflowMode: nav ? getComputedStyle(nav).overflowX : '',
+    gridColumns: app ? getComputedStyle(app).gridTemplateColumns : '',
+    topnavRow: topnav ? getComputedStyle(topnav).gridRow : '',
+    active: !!nav?.querySelector('[aria-current="page"]'),
+    oldDrawer: !!document.querySelector('.jlwa-ui-sidebar,.jlwa-ui-sidebar-overlay')
+  });
+  document.body.append(test);
+}, 650);
+</script>
 </body></html>

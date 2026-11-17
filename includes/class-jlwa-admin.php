@@ -442,7 +442,7 @@ class JLWA_Admin {
 	protected function shell_start( $active, $title, $subtitle ) {
 		?>
 		<div class="wrap jlwa-app jlwa-v3 jlwa-app--<?php echo esc_attr( $active ); ?>">
-			<div id="jlwa-vue-sidebar">
+			<div id="jlwa-vue-topnav">
 				<nav class="jlwa-v3-fallback-nav" aria-label="九流WP助手功能导航">
 					<strong>九流 WP 助手</strong>
 					<?php $this->render_nav_item( 'dashboard', JLWA_MENU_SLUG, '控制台', 'dashicons-dashboard', $active ); ?>

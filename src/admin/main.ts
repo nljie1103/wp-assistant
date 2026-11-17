@@ -1,5 +1,5 @@
 import { createApp, reactive } from 'vue'
-import Sidebar from './components/Sidebar.vue'
+import TopNavigation from './components/TopNavigation.vue'
 import Toolbar from './components/Toolbar.vue'
 import Dashboard from './components/Dashboard.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
@@ -26,7 +26,7 @@ declare global { interface Window { JLWA_V3?: Bridge; JLWA_DIALOG?: any } }
 
 function boot() {
   const config = window.JLWA_V3
-  const sidebarNode = document.getElementById('jlwa-vue-sidebar')
+  const sidebarNode = document.getElementById('jlwa-vue-topnav')
   const toolbarNode = document.getElementById('jlwa-vue-toolbar')
   if (!config || !sidebarNode || !toolbarNode) return
 
@@ -39,7 +39,7 @@ function boot() {
   if (!appRoot) return
   appRoot.setAttribute('data-jlwa-theme', savedTheme)
   document.documentElement.dataset.jlwaTheme = savedTheme
-  const state = reactive({ theme: savedTheme, commandOpen: false, sidebarOpen: false, dirtyCount: 0 })
+  const state = reactive({ theme: savedTheme, commandOpen: false, dirtyCount: 0 })
   // Keep notice behavior coherent even when a legacy AJAX callback inserts it.
   enhanceNotices(appRoot)
   watchNotices(appRoot)
@@ -50,7 +50,7 @@ function boot() {
   try {
     // Two isolated Vue roots prevent the framework from destroying legacy PHP
     // admin forms. Their state is shared through a single reactive object.
-    createApp(Sidebar, { ...common, homeUrl: config.homeUrl }).mount(sidebarNode)
+    createApp(TopNavigation, { ...common, homeUrl: config.homeUrl }).mount(sidebarNode)
     createApp(Toolbar, { ...common, title: config.title, subtitle: config.subtitle }).mount(toolbarNode)
     const confirmationNode = document.getElementById('jlwa-vue-dialog-host')
     if (confirmationNode) {
@@ -92,10 +92,8 @@ function boot() {
     const key = event.key?.toLowerCase()
     if ((event.metaKey || event.ctrlKey) && key === 'k') {
       event.preventDefault()
-      state.sidebarOpen = false
       state.commandOpen = !state.commandOpen
     }
-    if (event.key === 'Escape') state.sidebarOpen = false
   })
 }
 
