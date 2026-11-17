@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.7
+Stable tag: 2.6.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.8 =
+* 多域名主题及插件 CSS/JS、字体同源改写调整为独立选项，默认关闭。常规多域名功能不再强制注册静态资源改写钩子。
+* 下载页后台移除“说明”标签，将 OpenList 本地端口、容器名称、下载出口、凭证有效期、授权日志、保守限流独立移动到“交付高级设置”分类。
+* “私有安全交付”只保留核心安全拦截、源站域名、目录前缀和 Nginx 内部入口，页面明显缩短。
+* 高级设置与核心安全设置分区保存互不重置；非法配置继续原子拒绝，原始订单与 Nginx 配置不受影响。
+
+
 
 = 2.6.7 =
 * 私有下载默认行为说明：不填写出口时从 pay-download 请求域名通过 X-Accel-Redirect 交付；填写出口时才签发跨域票据。

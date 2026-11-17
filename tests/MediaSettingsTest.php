@@ -31,6 +31,29 @@ final class MediaSettingsTest extends TestCase {
         unset($GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY]);
     }
 
+    public function test_asset_rewrite_is_default_off_and_domain_save_is_scoped(): void {
+        $this->assertSame( 0, JRMU_Settings::get_defaults()['domain_asset_rewrite_enabled'] );
+        $this->assertSame( 0, JRMU_Settings::get_options()['domain_asset_rewrite_enabled'] );
+        $this->assertContains( 'domain_asset_rewrite_enabled', JRMU_Settings::tab_fields()['domains'] );
+        $result = JRMU_Settings::sanitize( array(
+            'jrmu_settings_scope' => 'domains',
+            'domain_adaptation_enabled' => '1',
+            'domain_asset_rewrite_enabled' => '1',
+            'domain_allowed_hosts' => 'proxy.example.com',
+        ) );
+        $this->assertSame( 1, $result['domain_asset_rewrite_enabled'] );
+        $this->assertSame( 1, $result['convert_existing_media_output'] );
+        $this->assertSame( 'https://origin.example.com', $result['origin_url'] );
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] = $result;
+        $disabled = JRMU_Settings::sanitize( array(
+            'jrmu_settings_scope' => 'domains',
+            'domain_adaptation_enabled' => '1',
+            'domain_allowed_hosts' => 'proxy.example.com',
+        ) );
+        $this->assertSame( 0, $disabled['domain_asset_rewrite_enabled'] );
+        $this->assertSame( 1, $disabled['convert_existing_media_output'] );
+    }
+
     public function test_media_only_save_preserves_domains_seo_content_and_source(): void {
         $result = JRMU_Settings::sanitize(array('jrmu_settings_scope' => 'media'));
         $this->assertSame(0, $result['convert_existing_media_output']);

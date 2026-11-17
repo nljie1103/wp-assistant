@@ -33,3 +33,9 @@
 .jlwa-download-admin > .jlwa-download-section{margin-top:12px}
 .jlwa-download-admin > section.jlwa-download-section{max-width:100%}
 @media(max-width:782px){.jlwa-download-tabs .nav-tab{margin-bottom:3px;padding:9px 12px}}
+
+/* Download advanced delivery fields are managed in a separate, compact tab. */
+.jlwa-download-admin .jlwa-delivery-details{margin:12px 0 16px;padding:12px 14px;border:1px solid #e4e7ec;border-radius:10px;background:#f8fafc}
+.jlwa-download-admin .jlwa-delivery-details>summary{cursor:pointer;font-weight:600;color:#344054}
+.jlwa-download-admin .jlwa-delivery-details[open]>summary{margin-bottom:10px}
+.jlwa-download-admin .jlwa-delivery-details .description{line-height:1.65;margin:0}

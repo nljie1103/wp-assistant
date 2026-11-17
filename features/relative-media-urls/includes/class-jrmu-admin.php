@@ -178,7 +178,8 @@ class JRMU_Admin {
 					<?php if ( 'domains' === $tab ) : ?>
 					<h2>三、多域名访问适配</h2>
 					<table class="form-table" role="presentation">
-						<tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">白名单入口的站内链接与 CSS/JS 等静态资源跟随当前域名；例如 Font Awesome 样式与其相对字体从同一个域名加载，避免跨域字体方块。仅改资源输出，不修改原主题或原文件。</p></td></tr>
+						<tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">控制白名单内的站内 URL 动态适配；主题 CSS/JS、插件静态资源的同源改写由下方独立开关管理，默认不介入。</p></td></tr>
+						<tr><th>静态资源同源改写<br><small>可选 · 默认关闭</small></th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_asset_rewrite_enabled]" value="1" <?php checked( $options['domain_asset_rewrite_enabled'], 1 ); ?>> 让主题 CSS、JS、字体及插件静态资源跟随当前白名单入口域名</label><p class="description"><strong>高级兼容功能：</strong>可用于解决 Font Awesome 跨域字体显示方块，但会改变资源请求来源，可能影响 CDN 缓存、CSP 或主题依赖。先确认每个入口均能提供相同资源再开启；关闭即可恢复原有资源地址，不改数据库或主题文件。</p></td></tr>
 						<tr><th>允许域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_allowed_hosts]" rows="5" class="large-text code" placeholder="blog.jiuliu.org&#10;hk-blog.jiuliu.org&#10;origin-blog.jiuliu.org"><?php echo esc_textarea( $options['domain_allowed_hosts'] ); ?></textarea><p class="description">白名单模式下，只有这里列出的域名才会触发动态链接。</p></td></tr>
 						<tr><th>适配模式</th><td><input type="hidden" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="whitelist"><strong>仅白名单域名</strong><p class="description">为防止伪造 Host 请求头污染站点 URL，4.2.0 起不再提供“任意 Host”模式。数据库中的原始 home/siteurl 会自动加入可信列表。</p></td></tr>
 						<tr><th>协议</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="https" <?php checked( $options['domain_scheme'], 'https' ); ?>> 强制 HTTPS</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="auto" <?php checked( $options['domain_scheme'], 'auto' ); ?>> 自动识别 HTTPS / X-Forwarded-Proto</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="http" <?php checked( $options['domain_scheme'], 'http' ); ?>> 强制 HTTP</label></td></tr>
@@ -226,7 +227,7 @@ class JRMU_Admin {
 			'保存文章时转换' => ! empty( $options['convert_post_on_save'] ),
 			'前台文章临时转换' => ! empty( $options['convert_post_on_frontend'] ),
 			'多域名访问适配' => ! empty( $options['domain_adaptation_enabled'] ),
-			'主题 CSS/JS 与图标字体同源适配' => ! empty( $options['domain_adaptation_enabled'] ),
+			'主题 CSS/JS 与图标字体同源适配' => ! empty( $options['domain_adaptation_enabled'] ) && ! empty( $options['domain_asset_rewrite_enabled'] ),
 			'Canonical 主域名' => ! empty( $options['canonical_enabled'] ),
 		);
 		echo '<ul class="jrmu-status-list">';

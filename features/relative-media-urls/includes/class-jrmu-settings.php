@@ -33,6 +33,7 @@ class JRMU_Settings {
 
 			// 多域名访问适配模块。
 			'domain_adaptation_enabled'     => 0,
+			'domain_asset_rewrite_enabled'  => 0,
 			'domain_dynamic_siteurl'        => 1,
 			'domain_rewrite_frontend_links' => 0,
 			'domain_rewrite_mode'           => 'current_full',
@@ -74,6 +75,7 @@ class JRMU_Settings {
 			'convert_post_on_save',
 			'convert_post_on_frontend',
 			'domain_adaptation_enabled',
+			'domain_asset_rewrite_enabled',
 			'domain_dynamic_siteurl',
 			'domain_rewrite_frontend_links',
 			'domain_exclude_admin',
@@ -114,7 +116,7 @@ class JRMU_Settings {
 		return array(
 			'media' => array( 'convert_existing_media_output', 'convert_future_media_output' ),
 			'content' => array( 'convert_post_on_save', 'convert_post_on_frontend' ),
-			'domains' => array( 'domain_adaptation_enabled', 'domain_dynamic_siteurl', 'domain_rewrite_frontend_links', 'domain_rewrite_mode', 'domain_exclude_admin', 'domain_exclude_login', 'domain_skip_system_endpoints', 'domain_mode', 'domain_scheme', 'domain_allowed_hosts' ),
+			'domains' => array( 'domain_adaptation_enabled', 'domain_asset_rewrite_enabled', 'domain_dynamic_siteurl', 'domain_rewrite_frontend_links', 'domain_rewrite_mode', 'domain_exclude_admin', 'domain_exclude_login', 'domain_skip_system_endpoints', 'domain_mode', 'domain_scheme', 'domain_allowed_hosts' ),
 			'seo' => array( 'canonical_enabled', 'canonical_primary_host', 'canonical_scheme' ),
 			'scope' => array( 'target_uploads', 'target_themes', 'target_plugins', 'extra_hosts', 'scan_limit', 'scan_postmeta' ),
 			'nginx' => array( 'origin_url', 'media_nginx_target_host' ),

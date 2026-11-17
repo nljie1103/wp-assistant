@@ -172,6 +172,10 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertSame( 'security', JLWA_Download_Page_Feature::admin_tab() );
         $_GET['tab'] = 'deployment';
         $this->assertSame( 'deployment', JLWA_Download_Page_Feature::admin_tab() );
+        $_GET['tab'] = 'advanced';
+        $this->assertSame( 'advanced', JLWA_Download_Page_Feature::admin_tab() );
+        $_GET['tab'] = 'help';
+        $this->assertSame( 'security', JLWA_Download_Page_Feature::admin_tab() );
         $_GET['tab'] = 'invalid';
         $this->assertSame( 'templates', JLWA_Download_Page_Feature::admin_tab() );
         $_GET['tab'] = array( 'security' );
@@ -179,9 +183,12 @@ final class DownloadPageAccessTest extends TestCase {
         ob_start();
         JLWA_Download_Page_Feature::render_admin_tabs( 'security' );
         $html = ob_get_clean();
-        foreach ( array( '下载页模板', '私有安全交付', 'Nginx 自动部署', '下载记录', '说明' ) as $label ) {
+        foreach ( array( '下载页模板', '私有安全交付', '交付高级设置', 'Nginx 自动部署', '下载记录' ) as $label ) {
             $this->assertStringContainsString( $label, $html );
         }
+        $this->assertStringNotContainsString( 'tab=help', $html );
+        $this->assertStringNotContainsString( '>说明<', $html );
+        $this->assertStringContainsString( 'tab=advanced', $html );
         $this->assertStringContainsString( 'tab=security', $html );
         $this->assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
     }
@@ -248,9 +255,79 @@ final class DownloadPageAccessTest extends TestCase {
             $this->assertSame( $old[ $key ], $saved[ $key ], $key );
         }
         $this->assertSame( 1, $saved['private_enabled'] );
-        $this->assertSame( '5244', $saved['openlist_host_port'] );
+        $this->assertSame( '', $saved['openlist_host_port'] ); // Moved to advanced tab, cannot overwrite from security form.
         $this->assertSame( 0, $saved['rate_enabled'] );
         $this->assertSame( 0, $saved['delivery_enabled'] );
+    }
+
+    public function test_advanced_form_preserves_private_security_and_visual_settings(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['enabled'] = 1;
+        $old['template'] = 'vip';
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_enabled'] = 1;
+        $old['openlist_host_port'] = '5244';
+        $old['delivery_enabled'] = 1;
+        $old['delivery_host'] = 'download.example.com';
+        $old['rate_enabled'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'advanced',
+            'openlist_host_port' => '5245',
+            'openlist_container' => 'openlist',
+            'delivery_host' => 'download.example.com',
+            'ticket_lifetime' => '240',
+            'rate_limit' => '45',
+            // Missing checkboxes are intentionally disabled only in this group.
+        ) );
+        foreach ( array( 'enabled', 'template', 'private_hosts', 'private_source_prefix', 'private_internal_prefix', 'private_enabled' ) as $key ) {
+            $this->assertSame( $old[$key], $saved[$key], $key );
+        }
+        $this->assertSame( '5245', $saved['openlist_host_port'] );
+        $this->assertSame( 'openlist', $saved['openlist_container'] );
+        $this->assertSame( 240, $saved['ticket_lifetime'] );
+        $this->assertSame( 45, $saved['rate_limit'] );
+        $this->assertSame( 0, $saved['delivery_enabled'] );
+        $this->assertSame( 0, $saved['audit_enabled'] );
+        $this->assertSame( 0, $saved['rate_enabled'] );
+        $this->assertEmpty( $GLOBALS['jlwa_test_settings_errors'] );
+    }
+
+    public function test_security_form_does_not_reset_advanced_download_settings(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_enabled'] = 1;
+        $old['openlist_host_port'] = '5245';
+        $old['openlist_container'] = 'openlist';
+        $old['delivery_host'] = 'download.example.com';
+        $old['delivery_enabled'] = 1;
+        $old['rate_enabled'] = 1;
+        $old['rate_limit'] = 40;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'security',
+            'private_hosts' => 'files.example.com',
+            'private_source_prefix' => '/d/storage/private/',
+            'private_internal_prefix' => '/_jlwa_private_openlist/',
+            'private_enabled' => 1,
+        ) );
+        foreach ( array( 'openlist_host_port', 'openlist_container', 'delivery_host', 'delivery_enabled', 'audit_enabled', 'rate_enabled', 'rate_limit' ) as $key ) {
+            $this->assertSame( $old[$key], $saved[$key], $key );
+        }
+        $this->assertEmpty( $GLOBALS['jlwa_test_settings_errors'] );
+    }
+
+    public function test_advanced_form_rejects_bad_port_without_disabling_private_delivery(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_enabled'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'advanced',
+            'openlist_host_port' => '-1',
+        ) );
+        $this->assertSame( $old, $saved );
+        $this->assertNotEmpty( $GLOBALS['jlwa_test_settings_errors'] );
     }
 
     public function test_success_feedback_only_after_settings_redirect(): void {

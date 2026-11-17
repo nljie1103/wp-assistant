@@ -20,6 +20,7 @@ final class MediaDomainAdapterTest extends TestCase {
         $GLOBALS['test_is_admin'] = false;
         $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] = array(
             'domain_adaptation_enabled' => 1,
+            'domain_asset_rewrite_enabled' => 1,
             'domain_allowed_hosts' => 'mirror.example.com',
             'domain_dynamic_siteurl' => 0,
             'domain_exclude_admin' => 1,
@@ -80,6 +81,16 @@ final class MediaDomainAdapterTest extends TestCase {
         $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['REQUEST_URI'] = '/wp-json/wp/v2/posts';
+        $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
+    }
+
+    public function test_static_asset_opt_in_is_independent_of_multidomain_main_switch(): void {
+        $url = 'https://origin.example.com/wp-content/themes/zibll/css/font-awesome.min.css';
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY]['domain_asset_rewrite_enabled'] = 0;
+        $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
+        $this->assertSame( 'https://mirror.example.com', $this->adapter->get_dynamic_base_url_or_false() );
+        // Existing installs without this newly introduced option stay opted out.
+        unset( $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY]['domain_asset_rewrite_enabled'] );
         $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
     }
 

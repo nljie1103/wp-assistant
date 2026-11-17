@@ -48,12 +48,12 @@ class JRMU_Domain_Adapter {
 		add_filter( 'pre_option_home', array( $this, 'filter_pre_option_home' ), 10, 3 );
 		add_filter( 'pre_option_siteurl', array( $this, 'filter_pre_option_siteurl' ), 10, 3 );
 
-		// Front-end theme/plugin assets must follow the whitelisted entry domain,
-		// even if dynamic siteurl or article/body rewriting is disabled. In particular,
-		// CSS @font-face references resolve relative to the CSS origin and otherwise
-		// produce CORS-blocked icon glyphs on alternate domains.
-		foreach ( array( 'style_loader_src', 'script_loader_src', 'template_directory_uri', 'stylesheet_directory_uri', 'theme_file_uri', 'plugins_url', 'content_url', 'includes_url' ) as $filter ) {
-			add_filter( $filter, array( $this, 'rewrite_asset_url' ), 99 );
+		// This changes CSS/JS/font origins beyond normal site URL adaptation.
+		// Keep it explicitly opt-in, even for existing multi-domain installations.
+		if ( ! empty( $options['domain_asset_rewrite_enabled'] ) ) {
+			foreach ( array( 'style_loader_src', 'script_loader_src', 'template_directory_uri', 'stylesheet_directory_uri', 'theme_file_uri', 'plugins_url', 'content_url', 'includes_url' ) as $filter ) {
+				add_filter( $filter, array( $this, 'rewrite_asset_url' ), 99 );
+			}
 		}
 
 		if ( ! empty( $options['domain_rewrite_frontend_links'] ) ) {
@@ -123,7 +123,8 @@ class JRMU_Domain_Adapter {
 	 * External CDNs, private download gateways, admin and login remain unchanged.
 	 */
 	public function rewrite_asset_url( $url ) {
-		if ( ! is_string( $url ) || '' === $url || ! $this->should_adapt_current_request() || ! preg_match( '#^https?://#i', $url ) ) {
+		$options = JRMU_Settings::get_options();
+		if ( empty( $options['domain_asset_rewrite_enabled'] ) || ! is_string( $url ) || '' === $url || ! $this->should_adapt_current_request() || ! preg_match( '#^https?://#i', $url ) ) {
 			return $url;
 		}
 		$parts = wp_parse_url( $url );

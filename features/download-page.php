@@ -56,11 +56,12 @@ class JLWA_Download_Page_Feature {
         // Separate admin tabs must never reset settings belonging to another tab.
         // Legacy full-form submissions remain supported for existing integrations.
         $scope = isset( $input['jlwa_settings_scope'] ) ? (string) $input['jlwa_settings_scope'] : '';
-        if ( in_array( $scope, array( 'templates', 'security' ), true ) ) {
+        if ( in_array( $scope, array( 'templates', 'security', 'advanced' ), true ) ) {
             $previous = self::options();
             $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url' );
-            $security_keys = array_keys( JLWA_Private_Download::defaults() );
-            $chosen = 'templates' === $scope ? $template_keys : $security_keys;
+            $security_keys = array( 'private_enabled', 'private_hosts', 'private_source_prefix', 'private_internal_prefix' );
+            $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
+            $chosen = 'templates' === $scope ? $template_keys : ( 'security' === $scope ? $security_keys : $advanced_keys );
             $submitted = $input;
             $input = $previous;
             foreach ( $chosen as $key ) {
@@ -68,7 +69,8 @@ class JLWA_Download_Page_Feature {
                     $input[ $key ] = $submitted[ $key ];
                 }
             }
-            foreach ( 'templates' === $scope ? array( 'enabled' ) : array( 'private_enabled', 'delivery_enabled', 'audit_enabled', 'rate_enabled' ) as $checkbox ) {
+            $checkboxes = 'templates' === $scope ? array( 'enabled' ) : ( 'security' === $scope ? array( 'private_enabled' ) : array( 'delivery_enabled', 'audit_enabled', 'rate_enabled' ) );
+            foreach ( $checkboxes as $checkbox ) {
                 $input[ $checkbox ] = ! empty( $submitted[ $checkbox ] ) ? 1 : 0;
             }
         }
@@ -251,16 +253,17 @@ class JLWA_Download_Page_Feature {
     /** Server-side tabs, matching the media-and-links feature navigation. */
     public static function admin_tab() {
         $tab = isset( $_GET['tab'] ) && is_scalar( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'templates';
-        return in_array( $tab, array( 'templates', 'security', 'deployment', 'logs', 'help' ), true ) ? $tab : 'templates';
+        if ( 'help' === $tab ) { return 'security'; }
+        return in_array( $tab, array( 'templates', 'security', 'advanced', 'deployment', 'logs' ), true ) ? $tab : 'templates';
     }
 
     public static function render_admin_tabs( $active ) {
         $tabs = array(
             'templates' => '下载页模板',
             'security' => '私有安全交付',
+            'advanced' => '交付高级设置',
             'deployment' => 'Nginx 自动部署',
             'logs' => '下载记录',
-            'help' => '说明',
         );
         echo '<h2 class="nav-tab-wrapper jlwa-download-tabs" aria-label="下载页设置分类">';
         foreach ( $tabs as $key => $label ) {
@@ -295,7 +298,7 @@ class JLWA_Download_Page_Feature {
         <div class="jlwa-download-admin">
         <?php self::render_admin_tabs( $tab ); ?>
         <?php self::save_feedback(); ?>
-        <?php if ( in_array( $tab, array( 'templates', 'security' ), true ) ) : ?>
+        <?php if ( in_array( $tab, array( 'templates', 'security', 'advanced' ), true ) ) : ?>
         <form action="options.php" method="post">
             <?php settings_fields( 'jlwa_download_page' ); ?>
             <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[jlwa_settings_scope]" value="<?php echo esc_attr( $tab ); ?>">
@@ -316,9 +319,14 @@ class JLWA_Download_Page_Feature {
                 <input id="jlwa-private-source" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_source_prefix]" value="<?php echo esc_attr( $options['private_source_prefix'] ); ?>">
                 <p><label for="jlwa-private-internal"><strong>WordPress Nginx 私有内部入口</strong>（须和 Nginx 配置完全一致）</label></p>
                 <input id="jlwa-private-internal" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_internal_prefix]" value="<?php echo esc_attr( $options['private_internal_prefix'] ); ?>">
-                <hr>
+            </section>
+            <?php endif; ?>
+            <?php if ( 'advanced' === $tab ) : ?>
+            <section class="jlwa-download-section" id="jlwa-delivery-advanced">
+                <h3>交付高级设置</h3>
+                <p class="description">与“私有安全交付”共用原有权限和资源配置。本页独立保存 OpenList 本机连接、下载出口、授权记录和限流参数；无需重新填写受保护源站与私有路径。</p>
                 <h4>一键部署 · 本地 OpenList 连接</h4>
-                <p>只需填写 Docker 发布在宿主机 <code>127.0.0.1</code> 的端口号（不是容器内部端口）。保存后，下方“Nginx 安全部署向导”自动生成完整的复制命令，不必自己找 Nginx 配置文件。</p>
+                <p>只需填写 Docker 发布在宿主机 <code>127.0.0.1</code> 的端口号（不是容器内部端口）。保存后，前往顶部“Nginx 自动部署”分类获取完整的一键复制命令，不必自己找 Nginx 配置文件。</p>
                 <p><label for="jlwa-openlist-host-port"><strong>OpenList 本机端口</strong></label></p>
                 <input id="jlwa-openlist-host-port" type="number" min="1" max="65535" step="1" style="width:160px" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[openlist_host_port]" value="<?php echo esc_attr( $options['openlist_host_port'] ); ?>" placeholder="例如 5244">
                 <details style="margin:12px 0">
@@ -335,17 +343,17 @@ class JLWA_Download_Page_Feature {
                 <input id="jlwa-delivery-host" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_host]" value="<?php echo esc_attr( $options['delivery_host'] ); ?>" placeholder="download.example.com">
                 <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_enabled]" value="1" <?php checked( ! empty( $options['delivery_enabled'] ) ); ?>><span>开启自定义下载出口（默认关闭，先配置并验证域名）</span></label>
                 <p><label>下载凭证有效期（秒，60～600） <input type="number" min="60" max="600" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[ticket_lifetime]" value="<?php echo esc_attr( $options['ticket_lifetime'] ); ?>"></label></p>
-                <p class="description"><strong>CDN 安全边界：</strong>下载凭证属于短期 Bearer 凭据，同有效期内持有者可使用，且支持同凭据范围请求。插件发送 no-store，但仍必须在 CDN 配置中强制对下载凭证参数 <code>jlwa_dl</code> 绕过缓存。普通 CDN 反代不等于文件内容缓存加速；当前版本不允许将私有下载设为公开缓存。</p>
+                <details class="jlwa-delivery-details"><summary>CDN 安全边界与下载凭证说明</summary><p class="description">下载凭证属于短期 Bearer 凭据，同有效期内持有者可使用，且支持同凭据范围请求。插件发送 no-store，但仍必须在 CDN 配置中强制对下载凭证参数 <code>jlwa_dl</code> 绕过缓存。普通 CDN 反代不等于文件内容缓存加速；当前版本不允许将私有下载设为公开缓存。</p></details>
                 <hr>
                 <h4>下载记录与保守限流</h4>
                 <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[audit_enabled]" value="1" <?php checked( ! empty( $options['audit_enabled'] ) ); ?>><span>记录授权下载操作（只存用户、文章、线路、时间、结果，不记录下载密码、凭证或源 URL）</span></label>
                 <label class="jlwa-mode-row"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[rate_enabled]" value="1" <?php checked( ! empty( $options['rate_enabled'] ) ); ?>><span>启用每用户每文章的下载申请限流（默认关闭，避免影响正常下载）</span></label>
                 <p><label>60 秒内最多请求次数（10～120） <input type="number" min="10" max="120" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[rate_limit]" value="<?php echo esc_attr( $options['rate_limit'] ); ?>"></label> <small>仅统计重新申请下载；范围续传不额外计数。</small></p>
                 <p><a class="button button-secondary" href="<?php echo esc_url( 'https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md' ); ?>" target="_blank" rel="noopener noreferrer">📘 查看 WordPress Nginx + OpenList 详细配置教程</a></p>
-                <p>教程包括宝塔配置文件位置、完整 Nginx 代码、每一步测试命令和故障回滚方法。升级不修改子比订单、WebDAV 密码或文章下载地址。</p>
+                <p class="description">包含部署、验证与回滚步骤；不修改子比订单、WebDAV 密码和文章下载地址。</p>
             </section>
             <?php endif; ?>
-            <?php submit_button( 'templates' === $tab ? '保存下载页模板' : '保存安全交付设置' ); ?>
+            <?php submit_button( 'templates' === $tab ? '保存下载页模板' : ( 'security' === $tab ? '保存私有安全交付' : '保存交付高级设置' ) ); ?>
         </form>
         <?php endif; ?>
         <?php if ( 'deployment' === $tab && class_exists( 'JLWA_Private_Deploy' ) ) { JLWA_Private_Deploy::render_panel(); } ?>
@@ -360,9 +368,6 @@ class JLWA_Download_Page_Feature {
         </tbody></table></section>
         <?php elseif ( 'logs' === $tab ) : ?>
         <section class="jlwa-download-section"><h3>下载记录</h3><p>暂无下载事件；记录仅包含时间、用户、文章、线路和状态，不包含下载凭证或真实文件 URL。</p></section>
-        <?php endif; ?>
-        <?php if ( 'help' === $tab ) : ?>
-        <section class="jlwa-download-section"><h3>模块说明与部署文档</h3><p>“下载页模板”只控制视觉与封面；“私有安全交付”独立管理下载权限接管、OpenList 源站与出口域名；“Nginx 自动部署”用于受限授权、备份、配置、验收和回滚。</p><p><strong>注意：</strong>单纯开启私有交付不会关闭 OpenList 公网旧直链，务必先验证已购买用户可以正常下载，再进行源站公网封锁。</p><p><a class="button button-secondary" href="https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md" target="_blank" rel="noopener noreferrer">查看安全下载配置教程</a></p></section>
         <?php endif; ?>
         </div>
         <script>jQuery(function($){var frame;$('#jlwa-select-cover').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'选择默认封面',button:{text:'使用这张图片'},multiple:false,library:{type:'image'}});frame.on('select',function(){$('#jlwa-default-cover').val(frame.state().get('selection').first().toJSON().url);});frame.open();});});</script>
