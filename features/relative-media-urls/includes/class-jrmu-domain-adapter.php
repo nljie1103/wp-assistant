@@ -48,6 +48,14 @@ class JRMU_Domain_Adapter {
 		add_filter( 'pre_option_home', array( $this, 'filter_pre_option_home' ), 10, 3 );
 		add_filter( 'pre_option_siteurl', array( $this, 'filter_pre_option_siteurl' ), 10, 3 );
 
+		// Front-end theme/plugin assets must follow the whitelisted entry domain,
+		// even if dynamic siteurl or article/body rewriting is disabled. In particular,
+		// CSS @font-face references resolve relative to the CSS origin and otherwise
+		// produce CORS-blocked icon glyphs on alternate domains.
+		foreach ( array( 'style_loader_src', 'script_loader_src', 'template_directory_uri', 'stylesheet_directory_uri', 'theme_file_uri', 'plugins_url', 'content_url', 'includes_url' ) as $filter ) {
+			add_filter( $filter, array( $this, 'rewrite_asset_url' ), 99 );
+		}
+
 		if ( ! empty( $options['domain_rewrite_frontend_links'] ) ) {
 			foreach ( array( 'post_link', 'page_link', 'post_type_link', 'term_link', 'category_link', 'tag_link', 'author_link', 'day_link', 'month_link', 'year_link' ) as $filter ) {
 				add_filter( $filter, array( $this, 'rewrite_url' ), 99 );
@@ -107,6 +115,37 @@ class JRMU_Domain_Adapter {
 			return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Rewrite first-party static assets to the currently allowed entry host.
+	 * Keep paths/query intact so CSS-relative font URLs stay on that same host.
+	 * External CDNs, private download gateways, admin and login remain unchanged.
+	 */
+	public function rewrite_asset_url( $url ) {
+		if ( ! is_string( $url ) || '' === $url || ! $this->should_adapt_current_request() || ! preg_match( '#^https?://#i', $url ) ) {
+			return $url;
+		}
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) ) {
+			return $url;
+		}
+		$path = (string) $parts['path'];
+		if ( 0 !== strpos( $path, '/wp-content/' ) && 0 !== strpos( $path, '/wp-includes/' ) ) {
+			return $url;
+		}
+		$current_host = $this->get_current_host_with_port();
+		if ( ! $current_host || ! $this->is_current_host_allowed( $current_host ) ) {
+			return $url;
+		}
+		$output = $this->get_current_scheme() . '://' . $current_host . $path;
+		if ( isset( $parts['query'] ) ) {
+			$output .= '?' . $parts['query'];
+		}
+		if ( isset( $parts['fragment'] ) ) {
+			$output .= '#' . $parts['fragment'];
+		}
+		return $output;
 	}
 
 	/** 重写单个 URL 到当前域名或根相对。 */

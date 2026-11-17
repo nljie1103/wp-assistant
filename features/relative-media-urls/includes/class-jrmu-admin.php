@@ -171,7 +171,7 @@ class JRMU_Admin {
 
 					<h2>三、多域名访问适配</h2>
 					<table class="form-table" role="presentation">
-						<tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">解决从香港入口进入首页，点击文章又跳回源站固定域名的问题。</p></td></tr>
+						<tr><th>总开关</th><td><label><input type="checkbox" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_adaptation_enabled]" value="1" <?php checked( $options['domain_adaptation_enabled'], 1 ); ?>> 启用站内链接跟随当前访问域名</label><p class="description">白名单入口的站内链接与 CSS/JS 等静态资源跟随当前域名；例如 Font Awesome 样式与其相对字体从同一个域名加载，避免跨域字体方块。仅改资源输出，不修改原主题或原文件。</p></td></tr>
 						<tr><th>允许域名</th><td><textarea name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_allowed_hosts]" rows="5" class="large-text code" placeholder="blog.jiuliu.org&#10;hk-blog.jiuliu.org&#10;origin-blog.jiuliu.org"><?php echo esc_textarea( $options['domain_allowed_hosts'] ); ?></textarea><p class="description">白名单模式下，只有这里列出的域名才会触发动态链接。</p></td></tr>
 						<tr><th>适配模式</th><td><input type="hidden" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_mode]" value="whitelist"><strong>仅白名单域名</strong><p class="description">为防止伪造 Host 请求头污染站点 URL，4.2.0 起不再提供“任意 Host”模式。数据库中的原始 home/siteurl 会自动加入可信列表。</p></td></tr>
 						<tr><th>协议</th><td><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="https" <?php checked( $options['domain_scheme'], 'https' ); ?>> 强制 HTTPS</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="auto" <?php checked( $options['domain_scheme'], 'auto' ); ?>> 自动识别 HTTPS / X-Forwarded-Proto</label><br><label><input type="radio" name="<?php echo esc_attr( JRMU_OPTION_KEY ); ?>[domain_scheme]" value="http" <?php checked( $options['domain_scheme'], 'http' ); ?>> 强制 HTTP</label></td></tr>
@@ -215,6 +215,7 @@ class JRMU_Admin {
 			'保存文章时转换' => ! empty( $options['convert_post_on_save'] ),
 			'前台文章临时转换' => ! empty( $options['convert_post_on_frontend'] ),
 			'多域名访问适配' => ! empty( $options['domain_adaptation_enabled'] ),
+			'主题 CSS/JS 与图标字体同源适配' => ! empty( $options['domain_adaptation_enabled'] ),
 			'Canonical 主域名' => ! empty( $options['canonical_enabled'] ),
 		);
 		echo '<ul class="jrmu-status-list">';
@@ -368,6 +369,7 @@ class JRMU_Admin {
 		?>
 		<h2>推荐使用顺序</h2>
 		<ol><li>先在“功能设置”里填写入口域名、源站域名，不要急着开启永久保存转换。</li><li>打开“扫描 / 预览 / 修复”，确认哪些链接会被处理。</li><li>先开启“前台临时输出”或“多域名访问适配”测试效果。</li><li>需要永久改库时，先备份数据库，再勾选文章执行。</li><li>如果改错，可用“根相对媒体 URL → 完整 URL”恢复。</li></ol>
+		<h2>多域名与图标字体</h2><p>在白名单里配置入口域名后，多域名适配会把主题/插件 CSS、JS 等站内资源输出地址改为当前访问域名。Font Awesome 等字体通常由 CSS 中的相对路径加载，因此可以保持同源；不需要修改子比主题源码。</p><p>如果仍显示图标方块，请先清除入口域名的整页缓存、CSS 缓存并强制刷新浏览器，确认字体文件从当前域名返回 HTTP 200/206。其它真正独立的 CDN 域名不被自动改写，仍需由该资源服务器提供合法的跨域字体响应头。</p>
 		<h2>边界说明</h2><p>插件不移动媒体文件、不接管存储、不改 WordPress 核心、不默认改数据库、不默认改 GUID。postmeta 只做只读提示，避免破坏序列化数据。</p>
 		<?php
 	}

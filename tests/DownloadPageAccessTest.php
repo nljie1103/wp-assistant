@@ -11,6 +11,7 @@ function add_settings_error( $setting, $code, $message, $type = 'error' ) {
 function get_settings_errors() { return $GLOBALS['jlwa_test_settings_errors'] ?? array(); }
 function wp_parse_args( $args, $defaults = array() ) { return array_merge( $defaults, (array) $args ); }
 function esc_url_raw( $url ) { return (string) $url; }
+function sanitize_key( $value ) { return preg_replace( "/[^a-z0-9_-]/", "", strtolower( (string) $value ) ); }
 
 function get_post_meta( $id, $key, $single = false ) {
     return isset( $GLOBALS['jlwa_test_paid_meta'] ) ? $GLOBALS['jlwa_test_paid_meta'] : array();
@@ -164,6 +165,92 @@ final class DownloadPageAccessTest extends TestCase {
         $bad['openlist_container'] = 'openlist;rm -rf /';
         $this->assertSame( $stored, $this->feature->sanitize( $bad ) );
         $this->assertStringContainsString( '容器名称', $GLOBALS['jlwa_test_settings_errors'][0]['message'] );
+    }
+
+    public function test_download_admin_tabs_and_invalid_fallback(): void {
+        $_GET['tab'] = 'security';
+        $this->assertSame( 'security', JLWA_Download_Page_Feature::admin_tab() );
+        $_GET['tab'] = 'deployment';
+        $this->assertSame( 'deployment', JLWA_Download_Page_Feature::admin_tab() );
+        $_GET['tab'] = 'invalid';
+        $this->assertSame( 'templates', JLWA_Download_Page_Feature::admin_tab() );
+        $_GET['tab'] = array( 'security' );
+        $this->assertSame( 'templates', JLWA_Download_Page_Feature::admin_tab() );
+        ob_start();
+        JLWA_Download_Page_Feature::render_admin_tabs( 'security' );
+        $html = ob_get_clean();
+        foreach ( array( '下载页模板', '私有安全交付', 'Nginx 自动部署', '下载记录', '说明' ) as $label ) {
+            $this->assertStringContainsString( $label, $html );
+        }
+        $this->assertStringContainsString( 'tab=security', $html );
+        $this->assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
+    }
+
+    public function test_visual_form_does_not_reset_saved_private_download_security(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $old['private_enabled'] = 1;
+        $old['delivery_host'] = 'download.example.com';
+        $old['delivery_enabled'] = 1;
+        $old['audit_enabled'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'template' => 'editorial',
+            'cover_mode' => 'default',
+            'default_image_url' => 'https://site.example.com/a.png',
+            // omitted visual checkbox means explicitly disabled.
+        ) );
+        $this->assertSame( 0, $saved['enabled'] );
+        $this->assertSame( 'editorial', $saved['template'] );
+        foreach ( array( 'private_hosts', 'private_source_prefix', 'private_enabled', 'delivery_host', 'delivery_enabled', 'audit_enabled' ) as $key ) {
+            $this->assertSame( $old[ $key ], $saved[ $key ], $key );
+        }
+    }
+
+    public function test_visual_only_save_preserves_legacy_invalid_security_fields_verbatim(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'old-site.example.net';
+        $old['private_source_prefix'] = '/d/storage/%E6%B5%8B%E8%AF%95/';
+        $old['private_enabled'] = 0;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'enabled' => '1',
+            'template' => 'vip',
+            'cover_mode' => 'featured',
+        ) );
+        $this->assertSame( 'vip', $saved['template'] );
+        $this->assertSame( $old['private_source_prefix'], $saved['private_source_prefix'] );
+        $this->assertSame( $old['private_hosts'], $saved['private_hosts'] );
+        $this->assertSame( array(), $GLOBALS['jlwa_test_settings_errors'] );
+    }
+
+    public function test_security_form_does_not_reset_saved_visual_settings(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['enabled'] = 1;
+        $old['template'] = 'midnight';
+        $old['cover_mode'] = 'featured';
+        $old['default_image_url'] = 'https://site.example.com/cover.jpg';
+        $old['private_hosts'] = 'files.example.com';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'security',
+            'private_hosts' => 'files.example.com',
+            'private_source_prefix' => '/d/storage/private/',
+            'private_internal_prefix' => '/_jlwa_private_openlist/',
+            'private_enabled' => '1',
+            'openlist_host_port' => '5244',
+            'audit_enabled' => '1',
+        ) );
+        foreach ( array( 'enabled', 'template', 'cover_mode', 'default_image_url' ) as $key ) {
+            $this->assertSame( $old[ $key ], $saved[ $key ], $key );
+        }
+        $this->assertSame( 1, $saved['private_enabled'] );
+        $this->assertSame( '5244', $saved['openlist_host_port'] );
+        $this->assertSame( 0, $saved['rate_enabled'] );
+        $this->assertSame( 0, $saved['delivery_enabled'] );
     }
 
     public function test_success_feedback_only_after_settings_redirect(): void {

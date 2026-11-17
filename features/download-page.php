@@ -53,6 +53,41 @@ class JLWA_Download_Page_Feature {
 
     public function sanitize( $input ) {
         $input = is_array( $input ) ? $input : array();
+        // Separate admin tabs must never reset settings belonging to another tab.
+        // Legacy full-form submissions remain supported for existing integrations.
+        $scope = isset( $input['jlwa_settings_scope'] ) ? (string) $input['jlwa_settings_scope'] : '';
+        if ( in_array( $scope, array( 'templates', 'security' ), true ) ) {
+            $previous = self::options();
+            $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url' );
+            $security_keys = array_keys( JLWA_Private_Download::defaults() );
+            $chosen = 'templates' === $scope ? $template_keys : $security_keys;
+            $submitted = $input;
+            $input = $previous;
+            foreach ( $chosen as $key ) {
+                if ( array_key_exists( $key, $submitted ) ) {
+                    $input[ $key ] = $submitted[ $key ];
+                }
+            }
+            foreach ( 'templates' === $scope ? array( 'enabled' ) : array( 'private_enabled', 'delivery_enabled', 'audit_enabled', 'rate_enabled' ) as $checkbox ) {
+                $input[ $checkbox ] = ! empty( $submitted[ $checkbox ] ) ? 1 : 0;
+            }
+        }
+        // Visual-only save must not revalidate, normalize, or overwrite an
+        // independently managed security configuration (even if it predates
+        // modern validation rules).
+        if ( 'templates' === $scope ) {
+            $templates = array( 'technology', 'business', 'vip', 'aurora', 'editorial', 'midnight' );
+            $modes = array( 'auto', 'featured', 'first', 'random', 'default' );
+            return array_replace(
+                $previous,
+                array(
+                    'enabled' => empty( $input['enabled'] ) ? 0 : 1,
+                    'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
+                    'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
+                    'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
+                )
+            );
+        }
         $errors = JLWA_Private_Download::validation_errors( $input );
         if ( $errors ) {
             foreach ( $errors as $index => $message ) {
@@ -213,9 +248,34 @@ class JLWA_Download_Page_Feature {
         exit;
     }
 
+    /** Server-side tabs, matching the media-and-links feature navigation. */
+    public static function admin_tab() {
+        $tab = isset( $_GET['tab'] ) && is_scalar( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'templates';
+        return in_array( $tab, array( 'templates', 'security', 'deployment', 'logs', 'help' ), true ) ? $tab : 'templates';
+    }
+
+    public static function render_admin_tabs( $active ) {
+        $tabs = array(
+            'templates' => '下载页模板',
+            'security' => '私有安全交付',
+            'deployment' => 'Nginx 自动部署',
+            'logs' => '下载记录',
+            'help' => '说明',
+        );
+        echo '<h2 class="nav-tab-wrapper jlwa-download-tabs" aria-label="下载页设置分类">';
+        foreach ( $tabs as $key => $label ) {
+            $url = admin_url( 'admin.php?page=jlwa-download-page&tab=' . $key );
+            echo '<a class="nav-tab ' . esc_attr( $active === $key ? 'nav-tab-active' : '' ) . '" href="' . esc_url( $url ) . '"';
+            if ( $active === $key ) { echo ' aria-current="page"'; }
+            echo '>' . esc_html( $label ) . '</a>';
+        }
+        echo '</h2>';
+    }
+
     public function render_admin_page() {
         if ( ! current_user_can( 'manage_options' ) ) { return; }
         $options = self::options();
+        $tab = self::admin_tab();
         $templates = array(
             'technology' => array( '科技蓝紫版', '完整资源中心布局，蓝紫科技视觉。' ),
             'business' => array( '简洁商务版', '完整信息布局，浅色商务与深色适配。' ),
@@ -233,11 +293,18 @@ class JLWA_Download_Page_Feature {
         );
         ?>
         <div class="jlwa-download-admin">
+        <?php self::render_admin_tabs( $tab ); ?>
         <?php self::save_feedback(); ?>
-        <form action="options.php" method="post"><?php settings_fields( 'jlwa_download_page' ); ?>
+        <?php if ( in_array( $tab, array( 'templates', 'security' ), true ) ) : ?>
+        <form action="options.php" method="post">
+            <?php settings_fields( 'jlwa_download_page' ); ?>
+            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[jlwa_settings_scope]" value="<?php echo esc_attr( $tab ); ?>">
+            <?php if ( 'templates' === $tab ) : ?>
             <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，新增主题不复制支付代码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
             <div class="jlwa-download-section"><h3>选择完整页面模板</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
             <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>六种视觉方案都自动识别横图、方图和竖图，并适配封面比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>
+            <?php endif; ?>
+            <?php if ( 'security' === $tab ) : ?>
             <section class="jlwa-download-section" id="jlwa-private-delivery">
                 <h3>🔒 付费资源 · 私有安全交付</h3>
                 <p><strong>独立于下载页美化开关。</strong>子比确认订单权限后由 Nginx 内部转发 OpenList 文件，不向浏览器提供原始链接。默认关闭，升级时不会自动改变下载行为。</p>
@@ -276,11 +343,13 @@ class JLWA_Download_Page_Feature {
                 <p><a class="button button-secondary" href="<?php echo esc_url( 'https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md' ); ?>" target="_blank" rel="noopener noreferrer">📘 查看 WordPress Nginx + OpenList 详细配置教程</a></p>
                 <p>教程包括宝塔配置文件位置、完整 Nginx 代码、每一步测试命令和故障回滚方法。升级不修改子比订单、WebDAV 密码或文章下载地址。</p>
             </section>
-            <?php submit_button( '保存下载页设置' ); ?>
+            <?php endif; ?>
+            <?php submit_button( 'templates' === $tab ? '保存下载页模板' : '保存安全交付设置' ); ?>
         </form>
-        <?php if ( class_exists( 'JLWA_Private_Deploy' ) ) { JLWA_Private_Deploy::render_panel(); } ?>
+        <?php endif; ?>
+        <?php if ( 'deployment' === $tab && class_exists( 'JLWA_Private_Deploy' ) ) { JLWA_Private_Deploy::render_panel(); } ?>
         <?php
-        $recent = get_option( 'jlwa_private_download_events', array() );
+        $recent = 'logs' === $tab ? get_option( 'jlwa_private_download_events', array() ) : array();
         if ( is_array( $recent ) && $recent ) :
         ?>
         <section class="jlwa-download-section"><h3>最近授权下载事件</h3><p>仅保留最近 120 条，不包含 URL、Token 和提取密码。</p><table class="widefat striped"><thead><tr><th>时间</th><th>用户 ID</th><th>文章 ID</th><th>下载线路</th><th>结果</th></tr></thead><tbody>
@@ -288,6 +357,11 @@ class JLWA_Download_Page_Feature {
         <tr><td><?php echo esc_html( wp_date( 'Y-m-d H:i:s', (int) ( $record['time'] ?? 0 ) ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['user_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['post_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) (int) ( $record['down_id'] ?? 0 ) ); ?></td><td><?php echo esc_html( (string) ( $record['result'] ?? '' ) ); ?></td></tr>
         <?php endforeach; ?>
         </tbody></table></section>
+        <?php elseif ( 'logs' === $tab ) : ?>
+        <section class="jlwa-download-section"><h3>下载记录</h3><p>暂无下载事件；记录仅包含时间、用户、文章、线路和状态，不包含下载凭证或真实文件 URL。</p></section>
+        <?php endif; ?>
+        <?php if ( 'help' === $tab ) : ?>
+        <section class="jlwa-download-section"><h3>模块说明与部署文档</h3><p>“下载页模板”只控制视觉与封面；“私有安全交付”独立管理下载权限接管、OpenList 源站与出口域名；“Nginx 自动部署”用于受限授权、备份、配置、验收和回滚。</p><p><strong>注意：</strong>单纯开启私有交付不会关闭 OpenList 公网旧直链，务必先验证已购买用户可以正常下载，再进行源站公网封锁。</p><p><a class="button button-secondary" href="https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md" target="_blank" rel="noopener noreferrer">查看安全下载配置教程</a></p></section>
         <?php endif; ?>
         </div>
         <script>jQuery(function($){var frame;$('#jlwa-select-cover').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'选择默认封面',button:{text:'使用这张图片'},multiple:false,library:{type:'image'}});frame.on('select',function(){$('#jlwa-default-cover').val(frame.state().get('selection').first().toJSON().url);});frame.open();});});</script>

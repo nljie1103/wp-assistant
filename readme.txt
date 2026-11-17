@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.5
+Stable tag: 2.6.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.6 =
+* 下载页设置改为顶部五个独立分类：下载页模板、私有安全交付、Nginx 自动部署、下载记录、说明，避免模板和安全设置在同一个超长页面。
+* 分类设置分开保存且互不覆盖；保存视觉模板不会清空 OpenList 私有下载和历史旧设置，保存安全设置不会重置模板。
+* 修复多域名访问时主题 Font Awesome CSS/JS 等静态资源仍引用原始域名、导致字体 CORS 被拒绝和图标变方块的问题；只在允许的域名下将站内 wp-content/wp-includes 资源改用当前域名。
+* 保留原有文章媒体链接转换与管理员扫描/修复流程。新增静态资源同源、跨域隔离、非白名单主机以及分类设置保存回归测试。
+* 未修改子比主题源码，不自动改动 Nginx 或数据库中的文章媒体内容。
+
+
 
 = 2.6.5 =
 * Nginx 部署向导简化为后台填写 OpenList 宿主机本地端口、保存并复制一条完整安装命令，无需人工查找两份 Nginx 配置文件。
