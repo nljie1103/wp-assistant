@@ -24,6 +24,8 @@ class JLWA_Private_Download {
             'audit_enabled' => 1,
             'rate_enabled' => 0,
             'rate_limit' => 30,
+            'openlist_host_port' => '',
+            'openlist_container' => '',
         );
     }
 
@@ -79,6 +81,14 @@ class JLWA_Private_Download {
         if ( '' !== $delivery && self::hosts( $delivery ) !== array( $delivery ) ) {
             $errors[] = '「下载出口域名」格式错误：只能填写一个域名，不带协议、端口或路径。';
         }
+        $port = trim( (string) ( $input['openlist_host_port'] ?? '' ) );
+        if ( '' !== $port && ( ! preg_match( '/^[0-9]{1,5}$/D', $port ) || (int) $port < 1 || (int) $port > 65535 ) ) {
+            $errors[] = '「OpenList 本机端口」格式错误：请输入 1～65535 之间的端口号（例如 5244）。';
+        }
+        $container = trim( (string) ( $input['openlist_container'] ?? '' ) );
+        if ( '' !== $container && ! preg_match( '/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/D', $container ) ) {
+            $errors[] = '「Docker 容器名称」格式错误：只能包含字母、数字、点、下划线和连接号。';
+        }
         if ( ! empty( $input['private_enabled'] ) && '' === $hosts ) {
             $errors[] = '启用私有交付之前，必须填写至少一个受保护的 OpenList 源站域名。';
         }
@@ -99,6 +109,8 @@ class JLWA_Private_Download {
         $delivery_valid = '' === $delivery || ( self::hosts( $delivery ) === array( $delivery ) );
         $ticket_lifetime = min( 600, max( 60, (int) ( $options['ticket_lifetime'] ?? 180 ) ) );
         $rate_limit = min( 120, max( 10, (int) ( $options['rate_limit'] ?? 30 ) ) );
+        $port = trim( (string) ( $options['openlist_host_port'] ?? '' ) );
+        $container = trim( (string) ( $options['openlist_container'] ?? '' ) );
         // Never accept an enabled state with invalid host or path configuration.
         if ( ! $valid && function_exists( 'add_settings_error' ) ) {
             add_settings_error( 'jlwa_download_page_options', 'jlwa_private_invalid', '私有交付域名或路径无效：已保持安全交付关闭，请修正配置再启用。', 'error' );
@@ -114,6 +126,8 @@ class JLWA_Private_Download {
             'audit_enabled' => ! empty( $options['audit_enabled'] ) ? 1 : 0,
             'rate_enabled' => ! empty( $options['rate_enabled'] ) ? 1 : 0,
             'rate_limit' => $rate_limit,
+            'openlist_host_port' => $port,
+            'openlist_container' => $container,
         );
     }
 

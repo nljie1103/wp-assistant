@@ -250,6 +250,17 @@ class JLWA_Download_Page_Feature {
                 <p><label for="jlwa-private-internal"><strong>WordPress Nginx 私有内部入口</strong>（须和 Nginx 配置完全一致）</label></p>
                 <input id="jlwa-private-internal" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[private_internal_prefix]" value="<?php echo esc_attr( $options['private_internal_prefix'] ); ?>">
                 <hr>
+                <h4>一键部署 · 本地 OpenList 连接</h4>
+                <p>只需填写 Docker 发布在宿主机 <code>127.0.0.1</code> 的端口号（不是容器内部端口）。保存后，下方“Nginx 安全部署向导”自动生成完整的复制命令，不必自己找 Nginx 配置文件。</p>
+                <p><label for="jlwa-openlist-host-port"><strong>OpenList 本机端口</strong></label></p>
+                <input id="jlwa-openlist-host-port" type="number" min="1" max="65535" step="1" style="width:160px" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[openlist_host_port]" value="<?php echo esc_attr( $options['openlist_host_port'] ); ?>" placeholder="例如 5244">
+                <details style="margin:12px 0">
+                    <summary>高级设置：Docker 容器名称（可选）</summary>
+                    <p>一般无需填写，安装助手会尝试根据端口自动识别。仅当同机存在多个容器、需要明确验证指定容器时才填写。</p>
+                    <input class="regular-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[openlist_container]" value="<?php echo esc_attr( $options['openlist_container'] ); ?>" placeholder="例如 openlist">
+                </details>
+                <p class="description">付费目录将由 OpenList 公网 Nginx 拦截，只有 WordPress 经本地内部通道读取；公开图片目录不会被封锁。首次仍需站长在服务器终端执行一条授权命令。</p>
+                <hr>
                 <h4>下载出口域名（可选）</h4>
                 <p>购买权限仍由子比在原站验证，开启后向指定的同一 WordPress 站点别名签发短期随机下载凭证。不显示 OpenList URL。必须先在 DNS、SSL 和站点配置中将这个别名指向同一 WordPress 网站并测试。</p>
                 <p><label for="jlwa-delivery-host"><strong>下载出口域名</strong>（不含 https://，例如 download.example.com）</label></p>

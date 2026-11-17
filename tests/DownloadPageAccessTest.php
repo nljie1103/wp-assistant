@@ -40,6 +40,7 @@ function wp_safe_redirect( $url, $status = 302, $x_redirect_by = '' ) {
 function nocache_headers() { $GLOBALS['jlwa_test_no_cache'] = true; }
 
 require_once dirname( __DIR__ ) . '/features/download-page.php';
+require_once dirname( __DIR__ ) . '/features/private-download-deploy.php';
 
 use PHPUnit\Framework\TestCase;
 
@@ -128,6 +129,41 @@ final class DownloadPageAccessTest extends TestCase {
         $url = JLWA_Download_Page_Feature::purchase_redirect_url( 2823 );
         $this->assertSame( 'https://example.test/2823.html?jlwa_purchase_required=2823#posts-pay', $url );
         $this->assertStringNotContainsString( 'download?post=', $url );
+    }
+
+    public function test_one_line_autoinstall_is_generated_from_saved_site_settings(): void {
+        $settings = JLWA_Private_Download::defaults();
+        $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );
+        $settings['private_hosts'] = "files.example.com\nfiles-cdn.example.com";
+        $settings['private_source_prefix'] = '/d/storage/private/';
+        $settings['openlist_host_port'] = '5244';
+        $command = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
+        $this->assertStringContainsString( 'install-auto', $command );
+        $this->assertStringContainsString( "--wordpress-host 'site.example.com'", $command );
+        $this->assertStringContainsString( "--openlist-host 'files.example.com'", $command );
+        $this->assertStringContainsString( "--port '5244'", $command );
+        $this->assertStringContainsString( "--source '/d/storage/private/'", $command );
+        $this->assertStringNotContainsString( '--wordpress-vhost', $command );
+        $this->assertStringNotContainsString( '--openlist-vhost', $command );
+        $settings['openlist_container'] = 'my-openlist';
+        $with_container = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
+        $this->assertStringContainsString( "--container 'my-openlist'", $with_container );
+        $settings['openlist_host_port'] = '99999';
+        $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );
+    }
+
+    public function test_untrusted_port_or_docker_name_rejects_settings_atomically(): void {
+        $stored = JLWA_Download_Page_Feature::defaults();
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $stored;
+        $bad = $stored;
+        $bad['openlist_host_port'] = '0';
+        $this->assertSame( $stored, $this->feature->sanitize( $bad ) );
+        $this->assertStringContainsString( '本机端口', $GLOBALS['jlwa_test_settings_errors'][0]['message'] );
+        $GLOBALS['jlwa_test_settings_errors'] = array();
+        $bad = $stored;
+        $bad['openlist_container'] = 'openlist;rm -rf /';
+        $this->assertSame( $stored, $this->feature->sanitize( $bad ) );
+        $this->assertStringContainsString( '容器名称', $GLOBALS['jlwa_test_settings_errors'][0]['message'] );
     }
 
     public function test_success_feedback_only_after_settings_redirect(): void {

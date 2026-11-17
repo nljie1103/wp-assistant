@@ -10,39 +10,41 @@
 - 通过 Nginx 拦截的是公网入口。仅隐藏域名、限制 `Referer`、检查前端 `Host` 都不可信；按真实网络来源限制 IP 则有作用，前提是信任链和反代配置正确。
 - 禁止访问付费目录不等于关闭整个 OpenList。公开图片应在别的公开目录，WebDAV 仍可使用原有账号；OpenList API、其它端口、历史缓存必须单独验收。
 
-## 2. 新手自动部署：先一次性授权，之后在插件后台操作
+## 2. 推荐：后台填本机端口，复制一条命令
 
-普通 PHP 用户通常无权写 root 所有的 Nginx 站点配置。v2.6.3 **随插件安装包自带受限部署助手** `ops/jlwa-nginx-helper.py`，不需安装另一个 WordPress 插件。
+不需要手动寻找 WordPress 和 OpenList 两份 Nginx 配置文件，也不必先知道 Docker 容器名。
 
-先用宝塔查看两份**实际的站点配置文件**，再从系统管理员终端执行以下**一次性命令示例**（必须逐项换成自己的值）：
+1. 打开 **九流 WP 助手 → 下载页美化 → 付费资源 · 私有安全交付**。
+2. 填写 OpenList 文件访问域名、付费目录原始路径，并在 **OpenList 本机端口** 里输入 Docker 映射到宿主机 \`127.0.0.1\` 的端口号，例如 \`5244\`。**不是容器内部端口。** 一般不必填写「Docker 容器名称」。
+3. **保存下载页设置**。下方「Nginx 安全部署向导」将自动显示一条符合当前服务器情况的**完整安装命令**，点击 **复制一键安装命令**，在该服务器的 root/sudo 终端执行即可。命令中的网站域名、插件安装路径、OpenList 源站和私有目录由插件读取已保存的配置生成，不需要手动改路径。
+4. 首次授权安装时，管理员脚本自动扫描宝塔 \`/www/server/panel/vhost/nginx/\` 的站点配置，按 Nginx \`server_name\` 匹配 WordPress 网站和 OpenList 网站。按本机端口检测 Docker 映射（容器名可选），检查该端口能从 \`127.0.0.1\` 连接、没有向公网监听，并保存允许管理的两份 Nginx 配置清单。
+5. 首次命令**只安装受限的系统助手，不会立即封锁文件**。返回 WordPress 插件后台，依次点「预览配置差异」→「自动备份并配置内部代理」→ **用真实已购账号验证下载** →「确认已购用户下载测试」→「封锁 OpenList 公网付费目录」。
+6. 用无痕浏览器验收旧 ZIP 直链返回 403、公开图片正常显示、WebDAV 正常工作；检查源 IP、其它端口、OpenList API 及 CDN 是否还能绕过访问。
 
-```bash
-sudo python3 /path/to/wp-content/plugins/jiuliu-wp-assistant/ops/jlwa-nginx-helper.py install \
-  --wordpress-vhost /www/server/panel/vhost/nginx/site.example.com.conf \
-  --openlist-vhost /www/server/panel/vhost/nginx/files.example.com.conf \
-  --port 5244 \
-  --source /d/storage/private/ \
-  --host files.example.com \
-  --php-user www
-```
+**示例界面里只应填写**：
 
-注意：
+| 设置 | 示例 |
+|---|---|
+| OpenList 访问域名 | \`files.example.com\`（可选另填同服务的 CDN 别名） |
+| 私有源目录 | \`/d/storage/private/\` |
+| OpenList 本机端口 | \`5244\` |
+| Docker 容器名 | 留空，自动匹配；识别有误时再填写 |
 
-- 以上 `/path/to/...` 及各项值均是占位示例；`port` 必须是宿主机可通过 `127.0.0.1` 访问的 OpenList **本地端口**，不是 Docker 容器内部映射端口。
-- 只能指定宝塔实际 Nginx 虚拟主机的两个普通 `.conf` 文件，必须由 root 管理且不可被其他用户写入。
-- 助手只支持**单一 server 块**的简单站点配置；复杂 vhost 不会强制修改，改用下方手动教程。
-- 该安装步骤会生成 root 所有的 `/usr/local/sbin/jlwa-nginx-helper` 和 `/etc/jlwa-download/approved.json`，仅授权 WordPress 的 PHP 用户通过 `sudo -n` 执行固定操作名（`status/preview/prepare/confirm/protect/rollback`）。**不允许任意 shell 命令或更改未批准的配置路径。**
-- 安装脚本含 Nginx 语法检查；一旦有错误，停止并检查，**不要**将网站文件改为 `777` 或赋予 PHP 完整 root 权限。
+这比复制多行带占位符的命令更简单，但仍保留一道系统管理员授权：WordPress PHP 进程通常无权读取 root 持有的 Nginx 配置文件，**不能**为了省事赋予 PHP 全权 sudo 或将配置文件 chmod 777。生成的一条命令会复制助手到 root 所有的系统位置，之后只允许插件后台运行固定命令。
 
-然后进入 WordPress 后台 → 九流 WP 助手 → 下载页美化 → **Nginx 安全部署向导**：
+**适用边界**：自动匹配要求服务器为受支持的宝塔 Nginx 结构，且每个主机名只能唯一命中一个站点配置。复杂多 \`server{}\` 配置、容器端口不通、端口监听公网、匹配有歧义，都会停止并提示；可切换下方手动方式。不能把执行安装命令理解为“源站已保护”。
 
-1. **预览配置差异**：确认将增加的两个 Nginx 管理片段。未授权或复杂站点会显示错误，不改变任何文件。
-2. **自动备份并配置内部代理**：备份 WordPress vhost 到 root-only 目录，写入 `internal` 规则，执行 `nginx -t` 并 reload；失败恢复原始配置。
-3. **先启用私有交付**，使用真实拥有购买资格的账号从文章下载按钮测试：确认文件完整、浏览器 Network/下载历史没有 OpenList 原始 URL，断点续传符合预期。通过后勾选“已完成真实购买用户下载验证”并确认。**人工确认不代表助手已模拟完成实际文件下载。**
-4. **封锁 OpenList 公网付费目录**：再次先备份，写入源站 `/d/` 和 `/p/` 公开拒绝规则，`nginx -t` 成功后才 reload。内部 `127.0.0.1` 通道继续可读。
-5. 用外部无痕浏览器复测旧直链，期望 403。还需测试 CDN、其它入口、OpenList API（如 `/api/fs/get`）、图片与 WebDAV。**向导仅反映配置阶段，不声称已经证明全站无旁路。**
+### 为什么只有付费目录被禁止，图片不受影响
 
-任何一步失败应停止；“回滚本次配置备份”只在已部署配置未被其它工具后续修改时自动恢复，避免覆盖其它管理员的新改动。
+假设 OpenList 的私有目录是 \`/d/storage/private/\`，公开图片目录是 \`/d/storage/public-images/\`：
+
+| 路径 | 公网访问 | 已购内部下载 |
+|---|---|---|
+| \`/d/storage/private/\` | Nginx 返回 403 | WordPress 通过回环端口读取 |
+| \`/p/storage/private/\` | Nginx 返回 403 | 不对外公开预览 |
+| \`/d/storage/public-images/\` | 保持正常访问 | 不受影响 |
+
+即使一个 OpenList 网站同时绑定两个域名（一个走 CDN，一个直连），**只要共用同一 Nginx 配置**，自动助手也只配置这一个站点，不会要求用户重复配置。这只是 URL 路径级封锁：仍须检测其它 API、WebDAV 匿名读取、Docker 端口和 CDN 缓存，不能仅凭 /d 返回 403 就宣布完全安全。
 
 ## 3. 无法首次安装助手时的手动方法
 

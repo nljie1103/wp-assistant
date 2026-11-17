@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.4
+Stable tag: 2.6.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.6.5 =
+* Nginx 部署向导简化为后台填写 OpenList 宿主机本地端口、保存并复制一条完整安装命令，无需人工查找两份 Nginx 配置文件。
+* 受限安装助手首次以 root 权限自动通过 server_name 查找宝塔 WordPress/OpenList 虚拟主机，并按本机端口尝试识别 Docker 容器，容器名称可选。
+* 安装前检查本机端口可连通且没有对公网监听；自动备份与分阶段校验继续沿用，禁止错误环境下修改公开资源入口。
+* 保护仅作用于 OpenList 付费资源文件/预览目录，公开图片目录和 WebDAV 原认证流程保持原样；不修改子比主题。
+
+
 
 = 2.6.4 =
 * 修复下载页设置保存后没有任何结果提示的问题。WordPress Settings API 保存成功时显示明确确认，失败时显示具体错误字段及原因。

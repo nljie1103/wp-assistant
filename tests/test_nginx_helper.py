@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 import unittest
 import tempfile
+from types import SimpleNamespace
+from contextlib import nullcontext
 from unittest.mock import patch
 
 source = Path(__file__).resolve().parents[1] / "ops" / "jlwa-nginx-helper.py"
@@ -84,6 +86,54 @@ class NginxHelperTests(unittest.TestCase):
                 self.assertFalse(state["after"])
             finally:
                 mod.STATE = original_state
+
+    def test_automatic_vhost_discovery_uses_exact_server_name(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            (directory / "site.conf").write_text(WP_VHOST)
+            (directory / "files.conf").write_text(OPENLIST_VHOST)
+            with patch.object(mod, "VHOST_DIR", directory), patch.object(mod, "validate_vhost", side_effect=lambda value: value):
+                self.assertEqual(str(directory / "site.conf"), mod.discover_vhost("site.example.com"))
+                self.assertEqual(str(directory / "files.conf"), mod.discover_vhost("files-cdn.example.com"))
+                with self.assertRaises(ValueError):
+                    mod.discover_vhost("fake-site.example.com")
+                (directory / "duplicate.conf").write_text(OPENLIST_VHOST)
+                with self.assertRaises(ValueError):
+                    mod.discover_vhost("files.example.com")
+
+    def test_port_must_be_loopback_and_reachable(self):
+        with patch.object(mod.socket, "create_connection", return_value=nullcontext()), patch.object(mod.shutil, "which", return_value="/usr/bin/ss"):
+            with patch.object(mod.subprocess, "run", return_value=SimpleNamespace(stdout="LISTEN 0 1024 127.0.0.1:5244 0.0.0.0:*\n")):
+                mod.verify_local_only_port(5244)
+            with patch.object(mod.subprocess, "run", return_value=SimpleNamespace(stdout="LISTEN 0 1024 0.0.0.0:5244 0.0.0.0:*\n")):
+                with self.assertRaises(ValueError):
+                    mod.verify_local_only_port(5244)
+        with patch.object(mod.socket, "create_connection", side_effect=ConnectionRefusedError):
+            with self.assertRaises(ValueError):
+                mod.verify_local_only_port(5244)
+
+    def test_docker_port_detection_and_public_port_rejection(self):
+        def run(args, **kwargs):
+            if args[1] == "ps":
+                return SimpleNamespace(stdout="container123\n")
+            return SimpleNamespace(stdout='{"5244/tcp":[{"HostIp":"127.0.0.1","HostPort":"5244"}]}')
+        with patch.object(mod.shutil, "which", return_value="/usr/bin/docker"), patch.object(mod.subprocess, "run", side_effect=run):
+            self.assertEqual("container123", mod.detect_docker_container(5244))
+        def named_container(args, **kwargs):
+            if args[1] == "ps":
+                return SimpleNamespace(stdout="container123\n")
+            if args[1] == "inspect" and args[2] == "--format" and args[3] == "{{.Id}}":
+                return SimpleNamespace(stdout="container123-extra-long-id\n")
+            return SimpleNamespace(stdout='{"5244/tcp":[{"HostIp":"127.0.0.1","HostPort":"5244"}]}')
+        with patch.object(mod.shutil, "which", return_value="/usr/bin/docker"), patch.object(mod.subprocess, "run", side_effect=named_container):
+            self.assertEqual("container123", mod.detect_docker_container(5244, "my-openlist"))
+        def exposed(args, **kwargs):
+            if args[1] == "ps":
+                return SimpleNamespace(stdout="container123\n")
+            return SimpleNamespace(stdout='{"5244/tcp":[{"HostIp":"0.0.0.0","HostPort":"5244"}]}')
+        with patch.object(mod.shutil, "which", return_value="/usr/bin/docker"), patch.object(mod.subprocess, "run", side_effect=exposed):
+            with self.assertRaises(ValueError):
+                mod.detect_docker_container(5244)
 
     def test_no_real_host_or_IP_hardcoded(self):
         code = source.read_text()

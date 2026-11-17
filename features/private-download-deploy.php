@@ -6,6 +6,56 @@ class JLWA_Private_Deploy {
     const BRIDGE = '/usr/local/sbin/jlwa-nginx-helper';
     const ACTIONS = array( 'status', 'preview', 'prepare', 'confirm', 'protect', 'rollback' );
 
+    /**
+     * Generate a single, strictly escaped command from saved WordPress settings.
+     * No Nginx paths or container name are required for the normal install.
+     * The root-owned installer discovers vhosts and checks Docker at run time.
+     */
+    public static function installer_command( $settings, $wordpress_host = null, $plugin_dir = null, $php_user = null ) {
+        $settings = is_array( $settings ) ? $settings : array();
+        $wordpress_host = null === $wordpress_host ? wp_parse_url( home_url( '/' ), PHP_URL_HOST ) : $wordpress_host;
+        $plugin_dir = null === $plugin_dir ? JLWA_PLUGIN_DIR : $plugin_dir;
+        if ( null === $php_user ) {
+            $php_user = 'www';
+            if ( function_exists( 'posix_geteuid' ) && function_exists( 'posix_getpwuid' ) ) {
+                $user = posix_getpwuid( posix_geteuid() );
+                if ( is_array( $user ) && ! empty( $user['name'] ) ) {
+                    $php_user = $user['name'];
+                }
+            }
+        }
+        $hosts = JLWA_Private_Download::hosts( $settings['private_hosts'] ?? '' );
+        $source = JLWA_Private_Download::prefix( $settings['private_source_prefix'] ?? '' );
+        $port = trim( (string) ( $settings['openlist_host_port'] ?? '' ) );
+        $container = trim( (string) ( $settings['openlist_container'] ?? '' ) );
+        $wordpress_host = strtolower( (string) $wordpress_host );
+        $plugin_dir = (string) $plugin_dir;
+        if ( ! $hosts || ! $source || ! preg_match( '/^[0-9]{1,5}$/D', $port ) || (int) $port < 1 || (int) $port > 65535
+            || JLWA_Private_Download::hosts( $wordpress_host ) !== array( $wordpress_host )
+            || ! preg_match( '/^[a-z_][a-z0-9_-]{0,30}$/D', (string) $php_user )
+            || ( '' !== $container && ! preg_match( '/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/D', $container ) )
+            || '' === $plugin_dir || '/' !== $plugin_dir[0] ) {
+            return '';
+        }
+        $script = rtrim( $plugin_dir, '/' ) . '/ops/jlwa-nginx-helper.py';
+        $args = array(
+            '--wordpress-host', $wordpress_host,
+            '--openlist-host', $hosts[0],
+            '--port', $port,
+            '--source', $source,
+            '--php-user', $php_user,
+        );
+        if ( '' !== $container ) {
+            $args[] = '--container';
+            $args[] = $container;
+        }
+        $command = 'sudo python3 ' . escapeshellarg( $script ) . ' install-auto';
+        foreach ( $args as $index => $arg ) {
+            $command .= ' ' . ( 0 === $index % 2 ? $arg : escapeshellarg( $arg ) );
+        }
+        return $command;
+    }
+
     public static function boot() {
         add_action( 'admin_post_jlwa_private_deploy', array( __CLASS__, 'handle' ) );
         add_action( 'admin_post_jlwa_private_probe', array( __CLASS__, 'probe' ) );
@@ -151,8 +201,21 @@ class JLWA_Private_Deploy {
             <p>一套 OpenList 即使绑定多个域名，也只维护一份源站站点规则。默认不修改任何系统文件。首次使用需要服务器管理员授权一次；之后所有操作都在九流 WP 助手后台执行。</p>
             <p><strong>当前状态：</strong><?php echo esc_html( $phases[ $phase ] ?? '需要人工检查配置' ); ?></p>
             <?php if ( ! $result['ok'] ) : ?><p class="notice notice-warning" style="padding:10px"><?php echo esc_html( $result['message'] ); ?></p><?php endif; ?>
+            <?php if ( ! empty( $status['docker_container_detected'] ) ) : ?><p>已识别与所填本地端口对应的 Docker 容器映射，并确认端口未对公网发布。</p><?php endif; ?>
             <?php if ( ! $has_helper ) : ?>
-                <p>请参照 <a href="https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md" target="_blank" rel="noopener noreferrer">部署教程</a>，通过服务器终端一次性安装插件包内 <code>ops/jlwa-nginx-helper.py</code>。安装脚本会复制为 root 所有，限制可管理的两个站点配置文件，安装后才能点击以下操作。<strong>切勿将 PHP 运行用户加入全权 sudo。</strong></p>
+                <p><strong>首次授权只需一条命令：</strong>插件自动读取当前 WordPress 域名、插件绝对路径、已保存的 OpenList 域名和付费目录。你只需在上面的设置里填写 <strong>OpenList 宿主机本地端口</strong> 并保存；Docker 容器名称可以留空，安装程序会尝试按端口识别。</p>
+                <?php
+                $command = self::installer_command( JLWA_Download_Page_Feature::options() );
+                if ( $command ) :
+                ?>
+                    <label for="jlwa-private-install-command"><strong>在服务器 root / sudo 终端执行以下命令：</strong></label>
+                    <textarea id="jlwa-private-install-command" class="large-text code" rows="3" readonly style="margin:8px 0;white-space:pre-wrap"><?php echo esc_textarea( $command ); ?></textarea>
+                    <button type="button" class="button button-secondary" onclick="var f=document.getElementById('jlwa-private-install-command');f.focus();f.select();document.execCommand('copy');this.textContent='命令已复制';">复制一键安装命令</button>
+                    <p class="description">首次执行时脚本以管理员权限自动定位宝塔的 WordPress/OpenList Nginx 配置文件，并验证本机 Docker 端口。此时只完成受限授权，不会直接封锁付费文件。</p>
+                <?php else : ?>
+                    <p class="notice notice-warning" style="padding:12px">请先在上方填写受保护源站域名、公开源路径和 OpenList 本机端口，点击“保存下载页设置”，刷新后将自动生成一条可复制的完整命令。</p>
+                <?php endif; ?>
+                <p><a href="https://github.com/nljie1103/wp-assistant/blob/main/docs/paid-download-security.md" target="_blank" rel="noopener noreferrer">查看简明部署教程</a>。根目录配置文件只有 root 可读取；插件不会为方便自动化而放开 Nginx 文件权限。</p>
             <?php else : ?>
                 <?php self::op_form( 'preview', '① 预览配置差异' ); ?>
                 <?php self::op_form( 'prepare', '② 自动备份并配置内部代理' ); ?>

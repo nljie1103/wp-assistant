@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
 import shutil
 import stat
 import subprocess
@@ -26,7 +27,7 @@ SUDOERS = Path("/etc/sudoers.d/jlwa-nginx-helper")
 BEGIN = "# BEGIN JLWA-MANAGED-DOWNLOAD"
 END = "# END JLWA-MANAGED-DOWNLOAD"
 RULE = re.compile(r"(?ms)^\s*" + re.escape(BEGIN) + r".*?" + re.escape(END) + r"\s*")
-PORT_RE = re.compile(r"^[1-9][0-9]{1,4}$")
+PORT_RE = re.compile(r"^[1-9][0-9]{0,4}$")
 HOST_RE = re.compile(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 PATH_RE = re.compile(r"^/d/(?:[\w\u4e00-\u9fff-]+/)+$")
 VHOST_DIR = Path("/www/server/panel/vhost/nginx")
@@ -52,6 +53,103 @@ def validate_vhost(value):
         fatal("only Baota's exact Nginx vhost files are allowed")
     secure_file(path)
     return str(path)
+
+
+def discover_vhost(host):
+    """Find exactly one root-owned Baota vhost whose server_name contains this host."""
+    if not HOST_RE.fullmatch(host):
+        fatal("invalid site host")
+    matches = []
+    for entry in VHOST_DIR.glob("*.conf"):
+        try:
+            validate_vhost(str(entry))
+            body = entry.read_text(encoding="utf-8")
+        except (ValueError, OSError, UnicodeError):
+            continue
+        names = re.findall(r"(?m)^\s*server_name\s+([^;]+);", body)
+        if any(host in item.split() for item in names):
+            matches.append(str(entry))
+    if len(matches) != 1:
+        fatal("expected one matching vhost for host; found %d. Check Baota vhost setup." % len(matches))
+    return matches[0]
+
+
+def verify_local_only_port(port):
+    # Ensure configured upstream is alive and not publicly listening.
+    try:
+        with socket.create_connection(("127.0.0.1", int(port)), timeout=2):
+            pass
+    except OSError:
+        fatal("OpenList local port is not reachable on 127.0.0.1; check the host-side port")
+    if not shutil.which("ss"):
+        return
+    try:
+        response = subprocess.run(
+            ["ss", "-H", "-ltn"], capture_output=True, text=True,
+            timeout=5, check=True
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
+    for line in response.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        local = parts[3]
+        if local.rsplit(":", 1)[-1] != str(port):
+            continue
+        bound = local.rsplit(":", 1)[0].strip("[]")
+        if bound not in ("127.0.0.1", "::1"):
+            fatal("selected port listens on a non-loopback interface; restrict it first")
+
+
+def detect_docker_container(port, selected=None):
+    """Docker is optional; detect local binding and refuse public published ports."""
+    if selected and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}", selected):
+        fatal("invalid Docker container name")
+    if not shutil.which("docker"):
+        if selected:
+            fatal("Docker not installed or not available for selected container")
+        return ""
+    try:
+        containers = subprocess.run(
+            ["docker", "ps", "-q"], capture_output=True, text=True,
+            timeout=6, check=True
+        ).stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        if selected:
+            fatal("cannot inspect the selected Docker container")
+        return ""
+    matches = []
+    for container_id in containers:
+        try:
+            response = subprocess.run(
+                ["docker", "inspect", "--format", "{{json .NetworkSettings.Ports}}", container_id],
+                capture_output=True, text=True, timeout=6, check=True
+            )
+            mapping = json.loads(response.stdout)
+            for publishes in (mapping or {}).values():
+                for publish in publishes or []:
+                    if str(publish.get("HostPort", "")) != str(port):
+                        continue
+                    addr = str(publish.get("HostIp", ""))
+                    if addr not in ("127.0.0.1", "::1"):
+                        fatal("port is exposed beyond loopback; restrict Docker publish address before installing")
+                    matches.append(container_id)
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+            continue
+    if len(matches) > 1:
+        fatal("multiple Docker containers match the selected port")
+    if selected:
+        try:
+            response = subprocess.run(
+                ["docker", "inspect", "--format", "{{.Id}}", selected],
+                capture_output=True, text=True, timeout=6, check=True
+            )
+            if not matches or not any(response.stdout.strip().startswith(item) for item in matches):
+                fatal("specified Docker container is not bound to this local host port")
+        except (OSError, subprocess.SubprocessError):
+            fatal("cannot find selected Docker container")
+    return matches[0] if matches else ""
 
 
 def validate_source(value):
@@ -118,9 +216,12 @@ def init_install(args):
     run_nginx(check=True)
     CONFIG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    verify_local_only_port(int(args.port))
+    container_id = detect_docker_container(int(args.port), getattr(args, "container", "") or "")
     manifest = {"wordpress_vhost": wp, "openlist_vhost": files,
                 "port": int(args.port), "source": source,
-                "host": host, "php_user": args.php_user}
+                "host": host, "php_user": args.php_user,
+                "docker_container_detected": bool(container_id)}
     if CONFIG.exists():
         fatal("already installed: remove only after manual review and backup")
     write_file(CONFIG, json.dumps(manifest, ensure_ascii=False), 0o600)
@@ -298,9 +399,27 @@ def main():
     installer.add_argument("--source", required=True)
     installer.add_argument("--host", required=True)
     installer.add_argument("--php-user", default="www")
+    installer.add_argument("--container", default="")
+    automatic = commands.add_parser("install-auto")
+    automatic.add_argument("--wordpress-host", required=True)
+    automatic.add_argument("--openlist-host", required=True)
+    automatic.add_argument("--port", required=True)
+    automatic.add_argument("--source", required=True)
+    automatic.add_argument("--php-user", default="www")
+    automatic.add_argument("--container", default="")
     for op in ("status", "preview", "prepare", "confirm", "protect", "rollback"):
         commands.add_parser(op)
     args = parser.parse_args()
+    if args.op == "install-auto":
+        if os.geteuid() != 0:
+            fatal("automatic install requires root")
+        wp_host = args.wordpress_host.lower()
+        files_host = args.openlist_host.lower()
+        args.wordpress_vhost = discover_vhost(wp_host)
+        args.openlist_vhost = discover_vhost(files_host)
+        print("Found distinct WordPress/OpenList Nginx configurations; verifying local port and access.")
+        init_install(args)
+        return
     if args.op == "install":
         init_install(args)
         return
@@ -316,7 +435,8 @@ def main():
                               "has_backup": bool(state["backups"]),
                               "approved_host": config["host"],
                               "approved_source": config["source"],
-                              "approved_port": config["port"]}, ensure_ascii=False))
+                              "approved_port": config["port"],
+                              "docker_container_detected": bool(config.get("docker_container_detected"))}, ensure_ascii=False))
         elif args.op == "preview":
             for kind, vhost in (("wp", config["wordpress_vhost"]), ("openlist", config["openlist_vhost"])):
                 old = Path(vhost).read_text()
