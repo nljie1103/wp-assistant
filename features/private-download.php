@@ -26,6 +26,7 @@ class JLWA_Private_Download {
             'rate_limit' => 30,
             'openlist_host_port' => '',
             'openlist_container' => '',
+            'openlist_public_images' => '',
         );
     }
 
@@ -89,6 +90,14 @@ class JLWA_Private_Download {
         if ( '' !== $container && ! preg_match( '/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/D', $container ) ) {
             $errors[] = '「Docker 容器名称」格式错误：只能包含字母、数字、点、下划线和连接号。';
         }
+        $images = trim( (string) ( $input['openlist_public_images'] ?? '' ) );
+        if ( '' !== $images ) {
+            $mount = '/' . implode( '/', array_slice( explode( '/', trim( $source, '/' ) ), 0, 2 ) ) . '/';
+            if ( ! self::prefix( $images ) || 0 !== strpos( $images, $mount ) || $images === $mount ||
+                0 === strpos( $images, $source ) || 0 === strpos( $source, $images ) ) {
+                $errors[] = '「唯一公开图片目录」无效：须为同一 OpenList 挂载下独立于付费目录的 /d/<挂载>/<图片目录>/，不得与付费资源目录重叠。';
+            }
+        }
         if ( ! empty( $input['private_enabled'] ) && '' === $hosts ) {
             $errors[] = '启用私有交付之前，必须填写至少一个受保护的 OpenList 源站域名。';
         }
@@ -128,6 +137,7 @@ class JLWA_Private_Download {
             'rate_limit' => $rate_limit,
             'openlist_host_port' => $port,
             'openlist_container' => $container,
+            'openlist_public_images' => (string) ( $options['openlist_public_images'] ?? '' ),
         );
     }
 

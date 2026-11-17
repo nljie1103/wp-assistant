@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.7.2
+Stable tag: 2.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 2.7.3 =
+* 新增可选 OpenList 公网文件白名单：在 /d/、/p/ 全部挂载中默认禁止文件直连，只允许管理员指定的图片目录及其文件公开访问。
+* 已保护站点在交付高级设置填写唯一公开图片目录，Nginx 自动部署会生成只读预览与一次性 root 升级命令，未授权或未操作不改变当前规则。
+* root 安全升级先验证现有 protected、已购确认、原始备份哈希及已部署 Nginx 规则，迁移时完整保留原始备份与 WordPress 私有交付代理；Nginx 检查/重载失败尝试自动恢复。
+* 提供独立的白名单撤销命令：恢复原有付费资源目录的 403 封锁，但不回滚 WordPress 内部代理或全部付费保护。
+* 增加真实 Nginx URI 匹配测试、Python 迁移与回退单元测试和 WordPress 设置安全回归；不修改 API、WebDAV 或主题支付逻辑。
+
+
 
 = 2.7.2 =
 * 修复启用 OpenList Nginx 私有代理后，Chrome 下载出现 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION 的错误。

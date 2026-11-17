@@ -56,6 +56,41 @@ class JLWA_Private_Deploy {
         return $command;
     }
 
+    /** Explicit one-time ROOT command, never executed by WordPress PHP. */
+    public static function public_images_command( $settings, $operation, $plugin_dir = null ) {
+        if ( ! in_array( $operation, array( 'preview-images-only', 'upgrade-images-only' ), true ) ) {
+            return '';
+        }
+        $settings = is_array( $settings ) ? $settings : array();
+        $prefix = trim( (string) ( $settings['openlist_public_images'] ?? '' ) );
+        $private = JLWA_Private_Download::prefix( $settings['private_source_prefix'] ?? '' );
+        $images = JLWA_Private_Download::prefix( $prefix );
+        if ( ! $private || ! $images || $images === $private ||
+            0 === strpos( $images, $private ) || 0 === strpos( $private, $images ) ) {
+            return '';
+        }
+        $mount = '/' . implode( '/', array_slice( explode( '/', trim( $private, '/' ) ), 0, 2 ) ) . '/';
+        if ( 0 !== strpos( $images, $mount ) || $mount === $images ) {
+            return '';
+        }
+        $plugin_dir = null === $plugin_dir ? JLWA_PLUGIN_DIR : (string) $plugin_dir;
+        if ( '' === $plugin_dir || '/' !== $plugin_dir[0] ) {
+            return '';
+        }
+        return 'sudo python3 ' . escapeshellarg( rtrim( $plugin_dir, '/' ) . '/ops/jlwa-nginx-helper.py' ) .
+            ' ' . $operation . ' --public-images ' . escapeshellarg( $images );
+    }
+
+    /** Dedicated root-only partial rollback: preserves the paid resource 403. */
+    public static function public_images_rollback_command( $plugin_dir = null ) {
+        $plugin_dir = null === $plugin_dir ? JLWA_PLUGIN_DIR : (string) $plugin_dir;
+        if ( '' === $plugin_dir || '/' !== $plugin_dir[0] ) {
+            return '';
+        }
+        return 'sudo python3 ' . escapeshellarg( rtrim( $plugin_dir, '/' ) . '/ops/jlwa-nginx-helper.py' ) .
+            ' rollback-images-only';
+    }
+
     public static function boot() {
         add_action( 'admin_post_jlwa_private_deploy', array( __CLASS__, 'handle' ) );
         add_action( 'admin_post_jlwa_private_probe', array( __CLASS__, 'probe' ) );
@@ -277,6 +312,38 @@ class JLWA_Private_Deploy {
                 <?php self::op_form( 'confirm', '③ 确认已购用户下载测试' ); ?>
                 <?php self::op_form( 'protect', '④ 封锁 OpenList 公网付费目录' ); ?>
                 <?php self::op_form( 'rollback', '恢复本次配置备份', '', true ); ?>
+            <?php endif; ?>
+
+            <?php if ( $has_helper && 'protected' === $phase ) : ?>
+                <hr>
+                <h4>🔐 公网文件白名单：仅开放图片</h4>
+                <?php if ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                    <p><strong>已启用图片白名单：</strong>公网 /d/、/p/ 仅允许以下目录及其文件：<code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>。请继续检查真实图片、旧文件直链与已购下载。</p>
+                    <details style="margin:12px 0">
+                        <summary>仅撤销图片白名单（保留原付费资源目录封锁）</summary>
+                        <p>如果图片异常，可由 root 执行以下受限回退命令，保留 WordPress 内部代理、原有付费目录的 403 封锁和完整备份。请勿把“恢复本次配置备份”当成白名单回退，它会回滚整套 Nginx 交付规则。</p>
+                        <textarea id="jlwa-images-rollback" rows="2" readonly class="large-text code"><?php echo esc_textarea( self::public_images_rollback_command() ); ?></textarea>
+                        <button class="button button-secondary" type="button" onclick="var e=document.getElementById('jlwa-images-rollback');e.focus();e.select();document.execCommand('copy')">复制白名单回退命令</button>
+                    </details>
+                <?php else : ?>
+                    <p>当前仍是<strong>仅封锁付费目录</strong>。如果其它 OpenList 目录也不能公开，请在“<a href="<?php echo esc_url( admin_url( 'admin.php?page=jlwa-download-page&tab=advanced' ) ); ?>">交付高级设置</a>”填写<strong>唯一公开图片目录</strong>并保存，再运行下面两个需要 root 明确授权的命令。默认只预览，不会静默修改系统配置。</p>
+                    <?php
+                    $image_options = JLWA_Download_Page_Feature::options();
+                    $image_preview = self::public_images_command( $image_options, 'preview-images-only' );
+                    $image_apply = self::public_images_command( $image_options, 'upgrade-images-only' );
+                    if ( $image_preview && $image_apply ) :
+                    ?>
+                        <p><label for="jlwa-image-preview"><strong>① 只读预览白名单变更（不会修改文件）</strong></label></p>
+                        <textarea id="jlwa-image-preview" class="large-text code" rows="3" readonly><?php echo esc_textarea( $image_preview ); ?></textarea>
+                        <button class="button button-secondary" type="button" onclick="var e=document.getElementById('jlwa-image-preview');e.focus();e.select();document.execCommand('copy')">复制预览命令</button>
+                        <p><label for="jlwa-image-apply"><strong>② 确认预览正确后执行升级（需要 root）</strong></label></p>
+                        <textarea id="jlwa-image-apply" class="large-text code" rows="3" readonly><?php echo esc_textarea( $image_apply ); ?></textarea>
+                        <button class="button button-secondary" type="button" onclick="var e=document.getElementById('jlwa-image-apply');e.focus();e.select();document.execCommand('copy')">复制升级命令</button>
+                        <p class="description">升级程序先检查现有 protected 状态及回滚 SHA，测试 Nginx，原样保留最初的备份。失败会尝试恢复原配置；升级成功后刷新此页面检查状态。无需重复首次 install-auto、② prepare、③ confirm 或④ protect。</p>
+                    <?php else : ?>
+                        <p class="notice notice-warning" style="padding:10px">先在“交付高级设置”填写一个不与付费目录重叠的唯一公开图片路径并保存，才会生成白名单预览命令。</p>
+                    <?php endif; ?>
+                <?php endif; ?>
             <?php endif; ?>
             <hr>
             <h4>🔍 已发布付费资源的公网匿名探测</h4>

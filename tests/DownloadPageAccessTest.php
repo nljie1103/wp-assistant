@@ -149,6 +149,69 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( 'sudo -i' ) );
     }
 
+    public function test_public_images_only_upgrade_generates_root_review_and_apply_commands(): void {
+        $settings = JLWA_Private_Download::defaults();
+        $settings['private_source_prefix'] = '/d/storage/private/';
+        $settings['openlist_public_images'] = '/d/storage/图片/';
+        $directory = '/opt/wp/wp-content/plugins/wp-assistant';
+        $preview = JLWA_Private_Deploy::public_images_command( $settings, 'preview-images-only', $directory );
+        $apply = JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory );
+        $this->assertStringContainsString( ' preview-images-only --public-images ', $preview );
+        $this->assertStringContainsString( ' upgrade-images-only --public-images ', $apply );
+        $this->assertStringContainsString( "'/d/storage/图片/'", $preview );
+        $this->assertStringContainsString( "'/d/storage/图片/'", $apply );
+        $this->assertStringContainsString( "'/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py'", $apply );
+        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'status', $directory ) );
+        $settings['openlist_public_images'] = '/d/storage/private/';
+        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory ) );
+        $settings['openlist_public_images'] = '/d/another/图片/';
+        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory ) );
+    }
+
+    public function test_image_only_root_rollback_command_is_distinct_from_full_restore(): void {
+        $command = JLWA_Private_Deploy::public_images_rollback_command( '/opt/wp/wp-content/plugins/wp-assistant' );
+        $this->assertSame(
+            "sudo python3 '/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py' rollback-images-only",
+            $command
+        );
+        $this->assertStringNotContainsString( ' rollback', substr( $command, 0, -strlen('rollback-images-only') ) );
+        $this->assertSame( '', JLWA_Private_Deploy::public_images_rollback_command( './relative' ) );
+    }
+
+    public function test_image_whitelist_setting_saves_only_in_advanced_scope(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'advanced',
+            'openlist_public_images' => '/d/storage/图片/',
+        ) );
+        $this->assertSame( '/d/storage/图片/', $saved['openlist_public_images'] );
+        $this->assertSame( $old['private_source_prefix'], $saved['private_source_prefix'] );
+        $this->assertSame( $old['private_hosts'], $saved['private_hosts'] );
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $saved;
+        $visual = $this->feature->sanitize( array( 'jlwa_settings_scope' => 'templates', 'template' => 'vip' ) );
+        $this->assertSame( '/d/storage/图片/', $visual['openlist_public_images'] );
+        $this->assertSame( array(), $GLOBALS['jlwa_test_settings_errors'] );
+    }
+
+    public function test_image_whitelist_rejects_private_subfolder_and_other_mount(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        foreach ( array( '/d/storage/private/', '/d/storage/private/sub/', '/d/storage/', '/d/other/图片/', '/p/storage/图片/' ) as $bad ) {
+            $GLOBALS['jlwa_test_settings_errors'] = array();
+            $saved = $this->feature->sanitize( array(
+                'jlwa_settings_scope' => 'advanced',
+                'openlist_public_images' => $bad,
+            ) );
+            $this->assertSame( $old, $saved, $bad );
+            $this->assertNotEmpty( $GLOBALS['jlwa_test_settings_errors'], $bad );
+        }
+    }
+
     public function test_nginx_operations_return_to_deployment_tab_and_result_anchor(): void {
         $preview = JLWA_Private_Deploy::result_redirect_url( 'deployment' );
         $probe = JLWA_Private_Deploy::result_redirect_url( 'probe' );

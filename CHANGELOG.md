@@ -1,3 +1,11 @@
+## 2.7.3 — 2026-11-17
+
+- **新增公网文件白名单**：不再只阻断当前已知的付费资源目录。升级后的 OpenList 公网 Nginx 会拦截所有 /d/、/p/ 挂载下的文件路由（包括未来新增的目录），唯一例外为管理员明确指定的同挂载图片目录，保留现有站点代理/缓存行为。未配置或未执行升级时保持当前已部署规则不变。
+- **受控且向后兼容的 root 迁移**：受限 helper 已复制到 root 管理目录，更新 WordPress 插件无法替换。管理员可在“交付高级设置”保存一个公用图片路径，再从“Nginx 自动部署”复制只读预览和明确需要 root 执行的升级命令。升级对现有保护规则、已购确认、WordPress 代理和 SHA/原始备份进行一致性检查，拒绝覆盖人工编辑和不完整状态。
+- **升级失败自动恢复与独立回退**：Nginx 检查失败会尝试恢复先前的虚拟主机、helper、manifest 和状态；独立 rollback-images-only 命令恢复此前仅封锁付费目录的策略，保留 WordPress 内部代理与原有回滚备份。原通用 rollback 仍用于回滚整套部署，不应作为白名单撤销命令。
+- **兼容界限**：仅约束文件路由 /d/ 和 /p/。OpenList 后台、API、WebDAV 和站点主页不由该白名单封锁；这些入口仍需要独立鉴权与安全验证。WordPress 已购下载继续通过本机 127.0.0.1 上的 OpenList 内部代理读取，正常验收后才可宣布生产可用。
+- **测试**：PHP 设置安全性与命令生成、Nginx 文件路由正反匹配、原 SHA/备份保留及回滚、模拟 Nginx 语法错误全文件恢复，并使用真实 Nginx 临时站点请求中文 URL、非图片资源和路径规范化变体。
+
 ## 2.7.2 — 2026-11-17
 
 - **修复浏览器拒绝已购下载**：启用私有交付并完成 Nginx 内部代理准备后，PHP 与 OpenList 各自提供 Content-Disposition，Nginx 经 X-Accel-Redirect 转发时可能同时输出两份，引发 Chrome 的 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION。修复后应用层先清除 Content-Disposition，由最终 OpenList 文件响应负责单一文件名字段；保留原有受限内部代理和访问授权。

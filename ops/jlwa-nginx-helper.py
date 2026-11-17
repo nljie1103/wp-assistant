@@ -281,6 +281,11 @@ def read_manifest():
     obj["source"] = validate_source(obj["source"])
     if not HOST_RE.fullmatch(obj["host"]) or not 1 <= obj["port"] <= 65535:
         fatal("invalid root-only manifest")
+    policy = obj.get("public_access_policy", "paid_only")
+    if policy not in ("paid_only", "images_only"):
+        fatal("invalid root-approved public access policy")
+    if policy == "images_only":
+        obj["public_images"] = validate_public_images(obj.get("public_images", ""), obj)
     return obj
 
 
@@ -307,6 +312,17 @@ def snippet(kind, data):
     add_header Cache-Control "private, no-store" always;
 }
 location = /__jlwa_private_upstream_error { internal; return 502; }""" % (data["port"], prefix, data["host"])
+    elif data.get("public_access_policy") == "images_only":
+        # Use the normalized $uri at server rewrite phase, BEFORE the site's
+        # existing reverse-proxy location/caching rules. Restrict all /d and
+        # /p mounts, not just today's paid folder; images alone are public.
+        # Existing image proxy configuration is unchanged, including headers
+        # and the upstream path. Nginx normalizes percent-encoded paths.
+        images = validate_source(data.get("public_images", ""))
+        image_suffix = images[len("/d/"):].rstrip("/")
+        text = ( '# Public file routes are denied except the exact image subtree.\n'
+                 'if ($uri ~ "^/(?:d|p)(?:$|/(?!%s(?:/|$)))") { return 403; }'
+                 % re.escape(image_suffix) )
     else:
         preview = "/p/" + prefix[len("/d/"):]
         text = """location = %s { return 403; }
@@ -341,6 +357,184 @@ def transform(current, kind, config):
     match = matches[0]
     position = match.end()
     return current[:position] + desired + current[position:]
+
+
+def validate_public_images(images, config):
+    """Restrict images to one distinct directory of the already approved mount."""
+    images = validate_source(images)
+    source = config["source"]
+    mount = "/" + "/".join(source.strip("/").split("/")[:2]) + "/"
+    if not images.startswith(mount) or images == mount:
+        fatal("public images must be a directory within the approved OpenList mount")
+    if images.startswith(source) or source.startswith(images):
+        fatal("public image folder must not overlap the private paid folder")
+    return images
+
+
+def images_only_proposal(current, config, images):
+    """Safely migrate an exact old paid-only managed block to image-only rules."""
+    if current.count(BEGIN) != 1 or current.count(END) != 1:
+        fatal("exactly one managed OpenList block is required")
+    if config["host"] not in " ".join(re.findall(r"(?m)^\s*server_name\s+([^;]+);", current)).split():
+        fatal("approved OpenList hostname is absent from vhost")
+    if len(list(re.finditer(r"(?m)^\s*server\s*\{", current))) != 1:
+        fatal("expected exactly one server block")
+    old = snippet("openlist", dict(config, public_access_policy="paid_only"))
+    proposed_config = dict(config, public_access_policy="images_only", public_images=images)
+    new = snippet("openlist", proposed_config)
+    if new in current:
+        return current
+    if old not in current or current.count(old) != 1:
+        fatal("existing paid-only managed block differs from expected; refuse migration")
+    return current.replace(old, new, 1)
+
+
+def migrate_public_images(args):
+    """Explicit root-only image allowlist upgrade of an already protected site.
+
+    The installed helper is root-owned and intentionally unaffected by WordPress
+    plugin updates. This command atomically upgrades that helper and its
+    approved manifest, and upgrades the source vhost while retaining its
+    original rollback backup. PHP never receives a generic root-write ability.
+    """
+    if os.geteuid() != 0:
+        fatal("image-only migration requires an explicit root command")
+    config = read_manifest()
+    images = validate_public_images(args.public_images, config)
+    statefile = STATE / "state.json"
+    if not statefile.is_file() or statefile.is_symlink() or not STATE.is_dir():
+        fatal("protected deployment state missing")
+    secure_file(TARGET)
+    secure_file(SUDOERS)
+    target_source = Path(__file__).resolve()
+    if target_source == TARGET or not target_source.is_file():
+        fatal("use the new plugin's script, not the already installed helper")
+    if config.get("public_access_policy", "paid_only") not in ("paid_only", "images_only"):
+        fatal("unrecognized existing access policy")
+    if config.get("public_access_policy") == "images_only":
+        if config.get("public_images") != images:
+            fatal("image-only already installed for a different public directory; review manually")
+        state = load_state()
+        source = Path(config["openlist_vhost"]).read_text(encoding="utf-8")
+        if ( state.get("phase") != "protected" or
+             digest(source) != state.get("after", {}).get("openlist") or
+             snippet("openlist", config) not in source ):
+            fatal("image-only manifest exists but deployed rule state differs; inspect manually")
+        print("image-only policy already installed; no changes")
+        return
+
+    with (STATE / "lock").open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        state = load_state()
+        if state.get("phase") != "protected" or not state.get("confirmed"):
+            fatal("only a verified and already protected deployment can be migrated")
+        if not state.get("backups", {}).get("openlist") or not state.get("backups", {}).get("wp"):
+            fatal("original rollback backups missing")
+        wp_path = Path(config["wordpress_vhost"])
+        source_path = Path(config["openlist_vhost"])
+        old_wp = wp_path.read_text(encoding="utf-8")
+        old_source = source_path.read_text(encoding="utf-8")
+        if digest(old_wp) != state.get("after", {}).get("wp"):
+            fatal("WordPress vhost differs from deployment history")
+        if digest(old_source) != state.get("after", {}).get("openlist"):
+            fatal("OpenList vhost differs from deployment history")
+        if snippet("wp", config) not in old_wp:
+            fatal("WordPress internal proxy changed; refuse migration")
+        proposed = images_only_proposal(old_source, config, images)
+        if proposed == old_source:
+            fatal("image-only rule already in Nginx while manifest is not updated")
+        if not Path(state["backups"]["openlist"]).is_file():
+            fatal("OpenList original rollback backup missing")
+        if not Path(state["backups"]["wp"]).is_file():
+            fatal("WordPress original rollback backup missing")
+        # Confirm the current nginx configuration before any writes.
+        run_nginx(check=True)
+        if args.op == "preview-images-only":
+            print("--- OpenList proposed public file allowlist ---")
+            print("".join(difflib.unified_diff(
+                old_source.splitlines(True), proposed.splitlines(True),
+                fromfile="current", tofile="proposed"))[:12000])
+            print("Read-only preview; existing Nginx, manifest, helper and backups unchanged")
+            return
+
+        old_target = TARGET.read_text(encoding="utf-8")
+        old_config = CONFIG.read_text(encoding="utf-8")
+        old_state = statefile.read_text(encoding="utf-8")
+        new_manifest = dict(config, public_access_policy="images_only", public_images=images)
+        new_state = dict(state)
+        new_state["after"] = dict(state["after"], openlist=digest(proposed))
+        new_state["public_access_policy"] = "images_only"
+        try:
+            write_file(TARGET, target_source.read_text(encoding="utf-8"))
+            write_file(CONFIG, json.dumps(new_manifest, ensure_ascii=False))
+            write_file(source_path, proposed)
+            run_nginx(check=True)
+            run_nginx(check=False)
+            save_state(new_state)
+        except Exception:
+            # Restore exact bytes for every file before returning an error.
+            write_file(source_path, old_source)
+            write_file(CONFIG, old_config)
+            write_file(TARGET, old_target)
+            write_file(statefile, old_state)
+            run_nginx(check=True)
+            run_nginx(check=False)
+            raise
+        print("image-only public file allowlist deployed; original rollback backups retained")
+        print("verify public images, denied other /d/ and /p/ paths, paid downloads and WebDAV")
+
+
+def rollback_public_images():
+    """Revert ONLY the public /d and /p allowlist, keeping paid-only blocking.
+
+    Unlike the general rollback, this does not alter the WordPress internal
+    proxy and does not remove the paid-resource 403 rules. A failed image
+    allowlist deployment must be safely reversible without exposing paid ZIPs.
+    """
+    if os.geteuid() != 0:
+        fatal("image-only rollback requires an explicit root command")
+    config = read_manifest()
+    if config.get("public_access_policy") != "images_only":
+        fatal("image-only policy is not active")
+    with (STATE / "lock").open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        state = load_state()
+        source_path = Path(config["openlist_vhost"])
+        wp_path = Path(config["wordpress_vhost"])
+        current = source_path.read_text(encoding="utf-8")
+        if (state.get("phase") != "protected" or not state.get("confirmed")
+                or digest(current) != state.get("after", {}).get("openlist")
+                or digest(wp_path.read_text(encoding="utf-8")) != state.get("after", {}).get("wp")):
+            fatal("deployment changed since image-only upgrade; refuse unsafe rollback")
+        active = snippet("openlist", config)
+        original = snippet("openlist", dict(config, public_access_policy="paid_only"))
+        if (current.count(BEGIN) != 1 or current.count(END) != 1
+                or current.count(active) != 1):
+            fatal("image-only managed block differs; refusing partial rollback")
+        restored = current.replace(active, original, 1)
+        manifest_before = CONFIG.read_text(encoding="utf-8")
+        statefile = STATE / "state.json"
+        state_before = statefile.read_text(encoding="utf-8")
+        next_manifest = dict(config, public_access_policy="paid_only")
+        next_manifest.pop("public_images", None)
+        next_state = dict(state, public_access_policy="paid_only")
+        next_state["after"] = dict(state["after"], openlist=digest(restored))
+        run_nginx(check=True)
+        try:
+            write_file(source_path, restored)
+            run_nginx(check=True)
+            run_nginx(check=False)
+            write_file(CONFIG, json.dumps(next_manifest, ensure_ascii=False))
+            save_state(next_state)
+        except Exception:
+            write_file(source_path, current)
+            write_file(CONFIG, manifest_before)
+            write_file(statefile, state_before)
+            run_nginx(check=True)
+            run_nginx(check=False)
+            raise
+        print("image-only restriction reverted to previous paid-directory blocking")
+        print("WordPress internal proxy and original rollback backups preserved")
 
 
 def backup(path, label, current):
@@ -438,7 +632,17 @@ def main():
     automatic.add_argument("--container", default="")
     for op in ("status", "preview", "prepare", "confirm", "protect", "rollback"):
         commands.add_parser(op)
+    for op in ("preview-images-only", "upgrade-images-only"):
+        cmd = commands.add_parser(op)
+        cmd.add_argument("--public-images", required=True)
+    commands.add_parser("rollback-images-only")
     args = parser.parse_args()
+    if args.op in ("preview-images-only", "upgrade-images-only"):
+        migrate_public_images(args)
+        return
+    if args.op == "rollback-images-only":
+        rollback_public_images()
+        return
     if args.op == "install-auto":
         if os.geteuid() != 0:
             fatal("automatic install requires root")
@@ -465,7 +669,9 @@ def main():
                               "approved_host": config["host"],
                               "approved_source": config["source"],
                               "approved_port": config["port"],
-                              "docker_container_detected": bool(config.get("docker_container_detected"))}, ensure_ascii=False))
+                              "docker_container_detected": bool(config.get("docker_container_detected")),
+                              "public_access_policy": config.get("public_access_policy", "paid_only"),
+                              "approved_public_images": config.get("public_images", "")}, ensure_ascii=False))
         elif args.op == "preview":
             for kind, vhost in (("wp", config["wordpress_vhost"]), ("openlist", config["openlist_vhost"])):
                 old = Path(vhost).read_text()

@@ -60,7 +60,7 @@ class JLWA_Download_Page_Feature {
             $previous = self::options();
             $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url' );
             $security_keys = array( 'private_enabled', 'private_hosts', 'private_source_prefix', 'private_internal_prefix' );
-            $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
+            $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'openlist_public_images', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
             $chosen = 'templates' === $scope ? $template_keys : ( 'security' === $scope ? $security_keys : $advanced_keys );
             $submitted = $input;
             $input = $previous;
@@ -334,7 +334,13 @@ class JLWA_Download_Page_Feature {
                     <p>一般无需填写，安装助手会尝试根据端口自动识别。仅当同机存在多个容器、需要明确验证指定容器时才填写。</p>
                     <input class="regular-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[openlist_container]" value="<?php echo esc_attr( $options['openlist_container'] ); ?>" placeholder="例如 openlist">
                 </details>
-                <p class="description">付费目录将由 OpenList 公网 Nginx 拦截，只有 WordPress 经本地内部通道读取；公开图片目录不会被封锁。首次仍需站长在服务器终端执行一条授权命令。</p>
+                <p class="description">付费目录将由 OpenList 公网 Nginx 拦截，只有 WordPress 经本地内部通道读取；公开图片目录不会被封锁。</p>
+                <hr>
+                <h4>公开文件白名单：只放行图片目录（可选，默认不改变现有规则）</h4>
+                <p class="description">启用后，OpenList 公网 /d/ 和 /p/ 的全部挂载、目录及文件都将被拒绝，只有这一目录（及其下的文件）允许访问；API 与需要认证的 WebDAV 不受此规则影响。已完成第④步的站点需要管理员再次执行一次有预览和自动回滚保护的 root 升级命令。</p>
+                <p><label for="jlwa-openlist-public-images"><strong>唯一公开图片目录（绝对路径，以 / 结尾）</strong></label></p>
+                <input id="jlwa-openlist-public-images" class="large-text code" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[openlist_public_images]" value="<?php echo esc_attr( $options['openlist_public_images'] ); ?>" placeholder="/d/storage/public-images/">
+                <p class="description">先保存，再进入“Nginx 自动部署”获取只读预览和执行命令。留空不会自动更改现有已部署的访问规则。</p>
                 <hr>
                 <h4>下载出口域名（可选）</h4>
                 <p><strong>留空时：</strong>已购下载通过实际发起 <code>/pay-download/</code> 请求的域名直接使用 Nginx <code>X-Accel-Redirect</code> 交付，不签发跨域跳转票据，也不会从未经信任的 HTTP Host 自动创建新出口。多域名入口需要确认子比生成的下载按钮确实指向当前域名。</p>

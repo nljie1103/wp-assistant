@@ -292,6 +292,191 @@ class NginxHelperTests(unittest.TestCase):
                 mod.main()
             self.assertEqual("files.example.com", json.loads((directory / "approved.json").read_text())["host"])
 
+    def test_image_allowlist_regex_denies_all_file_mounts_except_images(self):
+        import re
+        config = dict(SETTINGS, public_access_policy="images_only", public_images="/d/storage/图片/")
+        snippet = mod.snippet("openlist", config)
+        expr = re.search(r'if \(\$uri ~ "([^"]+)"\)', snippet)
+        self.assertIsNotNone(expr)
+        deny = re.compile(expr.group(1))
+        allowed = [
+            "/d/storage/图片/", "/d/storage/图片/example.png", "/p/storage/图片/photo.png",
+            "/d/storage/图片", "/p/storage/图片", "/d/storage/图片/folder/a.webp",
+        ]
+        denied = [
+            "/d", "/p", "/d/", "/p/", "/d/storage/private/a.zip",
+            "/p/storage/private/a.zip", "/d/storage/图片2/test.png",
+            "/p/storage/图片-private/test.png", "/d/other/file.png",
+            "/p/other/file.png", "/d/storage/私有/a", "/p/storage/私有/a",
+        ]
+        for path in allowed:
+            self.assertIsNone(deny.search(path), path)
+        for path in denied:
+            self.assertIsNotNone(deny.search(path), path)
+        self.assertEqual(2, snippet.count("JLWA-MANAGED-DOWNLOAD"))
+        self.assertNotIn("proxy_pass", snippet)
+        self.assertIn('return 403;', snippet)
+
+    def test_image_allowlist_migration_requires_non_overlapping_same_mount(self):
+        for bad in ("", "/d/storage/private/", "/d/storage/private/sub/",
+                    "/d/storage/", "/d/other/图片/", "/p/storage/图片/",
+                    "/d/storage/图片%2f/", "/d/storage/图片/../private/"):
+            with self.assertRaises(ValueError, msg=bad):
+                mod.validate_public_images(bad, SETTINGS)
+        self.assertEqual("/d/storage/图片/", mod.validate_public_images("/d/storage/图片/", SETTINGS))
+
+    def test_image_allowlist_migration_preserves_history_and_rollback(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            wp_file, files_file = directory / "wp.conf", directory / "files.conf"
+            original_wp, original_files = WP_VHOST, OPENLIST_VHOST
+            config = dict(SETTINGS, wordpress_vhost=str(wp_file), openlist_vhost=str(files_file))
+            protected_wp = mod.transform(original_wp, "wp", config)
+            protected_files = mod.transform(original_files, "openlist", config)
+            wp_file.write_text(protected_wp)
+            files_file.write_text(protected_files)
+            state_dir = directory / "state"
+            state_dir.mkdir()
+            (state_dir / "lock").write_text("")
+            wp_back, files_back = directory / "wp.back", directory / "files.back"
+            wp_back.write_text(original_wp)
+            files_back.write_text(original_files)
+            state = {
+                "phase": "protected", "confirmed": True,
+                "backups": {"wp": str(wp_back), "openlist": str(files_back)},
+                "after": {"wp": mod.digest(protected_wp), "openlist": mod.digest(protected_files)},
+            }
+            state_file = state_dir / "state.json"
+            state_file.write_text(json.dumps(state))
+            manifest = directory / "approved.json"
+            manifest.write_text(json.dumps(config))
+            target = directory / "installed-helper"
+            target.write_text("old helper")
+            sudoers = directory / "sudoers"
+            sudoers.write_text("approved")
+            public = "/d/storage/图片/"
+            with (
+                patch.object(mod, "STATE", state_dir),
+                patch.object(mod, "CONFIG", manifest),
+                patch.object(mod, "TARGET", target),
+                patch.object(mod, "SUDOERS", sudoers),
+                patch.object(mod, "read_manifest", side_effect=lambda: json.loads(manifest.read_text())),
+                patch.object(mod, "secure_file", return_value=None),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch.object(mod, "run_nginx") as nginx,
+            ):
+                preview = SimpleNamespace(op="preview-images-only", public_images=public)
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    mod.migrate_public_images(preview)
+                self.assertIn("Read-only preview", out.getvalue())
+                self.assertEqual(protected_files, files_file.read_text())
+                self.assertEqual("old helper", target.read_text())
+                self.assertEqual(state, json.loads(state_file.read_text()))
+                self.assertEqual(1, nginx.call_count)
+                apply = SimpleNamespace(op="upgrade-images-only", public_images=public)
+                mod.migrate_public_images(apply)
+                newconf = json.loads(manifest.read_text())
+                self.assertEqual("images_only", newconf["public_access_policy"])
+                self.assertEqual(public, newconf["public_images"])
+                self.assertIn("images_only", target.read_text())
+                final = files_file.read_text()
+                self.assertIn('if ($uri ~ ', final)
+                self.assertNotIn("location ^~ /d/storage/private/", final)
+                newest = json.loads(state_file.read_text())
+                self.assertEqual(state["backups"], newest["backups"])
+                self.assertEqual("protected", newest["phase"])
+                self.assertTrue(newest["confirmed"])
+                self.assertEqual(mod.digest(final), newest["after"]["openlist"])
+                self.assertEqual(state["after"]["wp"], newest["after"]["wp"])
+                self.assertEqual(protected_wp, wp_file.read_text())
+                nginx.reset_mock()
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    mod.migrate_public_images(apply)
+                self.assertIn("already installed", out.getvalue())
+                nginx.assert_not_called()
+                # Image-only rollback keeps the original paid-directory deny
+                # and the paid-user WordPress internal delivery intact.
+                mod.rollback_public_images()
+                partially_reverted = files_file.read_text()
+                self.assertIn("location ^~ /d/storage/private/ { return 403; }", partially_reverted)
+                self.assertIn("location ^~ /p/storage/private/ { return 403; }", partially_reverted)
+                self.assertEqual(protected_wp, wp_file.read_text())
+                self.assertEqual(state["backups"], json.loads(state_file.read_text())["backups"])
+                self.assertEqual("paid_only", json.loads(manifest.read_text())["public_access_policy"])
+                # One-time migration can be re-applied without losing the
+                # original pre-install backup or a confirmed paid purchase.
+                mod.migrate_public_images(apply)
+                final_newconf = json.loads(manifest.read_text())
+                self.assertEqual("images_only", final_newconf["public_access_policy"])
+                newest = json.loads(state_file.read_text())
+                self.assertEqual(state["backups"], newest["backups"])
+                mod.rollback(final_newconf, newest)
+                self.assertEqual(original_wp, wp_file.read_text())
+                self.assertEqual(original_files, files_file.read_text())
+                self.assertEqual("rolled_back", json.loads(state_file.read_text())["phase"])
+
+    def test_image_only_nginx_check_failure_restores_every_root_owned_artifact(self):
+        with tempfile.TemporaryDirectory() as root:
+            d = Path(root)
+            wp, files = d / "wp.conf", d / "files.conf"
+            config = dict(SETTINGS, wordpress_vhost=str(wp), openlist_vhost=str(files))
+            wp_body = mod.transform(WP_VHOST, "wp", config)
+            files_body = mod.transform(OPENLIST_VHOST, "openlist", config)
+            wp.write_text(wp_body)
+            files.write_text(files_body)
+            state_dir = d / "state"
+            state_dir.mkdir()
+            (state_dir / "lock").write_text("")
+            original_wp, original_files = d / "wp.back", d / "files.back"
+            original_wp.write_text(WP_VHOST)
+            original_files.write_text(OPENLIST_VHOST)
+            state = {
+                "phase": "protected", "confirmed": True,
+                "backups": {"wp": str(original_wp), "openlist": str(original_files)},
+                "after": {"wp": mod.digest(wp_body), "openlist": mod.digest(files_body)},
+            }
+            state_text = json.dumps(state)
+            (state_dir / "state.json").write_text(state_text)
+            manifest, target, sudoers = d / "manifest", d / "helper", d / "sudoers"
+            manifest.write_text(json.dumps(config))
+            target.write_text("pinned OLD helper\n")
+            sudoers.write_text("approved\n")
+            original_manifest = manifest.read_text()
+            original_target = target.read_text()
+            with (
+                patch.object(mod, "STATE", state_dir),
+                patch.object(mod, "CONFIG", manifest),
+                patch.object(mod, "TARGET", target),
+                patch.object(mod, "SUDOERS", sudoers),
+                patch.object(mod, "read_manifest", side_effect=lambda: json.loads(manifest.read_text())),
+                patch.object(mod, "secure_file", return_value=None),
+                patch.object(mod.os, "geteuid", return_value=0),
+                patch.object(mod, "run_nginx", side_effect=[
+                    None, ValueError("simulated invalid nginx rule"), None, None,
+                ]),
+            ):
+                with self.assertRaisesRegex(ValueError, "simulated invalid"):
+                    mod.migrate_public_images(SimpleNamespace(
+                        op="upgrade-images-only", public_images="/d/storage/图片/",
+                    ))
+            self.assertEqual(files_body, files.read_text())
+            self.assertEqual(wp_body, wp.read_text())
+            self.assertEqual(original_target, target.read_text())
+            self.assertEqual(original_manifest, manifest.read_text())
+            self.assertEqual(state_text, (state_dir / "state.json").read_text())
+            self.assertEqual(WP_VHOST, original_wp.read_text())
+            self.assertEqual(OPENLIST_VHOST, original_files.read_text())
+
+    def test_image_allowlist_edited_vhost_refuses_migration_without_writes(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            source = directory / "files.conf"
+            config = dict(SETTINGS, openlist_vhost=str(source))
+            original = mod.transform(OPENLIST_VHOST, "openlist", config)
+            source.write_text(original.replace("return 403;", "return 200;", 1))
+            with self.assertRaisesRegex(ValueError, "existing paid-only managed block differs"):
+                mod.images_only_proposal(source.read_text(), config, "/d/storage/图片/")
+
     def test_no_real_host_or_IP_hardcoded(self):
         code = source.read_text()
         for needle in ("private-host.invalid", "unexpected.example.net", "198.51.100.9"):

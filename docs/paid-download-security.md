@@ -28,6 +28,21 @@
 
 此外，自动安装要求 OpenList 的宿主机端口可通过 127.0.0.1 访问，并且不允许监听 0.0.0.0 等公网地址。如果安全检查拒绝端口映射，需先调整 Docker/宝塔绑定并确认文件数据正常，再重新执行。
 
+## 可选：OpenList 公网文件只开放一个图片目录（v2.7.3 起）
+
+默认方案只封锁指定的付费目录；如果希望未来新增的所有文件夹也一律不能通过公网下载，可启用**图片白名单**：在公开文件路由 /d/ 和 /p/ 下默认返回 403，除管理员单独声明的图片目录外全部禁止。
+
+白名单只约束 /d/、/p/，不会自动封锁 OpenList 后台主页、需要认证的 API 或 WebDAV。若要限制这些接口，需要另外规划，以免影响原有管理员或采集程序。
+
+已完成 protected 部署的站点依次操作：
+
+1. 到“下载页美化 → 交付高级设置”保存“唯一公开图片目录”，例如 /d/storage/public-images/；路径必须位于已授权付费目录的同一挂载且不能互相包含。
+2. 到“Nginx 自动部署”复制只读预览命令 preview-images-only，使用 root 执行，核对差异。此前的首次 install-auto、prepare、confirm、protect 不需要重新执行。
+3. 预览正确后再执行 upgrade-images-only 命令。程序先核对当前已保护状态、已购确认、root 管理文件和历史 SHA 及原备份，应用规则并执行 nginx -t + reload；失败时尝试恢复全部之前文件。
+4. 刷新 WordPress 后台确认已启用图片白名单。分别验证真实图片文件可访问、任意其它 /d 和 /p 文件路径返回 403、已购买 ZIP 仍完整下载、原有 API/WebDAV 仍需认证。
+
+升级后的**专用** rollback-images-only 命令只撤销图片白名单并恢复原有付费目录封锁，保留 WordPress 私有代理与历史备份；不要使用通用的“恢复本次配置备份”替代它。
+
 ## 完成内部代理后 Chrome 提示重复 Content-Disposition？
 
 若已执行 prepare、随后打开已购下载链接出现 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION，通常是 PHP 与 OpenList 最终文件响应在 Nginx 内部代理中同时输出了 Content-Disposition。从 **v2.7.2** 起，九流 WP 助手不再抢先发送此字段，并清除 PHP/子比可能预设的同名头，交由 OpenList 的实际文件响应提供文件名。
