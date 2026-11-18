@@ -99,4 +99,44 @@ final class MediaDomainAdapterTest extends TestCase {
         $url = 'https://origin.example.com/wp-content/themes/zibll/css/font-awesome.min.css';
         $this->assertSame( $url, $this->adapter->rewrite_asset_url( $url ) );
     }
+
+    public function test_canonical_home_and_siteurl_are_never_overridden(): void {
+        // Even a whitelisted alternate entry must not become the licensed site.
+        $this->assertSame( 'https://origin.example.com', get_option( 'home' ) );
+        $this->assertSame( 'https://origin.example.com', get_option( 'siteurl' ) );
+        $this->assertSame( 'existing', $this->adapter->filter_pre_option_home( 'existing' ) );
+        $this->assertSame( 'existing', $this->adapter->filter_pre_option_siteurl( 'existing' ) );
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
+        $this->assertFalse( $this->adapter->filter_pre_option_siteurl( false ) );
+
+        $source = file_get_contents( dirname( __DIR__ ) . '/features/relative-media-urls/includes/class-jrmu-domain-adapter.php' );
+        $this->assertStringNotContainsString( "add_filter( 'pre_option_home'", $source );
+        $this->assertStringNotContainsString( "add_filter( 'pre_option_siteurl'", $source );
+        // Static assets remain independently configurable.
+        $this->assertSame(
+            'https://mirror.example.com/wp-content/themes/zibll/css/main.css',
+            $this->adapter->rewrite_asset_url( 'https://origin.example.com/wp-content/themes/zibll/css/main.css' )
+        );
+    }
+
+    public function test_sensitive_zibll_auth_ajax_and_payment_paths_bypass_even_when_exclusions_are_disabled(): void {
+        $options = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $options['domain_exclude_login'] = 0;
+        $options['domain_exclude_admin'] = 0;
+        $options['domain_skip_system_endpoints'] = 0;
+        $css = 'https://origin.example.com/wp-content/themes/zibll/css/main.css';
+        foreach ( array(
+            '/user-sign', '/user/login', '/user/register/', '/user/forgot',
+            '/wp-login.php', '/wp-admin/', '/wp-admin/admin-ajax.php?action=zibpay',
+            '/pay-download/?post=42&key=secret', '/checkout/', '/zibpay/',
+            '/wp-json/wp/v2/posts', '/?rest_route=/wp/v2/posts',
+        ) as $path ) {
+            $_SERVER['REQUEST_URI'] = $path;
+            $this->assertFalse( $this->adapter->should_adapt_current_request(), $path );
+            $this->assertSame( $css, $this->adapter->rewrite_asset_url( $css ), $path );
+        }
+        $_SERVER['REQUEST_URI'] = '/regular-article';
+        $this->assertTrue( $this->adapter->should_adapt_current_request() );
+    }
+
 }
