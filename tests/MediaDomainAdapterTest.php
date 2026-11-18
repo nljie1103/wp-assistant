@@ -139,4 +139,26 @@ final class MediaDomainAdapterTest extends TestCase {
         $this->assertTrue( $this->adapter->should_adapt_current_request() );
     }
 
+
+    public function test_sensitive_destination_links_are_never_rewritten_on_public_pages(): void {
+        $_SERVER['REQUEST_URI'] = '/ordinary-post';
+        $options = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $options['domain_rewrite_frontend_links'] = 1;
+        foreach ( array(
+            'https://origin.example.com/user-sign',
+            'https://origin.example.com/wp-login.php?action=login',
+            'https://origin.example.com/pay-download/?post=123&key=opaque',
+            'https://origin.example.com/order/2026',
+            'https://origin.example.com/checkout/',
+            'https://origin.example.com/callback/?token=opaque',
+            'https://origin.example.com/post/42?redirect_to=%2Fuser-sign',
+        ) as $url ) {
+            $this->assertSame( $url, $this->adapter->rewrite_url( $url ), $url );
+        }
+        $this->assertSame(
+            'https://mirror.example.com/normal-post/',
+            $this->adapter->rewrite_url( 'https://origin.example.com/normal-post/' )
+        );
+    }
+
 }
