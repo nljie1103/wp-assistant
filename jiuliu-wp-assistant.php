@@ -2,8 +2,8 @@
 /**
  * Plugin Name: 九流WP助手
  * Plugin URI: https://github.com/nljie1103/wp-assistant
- * Description: 一个统一、完整的 WordPress 增强插件，集成页面美化、反调试保护、沉浸式预加载、媒体与多域名链接管理、AI 文章摘要、子比下载页美化与可配置客服链接。
- * Version: 3.0.6
+ * Description: 一个统一的 WordPress 增强插件，提供页面特效、反调试、预加载、媒体多域名适配、AI 摘要、子比原生下载页皮肤与可配置客服，并保留最小必要私有安全交付。
+ * Version: 3.0.7
  * Author: 九流
  * Author URI: https://www.jiuliu.org
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JLWA_VERSION', '3.0.6' );
+define( 'JLWA_VERSION', '3.0.7' );
 define( 'JLWA_PLUGIN_FILE', __FILE__ );
 define( 'JLWA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JLWA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

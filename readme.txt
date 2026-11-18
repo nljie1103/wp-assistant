@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.6
+Stable tag: 3.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
-6. 下载页美化：六种子比资源页；站长可分别设置客服与社群链接、按钮文本、标题和说明；无配置时不显示作者联系方式。未购买者跳回文章；可选 OpenList 私有交付需配套 Nginx 内部通道和公网封锁。
+6. 下载页美化：子比原生下载页上叠加六种视觉皮肤和站长自定义客服／社群，不替换主题模板或原生下载按钮。未购下载页安全门禁与明确启用的 OpenList 私有交付继续保留；私有源站必须由 Nginx 封锁。
 
 == Installation ==
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.7 =
+* 子比原生优先：撤销对 WordPress home/siteurl 的全局 pre_option 覆盖；原生授权身份不再因前台访问别名域名变化。
+* 后台、AJAX、REST、/user-sign、/pay-download 及原生订单和支付入口不参与多域名转换。前台链接改写新增敏感目标及 nonce、token、key 等参数保护。
+* 六种下载页外观改为原生子比下载页面上的 CSS 视觉皮肤，客服面板只追加自有 DOM，不替换整页 PHP 模板，不修改原生支付和下载按钮。旧版完整页面布局的细节可能变化。
+* OpenList 私有交付未启用时不再注册子比文件交付钩子；启用时继续仅处理配置匹配的私有文件。未购访问保护与现有 Nginx/OpenList 公网封锁不减弱。
+* 新增多域名、登录支付路径、原生展示及私有交付的回归测试和上线验收文档。
+
 
 = 3.0.6 =
 * 下载页客服／社群联系方式由站长自行配置，支持自定义链接、按钮文字及区块文案；六种皮肤共享设置，不再向访客展示写死的 Telegram 地址。

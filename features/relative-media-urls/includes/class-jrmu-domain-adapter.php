@@ -45,8 +45,9 @@ class JRMU_Domain_Adapter {
 			return;
 		}
 
-		add_filter( 'pre_option_home', array( $this, 'filter_pre_option_home' ), 10, 3 );
-		add_filter( 'pre_option_siteurl', array( $this, 'filter_pre_option_siteurl' ), 10, 3 );
+		// Never override WordPress's home/siteurl options. Zibll and other themes
+		// may bind a license or auth callback to that canonical site identity.
+		// Multi-domain display is handled only at selected front-end URL/asset hooks.
 
 		// This changes CSS/JS/font origins beyond normal site URL adaptation.
 		// Keep it explicitly opt-in, even for existing multi-domain installations.
@@ -67,18 +68,14 @@ class JRMU_Domain_Adapter {
 		}
 	}
 
-	/** 动态 home。 */
+	/** Compatibility shim: reads of canonical WordPress options stay untouched. */
 	public function filter_pre_option_home( $pre_option = false, $option = 'home', $default = false ) {
-		return $this->get_dynamic_base_url_or_false();
+		return $pre_option;
 	}
 
-	/** 动态 siteurl。 */
+	/** Compatibility shim: never impersonate another licensed siteurl. */
 	public function filter_pre_option_siteurl( $pre_option = false, $option = 'siteurl', $default = false ) {
-		$options = JRMU_Settings::get_options();
-		if ( empty( $options['domain_dynamic_siteurl'] ) ) {
-			return false;
-		}
-		return $this->get_dynamic_base_url_or_false();
+		return $pre_option;
 	}
 
 	/**
@@ -103,6 +100,12 @@ class JRMU_Domain_Adapter {
 	public function should_adapt_current_request() {
 		$options = JRMU_Settings::get_options();
 		if ( empty( $options['domain_adaptation_enabled'] ) ) {
+			return false;
+		}
+		// The following are mandatory compatibility boundaries, not optional
+		// administrator preferences. No request used by auth, payments, REST or
+		// AJAX may have even its asset URLs rewritten.
+		if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || wp_doing_cron() || $this->is_sensitive_request() ) {
 			return false;
 		}
 		if ( ! empty( $options['domain_exclude_admin'] ) && is_admin() ) {
@@ -160,7 +163,7 @@ class JRMU_Domain_Adapter {
 			return $url;
 		}
 
-		if ( ! $this->is_source_host_allowed( $parts['host'] ) ) {
+		if ( ! $this->is_source_host_allowed( $parts['host'] ) || $this->is_sensitive_link( $url ) ) {
 			return $url;
 		}
 
@@ -425,11 +428,43 @@ class JRMU_Domain_Adapter {
 		return $samples;
 	}
 
-	/** 登录页请求。 */
+	/** Sensitive native WordPress/Zibll endpoints are always passed through. */
+	private function is_sensitive_request() {
+		$uri = strtolower( (string) ( $_SERVER['REQUEST_URI'] ?? '' ) );
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
+		if ( preg_match( '~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|checkout|zibpay)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+			return true;
+		}
+		if ( preg_match( '~(?:^|/)(?:wp-json|api|rest)(?:/|$)~i', $path ) ) {
+			return true;
+		}
+		if ( false !== strpos( $uri, 'rest_route=' ) || false !== strpos( $uri, 'admin-ajax.php' ) ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Never rewrite a destination URL carrying login, payment, download or
+	 * authorization state, even when it appears in otherwise public HTML.
+	 */
+	private function is_sensitive_link( $url ) {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) ) {
+			return true;
+		}
+		$path = strtolower( (string) ( $parts['path'] ?? '' ) );
+		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+			return true;
+		}
+		$query = strtolower( (string) ( $parts['query'] ?? '' ) );
+		return (bool) preg_match( '~(?:^|&)(?:action|_wpnonce|nonce|state|token|key|code|order|order_id|payment|zibpay|redirect_to)=~i', $query );
+	}
+
+	/** Login handling includes Zibll's /user-sign virtual route. */
 	private function is_login_request() {
-		$script = isset( $_SERVER['SCRIPT_NAME'] ) ? (string) wp_unslash( $_SERVER['SCRIPT_NAME'] ) : '';
-		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
-		return false !== strpos( $script, 'wp-login.php' ) || false !== strpos( $uri, 'wp-login.php' );
+		$script = isset( $_SERVER['SCRIPT_NAME'] ) ? strtolower( (string) wp_unslash( $_SERVER['SCRIPT_NAME'] ) ) : '';
+		return false !== strpos( $script, 'wp-login.php' ) || $this->is_sensitive_request();
 	}
 
 	/** 系统端点。 */

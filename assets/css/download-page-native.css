@@ -1,0 +1,139 @@
+/**
+ * Zibll native download page visual skins.
+ * Additive only: never hide, move, replace or intercept native payment/download UI.
+ * All selectors are scoped to an actual paid-download page's body class.
+ */
+body.jlwa-native-download {
+  --jlwa-native-accent: #6759e8;
+  --jlwa-native-accent-soft: rgba(103,89,232,.12);
+  --jlwa-native-ink: #1e2542;
+  --jlwa-native-surface: #ffffff;
+  --jlwa-native-border: rgba(103,89,232,.18);
+  --jlwa-native-glow: rgba(103,89,232,.09);
+}
+body.jlwa-native-business {
+  --jlwa-native-accent:#235f8b; --jlwa-native-accent-soft:rgba(35,95,139,.08);
+  --jlwa-native-ink:#263243; --jlwa-native-border:rgba(35,95,139,.16);
+  --jlwa-native-glow:rgba(35,95,139,.04);
+}
+body.jlwa-native-vip {
+  --jlwa-native-accent:#ab8428; --jlwa-native-accent-soft:rgba(171,132,40,.13);
+  --jlwa-native-ink:#343026; --jlwa-native-border:rgba(171,132,40,.23);
+  --jlwa-native-glow:rgba(171,132,40,.08);
+}
+body.jlwa-native-aurora {
+  --jlwa-native-accent:#008e91; --jlwa-native-accent-soft:rgba(0,142,145,.12);
+  --jlwa-native-ink:#173a41; --jlwa-native-border:rgba(0,142,145,.19);
+  --jlwa-native-glow:rgba(0,142,145,.08);
+}
+body.jlwa-native-editorial {
+  --jlwa-native-accent:#9c5d48; --jlwa-native-accent-soft:rgba(156,93,72,.08);
+  --jlwa-native-ink:#3f332d; --jlwa-native-surface:#fffcf7;
+  --jlwa-native-border:rgba(156,93,72,.18); --jlwa-native-glow:rgba(156,93,72,.05);
+}
+body.jlwa-native-midnight {
+  --jlwa-native-accent:#ba9c5a; --jlwa-native-accent-soft:rgba(186,156,90,.14);
+  --jlwa-native-ink:#f0e7d6; --jlwa-native-surface:#181e29;
+  --jlwa-native-border:rgba(186,156,90,.22); --jlwa-native-glow:rgba(30,30,40,.18);
+}
+
+/* Native download.php renders .page-article and .pay-box itself.
+ * Appearance changes only; their DOM, href, form handlers and capabilities stay native.
+ */
+body.jlwa-native-download .page-article {
+  border:1px solid var(--jlwa-native-border);
+  border-radius:18px;
+  box-shadow:0 15px 44px var(--jlwa-native-glow);
+  background:var(--jlwa-native-surface);
+  color:var(--jlwa-native-ink);
+  transition:box-shadow .2s ease;
+}
+body.jlwa-native-download .page-article .pay-box {
+  border:1px solid var(--jlwa-native-border);
+  border-radius:14px;
+  padding:clamp(14px,2.4vw,24px);
+  background:var(--jlwa-native-accent-soft);
+  margin-block:14px 24px;
+}
+body.jlwa-native-download .page-article :is(h1,h2,h3) {
+  text-wrap:balance;
+}
+body.jlwa-native-download .page-article :is(a.but,button.but,.but) {
+  border-radius:11px;
+  transition:box-shadow .18s ease,transform .18s ease;
+}
+body.jlwa-native-download .page-article :is(a.but,button.but):hover {
+  transform:translateY(-1px);
+  box-shadow:0 5px 15px var(--jlwa-native-glow);
+}
+body.jlwa-native-midnight .page-article a:not(.but) {
+  color:var(--jlwa-native-accent);
+}
+body.jlwa-native-midnight .page-article :is(.pay-box,.alert) {
+  color:var(--jlwa-native-ink);
+}
+
+/* The only added content is owned by WP Assistant, and is moved into the
+ * native article container (without changing or reparenting Zibll nodes).
+ */
+body.jlwa-native-download .jlwa-native-support-wrap {
+  width:100%;
+  max-width:1100px;
+  margin:22px auto 28px;
+  padding:0 12px;
+  box-sizing:border-box;
+}
+body.jlwa-native-download .page-article > .jlwa-native-support-wrap {
+  max-width:none;
+  padding:0;
+  margin:30px 0 6px;
+}
+body.jlwa-native-download .jlwa-native-support-wrap .jld-help-panel {
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:12px 18px;
+  align-items:center;
+  padding:clamp(18px,3vw,28px);
+  border:1px solid var(--jlwa-native-border);
+  border-radius:16px;
+  background:linear-gradient(135deg,var(--jlwa-native-accent-soft),var(--jlwa-native-surface));
+  color:var(--jlwa-native-ink);
+}
+body.jlwa-native-download .jld-help-icon {
+  display:grid;place-items:center;width:46px;height:46px;
+  border-radius:14px;background:var(--jlwa-native-accent-soft);
+  color:var(--jlwa-native-accent);font-size:21px;
+}
+body.jlwa-native-download .jld-panel-kicker {
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--jlwa-native-accent);
+}
+body.jlwa-native-download .jld-help-panel h3 {
+  margin:2px 0 6px;font-size:20px;font-weight:700;color:inherit;
+}
+body.jlwa-native-download .jld-help-panel p {margin:0;opacity:.75;line-height:1.7;}
+body.jlwa-native-download .jld-help-actions {
+  grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:10px;
+}
+body.jlwa-native-download .jld-help-actions a {
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 17px;border-radius:10px;
+  border:1px solid var(--jlwa-native-border);
+  background:var(--jlwa-native-surface);
+  color:var(--jlwa-native-accent);text-decoration:none;
+  font-weight:600;transition:background .2s ease,border-color .2s ease;
+}
+body.jlwa-native-download .jld-help-actions a:hover,
+body.jlwa-native-download .jld-help-actions a:focus-visible {
+  background:var(--jlwa-native-accent-soft);
+  border-color:var(--jlwa-native-accent);
+}
+@media (max-width:640px) {
+  body.jlwa-native-download .page-article {border-radius:12px;}
+  body.jlwa-native-download .jlwa-native-support-wrap .jld-help-panel {grid-template-columns:1fr;}
+  body.jlwa-native-download .jld-help-actions a {flex:1;justify-content:center;min-width:140px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  body.jlwa-native-download .page-article :is(a.but,button.but,.but),
+  body.jlwa-native-download .jld-help-actions a {transition:none;transform:none;}
+}

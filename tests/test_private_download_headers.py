@@ -27,6 +27,7 @@ class PrivateDownloadHeadersHTTPTest(unittest.TestCase):
             router.write_text(
                 "<?php\n"
                 "define('ABSPATH', '/');\n"
+                "function get_option($key, $default = false) { return $default; }\n"
                 "function add_filter(...$args) {}\n"
                 "function add_action(...$args) {}\n"
                 "function status_header($status) { http_response_code($status); }\n"
