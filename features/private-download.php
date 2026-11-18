@@ -232,6 +232,15 @@ class JLWA_Private_Download {
     /** Only count new paid-link activations; range requests to a ticket are not counted. */
     public static function rate_permits( $post_id, $settings ) {
         $user = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+        // Anonymous Zibll buyers may pay with guest checkout. They all have
+        // WordPress user ID 0; one shared rate-limit bucket would let any
+        // guest exhaust the allowance for EVERY other legitimate guest buyer
+        // of the same resource. Never conflate unrelated paid guest orders.
+        // The real Zibll purchase gate and protected Nginx source still apply.
+        // Skip per-user throttling unless an authenticated user ID exists.
+        if ( $user <= 0 ) {
+            return true;
+        }
         $key = 'jlwa_rl_' . hash( 'sha256', $user . ':' . (int) $post_id );
         $count = (int) get_transient( $key );
         if ( $count >= (int) $settings['rate_limit'] ) { return false; }
