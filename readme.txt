@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.8
+Stable tag: 3.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.9 =
+* 六种经典资源下载页的品牌文字自动读取本站 WordPress 网站名称，移除固定站长名称与默认封面署名。
+* 可在下载页模板设置会员权益页面 URL，不再向其他站长强行提供固定 /join-vip/ 路径；已有旧会员页面仍可自动兼容。
+* OpenList 站内 Nginx 内部中转与可选独立域名短期票据中转保持原有实现；新增真实 PHP HTTP 票据流测试及错误 Host 拒绝验证，原有安全封锁配置不修改。
+* 升级不重置私有交付、Nginx 及源站路径，仍需已购测试用户进行真实文件字节交付验收。
+
 
 = 3.0.8 =
 * 恢复 v3.0.6 的六款完整经典下载页及原来布局、封面策略、资源区块和客服；“经典完整页面”作为兼容默认，新增“子比原生皮肤”作为可选模式。
