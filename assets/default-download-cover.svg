@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
-  <title id="title">九流网络资源下载默认封面</title>
+  <title id="title">网站资源下载默认封面</title>
   <desc id="desc">蓝紫渐变背景上的云端下载与文件图标</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#172454"/><stop offset=".52" stop-color="#334d9a"/><stop offset="1" stop-color="#7552d6"/></linearGradient>
@@ -14,5 +14,5 @@
     <path d="M600 330v250m0 0-86-86m86 86 86-86"/>
   </g>
   <text x="600" y="735" text-anchor="middle" fill="#fff" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="58" font-weight="700" letter-spacing="4">资源下载中心</text>
-  <text x="600" y="796" text-anchor="middle" fill="#cbd8ff" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" letter-spacing="8">JIULIU NETWORK</text>
+  <text x="600" y="796" text-anchor="middle" fill="#cbd8ff" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" letter-spacing="8">DIGITAL RESOURCES</text>
 </svg>

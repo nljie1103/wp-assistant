@@ -1,10 +1,10 @@
 <?php
 /**
  * Template name: Zibll-资源下载（简洁商务版）
- * Description: 九流网络定制独立下载页（真实动态数据、深色模式自适应、横竖封面智能适配） - 简洁商务版（随主插件统一发布）
+ * Description: 通用 WordPress 资源下载页（真实动态数据、深色模式自适应、横竖封面智能适配） - 简洁商务版（随主插件统一发布）
  *
  * 使用说明：
- * 1. 可由九流WP助手加载，也可单独替换子比主题 pages/download.php；
+ * 1. 由九流 WP 助手加载，兼容子比已购资源下载页面；
  * 2. 仅改造显示层，保留 zibpay 原有权限验证与下载逻辑；
  * 4. 自动跟随子比 body.dark-theme，无额外 JavaScript 监听与轮询；
  * 3. 推荐放入子主题同路径 pages/download.php，避免主题更新覆盖。
@@ -31,7 +31,7 @@ if (!$source_post || 'publish' !== $source_post->post_status || empty($pay_meta[
 
 
 /**
- * ===== 九流网络资源下载页 v4.2：真实动态数据与状态校验辅助函数 =====
+ * ===== 通用下载页：真实动态数据与状态校验辅助函数 =====
  * 这些函数只读取 WordPress、子比主题与当前商品已有数据，不访问第三方接口。
  */
 if (!function_exists('jldv4_trim_text')) {
@@ -235,7 +235,16 @@ $pay_details_raw = !empty($pay_meta['pay_details']) ? $pay_meta['pay_details'] :
 $pay_extra_hide = !empty($pay_meta['pay_extra_hide']) ? $pay_meta['pay_extra_hide'] : '';
 $source_url = get_permalink($post_id);
 $purchase_url = $source_url . '#posts-pay';
-$membership_url = home_url('/join-vip/');
+// Membership link is site-specific; use an administrator-configured link
+// or an existing legacy page. Do not send other sites to a fixed slug.
+$membership_url = class_exists('JLWA_Download_Page_Feature')
+    ? JLWA_Download_Page_Feature::membership_url()
+    : '';
+// Site title is always read from this WordPress installation.
+$jld_site_name = trim(wp_strip_all_tags((string) get_bloginfo('name')));
+if ('' === $jld_site_name) {
+    $jld_site_name = '本站';
+}
 /**
  * ===== 左上角资源封面：无特色图片时的回退模式 =====
  *
@@ -738,7 +747,7 @@ $file_formats = $download_intel['formats'];
 $secret_items = $download_intel['secrets'];
 $storage_label = $download_intel['storage_label'];
 $resource_excerpt = jldv4_get_resource_excerpt($post_id, 165);
-$pay_doc = $pay_doc_raw ? $pay_doc_raw : '<p>' . esc_html($resource_excerpt ? $resource_excerpt : '该资源已接入九流网络站内交付系统，购买状态与下载权限均由系统自动核验。') . '</p>';
+$pay_doc = $pay_doc_raw ? $pay_doc_raw : '<p>' . esc_html($resource_excerpt ? $resource_excerpt : '该资源由本站提供，购买状态与下载权限由网站系统自动核验。') . '</p>';
 $format_text = $file_formats ? implode(' / ', $file_formats) : '数字资源';
 $pay_details = $pay_details_raw ? $pay_details_raw : '<p>当前资源共 ' . esc_html((string) max(1, $download_count)) . ' 条下载线路，识别到的文件格式为 ' . esc_html($format_text) . '。下载按钮仅显示商品后台真实配置的线路。</p>';
 $resource_attributes = jldv4_get_resource_attributes($pay_meta, $file_formats, $download_count, $modified_date, $storage_label);
@@ -993,7 +1002,7 @@ if ($widgets_register_container && in_array('top_fluid', $widgets_register_conta
 
 
 
-/* ===== 九流网络：跟随子比主题深色模式（v2） =====
+/* ===== 根据子比主题深色模式自动适配 =====
  * 子比切换时会在 body 上增删 .dark-theme，并使用 View Transition API。
  * 本页只使用 CSS 跟随，不注册额外监听器，不轮询、不重复执行 JavaScript。
  */
@@ -1148,7 +1157,7 @@ body.fps-accelerat .jld-page .jld-cover-mark{
                                 </div>
 
                                 <div class="jld-hero-copy">
-                                    <div class="jld-eyebrow"><span></span> 九流网络 · 资源下载中心</div>
+                                    <div class="jld-eyebrow"><span></span> <?php echo esc_html($jld_site_name); ?> · 资源下载中心</div>
                                     <h1><?php echo esc_html($pay_title); ?></h1>
                                     <p>购买状态与下载权限由网站系统自动核验，支付成功后无需人工开通。</p>
                                     <div class="jld-meta-list">
@@ -1158,7 +1167,7 @@ body.fps-accelerat .jld-page .jld-cover-mark{
                                     </div>
                                     <div class="jld-hero-actions">
                                         <a class="jld-button jld-button-primary" href="<?php echo esc_url($source_url); ?>"><i class="fa fa-file-text-o" aria-hidden="true"></i>查看原文章</a>
-                                        <a class="jld-button jld-button-ghost" href="<?php echo esc_url($membership_url); ?>"><i class="fa fa-diamond" aria-hidden="true"></i>会员权益</a>
+                                        <?php if ($membership_url) : ?><a class="jld-button jld-button-ghost" href="<?php echo esc_url($membership_url); ?>"><i class="fa fa-diamond" aria-hidden="true"></i>会员权益</a><?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1276,7 +1285,7 @@ body.fps-accelerat .jld-page .jld-cover-mark{
                                         <p>请返回原文章选择购买方式。网站内完成支付后，订单会自动到账并立即开放下载权限。</p>
                                         <div class="jld-locked-actions">
                                             <a class="jld-button jld-button-primary" href="<?php echo esc_url($purchase_url); ?>"><i class="fa fa-shopping-cart" aria-hidden="true"></i>返回文章购买</a>
-                                            <a class="jld-button jld-button-ghost" href="<?php echo esc_url($membership_url); ?>"><i class="fa fa-diamond" aria-hidden="true"></i>查看会员方案</a>
+                                            <?php if ($membership_url) : ?><a class="jld-button jld-button-ghost" href="<?php echo esc_url($membership_url); ?>"><i class="fa fa-diamond" aria-hidden="true"></i>查看会员方案</a><?php endif; ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
