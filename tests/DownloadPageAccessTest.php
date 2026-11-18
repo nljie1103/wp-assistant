@@ -626,6 +626,7 @@ final class DownloadPageAccessTest extends TestCase {
     public function test_native_skin_keeps_zibll_in_charge_of_the_download_template(): void {
         $options = JLWA_Download_Page_Feature::defaults();
         $options['enabled'] = 1;
+        $options['render_mode'] = 'native';
         $options['template'] = 'technology';
         $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
 
@@ -656,6 +657,7 @@ final class DownloadPageAccessTest extends TestCase {
     public function test_native_service_panel_only_adds_own_marked_markup(): void {
         $options = JLWA_Download_Page_Feature::defaults();
         $options['enabled'] = 1;
+        $options['render_mode'] = 'native';
         $options['template'] = 'midnight';
         $options['support_primary_url'] = 'https://example.test/help';
         $options['support_primary_label'] = '售后客服';
@@ -681,6 +683,91 @@ final class DownloadPageAccessTest extends TestCase {
         $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
         $this->assertTrue( JLWA_Private_Download::private_delivery_enabled() );
         $this->assertSame( 1, $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY]['private_enabled'] );
+    }
+
+
+    public function test_classic_full_layout_is_restored_by_default_without_early_exit(): void {
+        $this->assertSame( 'classic', JLWA_Download_Page_Feature::defaults()['render_mode'] );
+        $original = '/wordpress/theme/pages/download.php';
+        $this->assertSame( $original, $this->feature->choose_download_template( $original ) );
+
+        $options = JLWA_Download_Page_Feature::defaults();
+        $options['enabled'] = 1;
+        $options['template'] = 'business';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+        $this->assertSame( $original, $this->feature->choose_download_template( $original ) ); // Unpurchased.
+        $GLOBALS['jlwa_test_has_purchase'] = true;
+        foreach ( array(
+            'technology' => 'technology',
+            'business' => 'business',
+            'vip' => 'vip',
+            'aurora' => 'technology',
+            'editorial' => 'technology',
+            'midnight' => 'technology',
+        ) as $skin => $renderer ) {
+            $options['template'] = $skin;
+            $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+            $selected = $this->feature->choose_download_template( $original );
+            $this->assertSame(
+                dirname( __DIR__ ) . '/features/download-page-templates/' . $renderer . '.php',
+                $selected,
+                $skin
+            );
+            $this->assertFileExists( $selected );
+            // Classic mode cannot also inject native CSS/classes or duplicate support.
+            $this->assertSame( array( 'original' ), $this->feature->native_body_class( array( 'original' ) ) );
+            ob_start();
+            $this->feature->render_native_support();
+            $this->assertSame( '', ob_get_clean() );
+        }
+        $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page.php' );
+        $this->assertStringContainsString( "add_filter( 'template_include'", $source );
+        $this->assertStringNotContainsString( 'include $selected;', $source );
+    }
+
+    public function test_classic_and_native_modes_switch_without_disabling_download_security(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['enabled'] = 1;
+        $old['private_enabled'] = 1;
+        $old['private_hosts'] = 'files.example.test';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $old['support_primary_url'] = 'https://example.test/help';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+
+        $native = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'enabled' => 1,
+            'render_mode' => 'native',
+            'template' => 'aurora',
+        ) );
+        $this->assertSame( 'native', $native['render_mode'] );
+        $this->assertSame( 1, $native['private_enabled'] );
+        $this->assertSame( 'files.example.test', $native['private_hosts'] );
+        $this->assertSame( 'https://example.test/help', $native['support_primary_url'] );
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $native;
+        $GLOBALS['jlwa_test_has_purchase'] = true;
+        $this->assertSame( 'original-theme.php', $this->feature->choose_download_template( 'original-theme.php' ) );
+        $this->assertContains( 'jlwa-native-aurora', $this->feature->native_body_class( array() ) );
+
+        $classic = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'enabled' => 1,
+            'render_mode' => 'classic',
+            'template' => 'aurora',
+        ) );
+        $this->assertSame( 'classic', $classic['render_mode'] );
+        $this->assertSame( $native['private_hosts'], $classic['private_hosts'] );
+        $this->assertSame( $native['support_primary_url'], $classic['support_primary_url'] );
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $classic;
+        $this->assertStringContainsString(
+            '/download-page-templates/technology.php',
+            $this->feature->choose_download_template( 'original-theme.php' )
+        );
+        foreach ( array( 'technology', 'business', 'vip' ) as $file ) {
+            $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page-templates/' . $file . '.php' );
+            $this->assertStringContainsString( 'JLWA_Download_Page_Feature::options()', $source );
+            $this->assertStringContainsString( 'render_support_panel( $jlwa_download_options )', $source );
+        }
     }
 
 }
