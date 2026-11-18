@@ -286,7 +286,7 @@ if (!function_exists('jldv4_normalize_cover_url')) {
         }
 
         // 排除常见透明占位图，防止懒加载文章误把占位图当作封面。
-        if (preg_match('#(?:transparent|spacer|blank|loading)(?:[-_.][^/?#]*)?\.(?:gif|png|webp)(?:[?#]|$)#i', $url)) {
+        if (preg_match('~(?:transparent|spacer|blank|loading)(?:[-_.][^/?#]*)?\.(?:gif|png|webp)(?:[?#]|$)~i', $url)) {
             return '';
         }
 
