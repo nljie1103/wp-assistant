@@ -163,7 +163,7 @@ class JRMU_Domain_Adapter {
 			return $url;
 		}
 
-		if ( ! $this->is_source_host_allowed( $parts['host'] ) ) {
+		if ( ! $this->is_source_host_allowed( $parts['host'] ) || $this->is_sensitive_link( $url ) ) {
 			return $url;
 		}
 
@@ -442,6 +442,23 @@ class JRMU_Domain_Adapter {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Never rewrite a destination URL carrying login, payment, download or
+	 * authorization state, even when it appears in otherwise public HTML.
+	 */
+	private function is_sensitive_link( $url ) {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) ) {
+			return true;
+		}
+		$path = strtolower( (string) ( $parts['path'] ?? '' ) );
+		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+			return true;
+		}
+		$query = strtolower( (string) ( $parts['query'] ?? '' ) );
+		return (bool) preg_match( '~(?:^|&)(?:action|_wpnonce|nonce|state|token|key|code|order|order_id|payment|zibpay|redirect_to)=~i', $query );
 	}
 
 	/** Login handling includes Zibll's /user-sign virtual route. */
