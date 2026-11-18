@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.7
+Stable tag: 3.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
-6. 下载页美化：子比原生下载页上叠加六种视觉皮肤和站长自定义客服／社群，不替换主题模板或原生下载按钮。未购下载页安全门禁与明确启用的 OpenList 私有交付继续保留；私有源站必须由 Nginx 封锁。
+6. 下载页美化：恢复原版完整六款资源中心页面（默认经典模式），亦可切换不替换主题 HTML 的子比原生兼容皮肤；客服与群组可自行设置。未购下载页保护及明确启用的 OpenList 私有交付继续保留，私有源站必须由 Nginx 封锁。
 
 == Installation ==
 
@@ -39,6 +39,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.8 =
+* 恢复 v3.0.6 的六款完整经典下载页及原来布局、封面策略、资源区块和客服；“经典完整页面”作为兼容默认，新增“子比原生皮肤”作为可选模式。
+* 经典完整页面改由 WordPress template_include 正常加载，不再在 template_redirect 早期 include/exit；仅匹配指定且已购买的下载页，未购安全门禁不变。
+* 多域名全局动态 home/siteurl 作为高风险选项恢复，但单独新开关明确开启前绝不注册这些钩子。旧版保存过的 siteurl=1 不会触发重新启用；仍强制排除后台、子比 AJAX、REST、登录、支付、订单等敏感请求。
+* 视觉设置、客服配置与 OpenList/Nginx 私有交付设置互不覆盖，保留 PHP 7.4/8.3/8.4 及 JavaScript 回归测试。
+
 
 = 3.0.7 =
 * 子比原生优先：撤销对 WordPress home/siteurl 的全局 pre_option 覆盖；原生授权身份不再因前台访问别名域名变化。
