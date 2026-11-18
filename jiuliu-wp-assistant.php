@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 九流WP助手
  * Plugin URI: https://github.com/nljie1103/wp-assistant
- * Description: 一个统一、完整的 WordPress 增强插件，集成页面美化、反调试保护、沉浸式预加载、媒体与多域名链接管理、AI 文章摘要和子比下载页美化。
+ * Description: 一个统一、完整的 WordPress 增强插件，集成页面美化、反调试保护、沉浸式预加载、媒体与多域名链接管理、AI 文章摘要、子比下载页美化与可配置客服链接。
  * Version: 3.0.6
  * Author: 九流
  * Author URI: https://www.jiuliu.org
