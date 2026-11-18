@@ -37,6 +37,8 @@ class JLWA_Download_Page_Feature {
             'render_mode' => 'classic',
             'cover_mode' => 'auto',
             'default_image_url' => '',
+            // Optional membership page. No one site's /join-vip/ is a universal URL.
+            'membership_url' => '',
             // Public plugin: never ship one site's Telegram/customer-service links.
             'support_title' => '售前咨询与售后服务',
             'support_description' => '会员、订单、支付或资源下载遇到问题？请通过以下方式联系我们。',
@@ -74,7 +76,7 @@ class JLWA_Download_Page_Feature {
         $scope = isset( $input['jlwa_settings_scope'] ) ? (string) $input['jlwa_settings_scope'] : '';
         if ( in_array( $scope, array( 'templates', 'security', 'advanced' ), true ) ) {
             $previous = self::options();
-            $template_keys = array( 'enabled', 'template', 'render_mode', 'cover_mode', 'default_image_url', 'support_title', 'support_description', 'support_primary_url', 'support_primary_label', 'support_secondary_url', 'support_secondary_label' );
+            $template_keys = array( 'enabled', 'template', 'render_mode', 'cover_mode', 'default_image_url', 'membership_url', 'support_title', 'support_description', 'support_primary_url', 'support_primary_label', 'support_secondary_url', 'support_secondary_label' );
             $security_keys = array( 'private_enabled', 'private_hosts', 'private_source_prefix', 'private_internal_prefix' );
             $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'openlist_public_images', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
             $chosen = 'templates' === $scope ? $template_keys : ( 'security' === $scope ? $security_keys : $advanced_keys );
@@ -104,6 +106,7 @@ class JLWA_Download_Page_Feature {
                     'render_mode' => 'native' === ( $input['render_mode'] ?? '' ) ? 'native' : 'classic',
                     'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
                     'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
+                    'membership_url' => self::safe_membership_url( $input['membership_url'] ?? '' ),
                 ),
                 self::sanitize_support_fields( $input )
             );
@@ -125,7 +128,37 @@ class JLWA_Download_Page_Feature {
             'render_mode' => 'native' === ( $input['render_mode'] ?? '' ) ? 'native' : 'classic',
             'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
             'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
+            'membership_url' => self::safe_membership_url( $input['membership_url'] ?? '' ),
         ) + self::sanitize_support_fields( $input ) + JLWA_Private_Download::sanitized( $input );
+    }
+
+    /**
+     * Optional membership URL. Never assume that all WordPress sites have a
+     * /join-vip/ page: a real existing legacy page may be discovered, but
+     * otherwise the link is omitted rather than pointing at a broken route.
+     */
+    public static function safe_membership_url( $value ) {
+        if ( ! is_string( $value ) || ! preg_match( '~^https?://~i', trim( $value ) ) ) {
+            return '';
+        }
+        return esc_url_raw( trim( $value ), array( 'http', 'https' ) );
+    }
+
+    public static function membership_url( $options = array() ) {
+        $options = wp_parse_args( is_array( $options ) ? $options : array(), self::options() );
+        $configured = self::safe_membership_url( $options['membership_url'] ?? '' );
+        if ( '' !== $configured ) {
+            return $configured;
+        }
+        // Backward compatibility for existing sites that already published
+        // this page; it is not a universal default or automatically created.
+        if ( function_exists( 'get_page_by_path' ) ) {
+            $page = get_page_by_path( 'join-vip' );
+            if ( $page && 'publish' === ( $page->post_status ?? '' ) ) {
+                return esc_url_raw( get_permalink( $page->ID ), array( 'http', 'https' ) );
+            }
+        }
+        return '';
     }
 
     /** Allow only explicit external links / contact protocols (no javascript:, data: or relative URLs). */
@@ -470,6 +503,12 @@ class JLWA_Download_Page_Feature {
             </section>
             <div class="jlwa-download-section"><h3>选择下载页视觉方案</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
             <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>资源封面策略</h3><p>完整经典模板控制左上角大封面；原生模式保持子比自身封面展示规则。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会加载本插件的下载页模板或皮肤。'; ?></p></section></div>
+            <section class="jlwa-download-section" id="jlwa-download-membership">
+                <h3>会员权益页面</h3>
+                <p class="description">可填写本站会员介绍或购买页面的完整网址。留空时仅兼容已存在的旧版 join-vip 页面；如果站点没有此页面，则不显示会员入口，避免指向无效网址。</p>
+                <label for="jlwa-membership-url"><strong>会员权益链接（可选）</strong></label>
+                <input id="jlwa-membership-url" class="large-text code" type="url" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[membership_url]" value="<?php echo esc_attr( $options['membership_url'] ); ?>" placeholder="https://example.com/membership/">
+            </section>
             <section class="jlwa-download-section" id="jlwa-download-support">
                 <h3>售前咨询与售后服务 · 自定义联系方式</h3>
                 <p class="description">六种下载页皮肤共用以下设置，可填写 Telegram、WhatsApp、QQ 客服网页、邮件链接等。默认不填写任何网址，未配置时不显示联系区块，绝不指向插件作者的账号。</p>
