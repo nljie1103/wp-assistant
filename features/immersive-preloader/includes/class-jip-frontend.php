@@ -85,13 +85,28 @@ class JIP_Frontend {
 	}
 
 	/**
+	 * Authentication, checkout and ticketed file delivery are not page
+	 * transitions. Do not draw a full-screen loading overlay above Zibll
+	 * forms or downloaded files, even when "all pages" is selected.
+	 */
+	private function is_native_transaction_request() {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$path = strtolower( rawurldecode( (string) wp_parse_url( $uri, PHP_URL_PATH ) ) );
+		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+			return true;
+		}
+		$query = (string) wp_parse_url( $uri, PHP_URL_QUERY );
+		return (bool) preg_match( '~(?:^|&)(?:jlwa_dl|rest_route|wc-ajax|zibpay|order_id|payment)=~i', $query );
+	}
+
+	/**
 	 * 是否应在当前请求中显示预加载。
 	 *
 	 * @return bool
 	 */
 	private function should_display() {
 		// 后台、Ajax、Feed、REST、登录页等不显示。
-		if ( is_admin() || ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) || is_feed() ) {
+		if ( is_admin() || ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) || is_feed() || $this->is_native_transaction_request() ) {
 			return false;
 		}
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
@@ -150,7 +165,7 @@ class JIP_Frontend {
 	<?php if ( 'editorial' === $effect ) : ?>
 		<div class="jip-editorial-shell" aria-hidden="true"><span class="jip-editorial-rule"></span><span class="jip-editorial-number">01 / 01</span></div>
 		<div class="jip-stage jip-editorial-stage">
-			<div class="jip-editorial-eyebrow">JIULIU&nbsp; / &nbsp;DIGITAL EXPERIENCE</div>
+			<div class="jip-editorial-eyebrow">DIGITAL EXPERIENCE</div>
 			<div class="jip-editorial-wordmark"><?php echo esc_html( ! empty( $opts['show_site_title'] ) && $site_name ? $site_name : 'WELCOME' ); ?></div>
 			<div class="jip-editorial-caption">DESIGNED TO BEGIN</div>
 		</div>
