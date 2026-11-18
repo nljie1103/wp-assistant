@@ -665,8 +665,26 @@ if ( ! class_exists( 'JLWA_Page_Effects_Feature' ) ) {
             }
         }
 
+        /**
+         * Never inject effects or output buffers into authentication, checkout,
+         * purchased-file download or ticket redemption responses. The legacy
+         * "buffer" mode also must not post-process native Zibll HTML here.
+         */
+        private function is_native_transaction_request() {
+            if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || wp_doing_cron() ) {
+                return true;
+            }
+            $uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+            $path = strtolower( rawurldecode( (string) wp_parse_url( $uri, PHP_URL_PATH ) ) );
+            if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+                return true;
+            }
+            $query = (string) wp_parse_url( $uri, PHP_URL_QUERY );
+            return (bool) preg_match( '~(?:^|&)(?:jlwa_dl|rest_route|wc-ajax|zibpay|order_id|payment)=~i', $query );
+        }
+
         private function should_load_frontend( $options ) {
-            if ( is_admin() || wp_doing_ajax() ) {
+            if ( is_admin() || wp_doing_ajax() || $this->is_native_transaction_request() ) {
                 return false;
             }
             if ( function_exists( 'wp_is_json_request' ) && wp_is_json_request() ) {
