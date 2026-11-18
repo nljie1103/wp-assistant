@@ -26,6 +26,10 @@ function add_query_arg( $key, $value, $url ) {
     return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . rawurlencode( $key ) . '=' . rawurlencode( $value );
 }
 function zibpay_is_paid( $id ) { return ! empty( $GLOBALS['jlwa_test_has_purchase'] ) ? array( 'paid_type' => 2 ) : false; }
+function zibpay_get_post_down_buts() {}
+function zibpay_get_post_down_array() {}
+function zib_get_page_content_style() {}
+
 
 class JLWA_Test_Redirect extends RuntimeException {
     public $destination;
@@ -616,6 +620,67 @@ final class DownloadPageAccessTest extends TestCase {
         $html = ob_get_clean();
         $this->assertSame( 1, substr_count( $html, '<a ' ) );
         $this->assertStringContainsString( 'href="https://example.com/chat"', $html );
+    }
+
+
+    public function test_native_skin_keeps_zibll_in_charge_of_the_download_template(): void {
+        $options = JLWA_Download_Page_Feature::defaults();
+        $options['enabled'] = 1;
+        $options['template'] = 'technology';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+
+        // No paid privilege means no skin or customer-service panel.
+        $this->assertSame( array( 'test' ), $this->feature->native_body_class( array( 'test' ) ) );
+        ob_start();
+        $this->feature->render_native_support();
+        $this->assertSame( '', ob_get_clean() );
+
+        $GLOBALS['jlwa_test_has_purchase'] = true;
+        foreach ( array( 'technology', 'business', 'vip', 'aurora', 'editorial', 'midnight' ) as $skin ) {
+            $options['template'] = $skin;
+            $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+            $classes = $this->feature->native_body_class( array( 'test' ) );
+            $this->assertContains( 'jlwa-native-download', $classes );
+            $this->assertContains( 'jlwa-native-' . $skin, $classes );
+            $this->assertContains( 'test', $classes );
+        }
+
+        $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page.php' );
+        $this->assertStringNotContainsString( 'include $selected;', $source );
+        $this->assertStringNotContainsString( "add_action( 'template_redirect', array( $this, 'maybe_render' )", $source );
+        $this->assertStringContainsString( "add_action( 'template_redirect', array( $this, 'guard_paid_download_page' )", $source );
+        $this->assertFileExists( dirname( __DIR__ ) . '/assets/css/download-page-native.css' );
+        $this->assertFileExists( dirname( __DIR__ ) . '/assets/js/download-page-native.js' );
+    }
+
+    public function test_native_service_panel_only_adds_own_marked_markup(): void {
+        $options = JLWA_Download_Page_Feature::defaults();
+        $options['enabled'] = 1;
+        $options['template'] = 'midnight';
+        $options['support_primary_url'] = 'https://example.test/help';
+        $options['support_primary_label'] = '售后客服';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+        $GLOBALS['jlwa_test_has_purchase'] = true;
+        ob_start();
+        $this->feature->render_native_support();
+        $html = ob_get_clean();
+        $this->assertStringContainsString( 'id="jlwa-native-support"', $html );
+        $this->assertStringContainsString( 'data-jlwa-owned="1"', $html );
+        $this->assertStringContainsString( 'https://example.test/help', $html );
+        $this->assertStringContainsString( '售后客服', $html );
+        $this->assertStringNotContainsString( 't.me/jiuliu_org', $html );
+        $this->assertSame( 1, substr_count( $html, '<a ' ) );
+    }
+
+    public function test_native_mode_keeps_private_delivery_separately_scoped(): void {
+        $options = JLWA_Download_Page_Feature::defaults();
+        $options['enabled'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+        $this->assertFalse( JLWA_Private_Download::private_delivery_enabled() );
+        $options['private_enabled'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $options;
+        $this->assertTrue( JLWA_Private_Download::private_delivery_enabled() );
+        $this->assertSame( 1, $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY]['private_enabled'] );
     }
 
 }
