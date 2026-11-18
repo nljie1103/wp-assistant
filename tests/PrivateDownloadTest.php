@@ -122,4 +122,17 @@ final class PrivateDownloadTest extends TestCase {
         $this->assertSame( 0, $invalid['private_enabled'] );
         $this->assertSame( '', $invalid['private_hosts'] );
     }
+
+    public function test_guest_purchasers_never_share_one_global_zero_user_rate_bucket(): void {
+        // Every anonymous Zibll purchaser has WP user_id = 0, but may hold a
+        // different legitimate paid guest order. The old key "0:<post>" caused
+        // cross-customer rate limit exhaustion after a few bought downloads.
+        // No stable user/order identifier is available at this filter layer,
+        // so enforce the real Zibll paid check and allow guest file activation.
+        $settings = array( 'rate_limit' => 0 );
+        for ( $i = 0; $i < 50; ++$i ) {
+            $this->assertTrue( JLWA_Private_Download::rate_permits( 2823, $settings ) );
+        }
+    }
+
 }

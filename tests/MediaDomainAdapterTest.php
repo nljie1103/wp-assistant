@@ -202,4 +202,58 @@ final class MediaDomainAdapterTest extends TestCase {
         $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
     }
 
+
+    public function test_zibll_download_and_jlwa_ticket_requests_keep_native_host(): void {
+        $opt = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $opt['domain_legacy_identity_override'] = 1;
+        $opt['domain_dynamic_siteurl'] = 1;
+        $opt['domain_rewrite_frontend_links'] = 1;
+        $css = 'https://origin.example.com/wp-content/themes/zibll/css/main.css';
+        foreach ( array(
+            '/download?post=2823',
+            '/blog/download/?post=2823',
+            '/?jlwa_dl=' . str_repeat( 'a', 48 ),
+            '/ordinary-article?order_id=1234',
+            '/?wc-ajax=checkout',
+        ) as $uri ) {
+            $_SERVER['REQUEST_URI'] = $uri;
+            $this->assertFalse( $this->adapter->should_adapt_current_request(), $uri );
+            $this->assertFalse( $this->adapter->filter_pre_option_home( false ), $uri );
+            $this->assertSame( $css, $this->adapter->rewrite_asset_url( $css ), $uri );
+        }
+    }
+
+    public function test_normal_url_conversion_bypasses_native_pay_and_private_download_urls(): void {
+        $opt = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $opt['domain_rewrite_frontend_links'] = 1;
+        $_SERVER['REQUEST_URI'] = '/some-regular-post';
+        $sensitive = array(
+            'https://origin.example.com/download?post=2823',
+            'https://origin.example.com/pay-download/?key=abcd',
+            'https://origin.example.com/?jlwa_dl=' . str_repeat( 'b', 48 ),
+            'https://origin.example.com/checkout/',
+            'https://origin.example.com/blog/download/?post=2823',
+            'https://origin.example.com/ordinary?order_id=42',
+        );
+        foreach ( $sensitive as $url ) {
+            $this->assertSame( $url, $this->adapter->rewrite_url( $url ), $url );
+            $this->assertSame(
+                '<a href="' . $url . '">download</a>',
+                $this->adapter->rewrite_html_to_domain( '<a href="' . $url . '">download</a>', 'https://mirror.example.com' ),
+                $url
+            );
+            $this->assertSame(
+                '<a href="' . $url . '">download</a>',
+                $this->adapter->rewrite_html_to_relative( '<a href="' . $url . '">download</a>' ),
+                $url
+            );
+        }
+        $normal = 'https://origin.example.com/general-article/';
+        $this->assertSame( 'https://mirror.example.com/general-article/', $this->adapter->rewrite_url( $normal ) );
+        $this->assertSame(
+            '<a href="/general-article/">post</a>',
+            $this->adapter->rewrite_html_to_relative( '<a href="' . $normal . '">post</a>' )
+        );
+    }
+
 }

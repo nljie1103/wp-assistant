@@ -234,7 +234,7 @@ class JRMU_Domain_Adapter {
 			function ( $matches ) use ( $base_url ) {
 				$url   = isset( $matches[0] ) ? $matches[0] : '';
 				$parts = wp_parse_url( $url );
-				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) ) {
+				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) || $this->is_sensitive_link( $url ) ) {
 					return $url;
 				}
 				$out = $base_url . $parts['path'];
@@ -261,7 +261,7 @@ class JRMU_Domain_Adapter {
 			function ( $matches ) {
 				$url   = isset( $matches[0] ) ? $matches[0] : '';
 				$parts = wp_parse_url( $url );
-				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) ) {
+				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) || $this->is_sensitive_link( $url ) ) {
 					return $url;
 				}
 				$out = $parts['path'];
@@ -426,7 +426,7 @@ class JRMU_Domain_Adapter {
 				}
 				$url   = isset( $matches[0] ) ? $matches[0] : '';
 				$parts = wp_parse_url( $url );
-				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) ) {
+				if ( empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->is_source_host_allowed( $parts['host'] ) || $this->is_sensitive_link( $url ) ) {
 					return $url;
 				}
 				$to = $target_base ? $target_base . $parts['path'] : $parts['path'];
@@ -448,7 +448,7 @@ class JRMU_Domain_Adapter {
 	private function is_sensitive_request() {
 		$uri = strtolower( (string) ( $_SERVER['REQUEST_URI'] ?? '' ) );
 		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
-		if ( preg_match( '~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+		if ( preg_match( '~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
 			return true;
 		}
 		if ( preg_match( '~(?:^|/)(?:wp-json|api|rest)(?:/|$)~i', $path ) ) {
@@ -457,7 +457,10 @@ class JRMU_Domain_Adapter {
 		if ( false !== strpos( $uri, 'rest_route=' ) || false !== strpos( $uri, 'admin-ajax.php' ) ) {
 			return true;
 		}
-		return false;
+		// Zibll /download?post=..., paid order links and opaque JLWA
+		// tickets must keep their original host, even in legacy identity mode.
+		$query = strtolower( (string) wp_parse_url( $uri, PHP_URL_QUERY ) );
+		return (bool) preg_match( '~(?:^|&)(?:jlwa_dl|post|order|order_id|zibpay|payment|pay|wc-ajax|_wpnonce|nonce|token|key|state|code|redirect_to)=~i', $query );
 	}
 
 	/**
@@ -470,11 +473,11 @@ class JRMU_Domain_Adapter {
 			return true;
 		}
 		$path = strtolower( (string) ( $parts['path'] ?? '' ) );
-		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
 			return true;
 		}
 		$query = strtolower( (string) ( $parts['query'] ?? '' ) );
-		return (bool) preg_match( '~(?:^|&)(?:action|_wpnonce|nonce|state|token|key|code|order|order_id|payment|zibpay|redirect_to)=~i', $query );
+		return (bool) preg_match( '~(?:^|&)(?:action|_wpnonce|nonce|state|token|key|code|order|order_id|payment|pay|post|jlwa_dl|wc-ajax|zibpay|redirect_to)=~i', $query );
 	}
 
 	/** Login handling includes Zibll's /user-sign virtual route. */

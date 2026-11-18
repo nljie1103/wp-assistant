@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.9
+Stable tag: 3.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.0 =
+* 修复多域名白名单对原生子比下载 URL、结算参数和 JLWA 下载短期票据的遗漏；自动前台改写和后台手动批量改写均不会触碰这些链接。
+* 全站开屏、特效输出缓冲与严格反调试强制排除登录、订单、支付、下载和票据路由，仍正常保留普通文章与首页特效。
+* 修复匿名已购访客共用 ID 0 限流额度，防止一个访客耗尽所有游客的下载资格；真实子比购买验证和 Nginx 安全保护保持。
+* 预加载杂志排版移除写死的作者英文品牌。自动回归覆盖普通页面不被误排和原生路径强制豁免。
+* 保持原有六款完整下载页、客服设置、OpenList 内部中转、可选下载出口票据、root Nginx 帮助程序不变。
+
 
 = 3.0.9 =
 * 六种经典资源下载页的品牌文字自动读取本站 WordPress 网站名称，移除固定站长名称与默认封面署名。
