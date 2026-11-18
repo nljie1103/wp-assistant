@@ -99,4 +99,25 @@ final class AntiDebugScopeTest extends TestCase {
         $settings['scope']['pages'] = 1;
         $this->assertFalse($this->enabledFor($settings));
     }
+
+    public function test_zibll_payment_order_ticket_routes_bypass_strict_defense(): void {
+        $GLOBALS['test_is_page'] = true;
+        $settings = JLWA_Anti_Debug_Feature::defaults();
+        $settings['mode'] = 'strict';
+        $settings['scope']['pages'] = 1;
+        $settings['scope']['exclude_paths'] = '';
+        foreach ( array(
+            '/pay-download/', '/blog/pay-download', '/download?post=2823',
+            '/checkout/', '/order/42', '/zibpay/', '/?jlwa_dl=abc',
+            '/?wc-ajax=checkout', '/?rest_route=/wp/v2/posts',
+        ) as $uri ) {
+            $_SERVER['REQUEST_URI'] = $uri;
+            $this->assertFalse( $this->enabledFor( $settings ), $uri );
+        }
+        foreach ( array( '/ordinary', '/download-guide', '/order-history-article' ) as $uri ) {
+            $_SERVER['REQUEST_URI'] = $uri;
+            $this->assertTrue( $this->enabledFor( $settings ), $uri );
+        }
+    }
+
 }
