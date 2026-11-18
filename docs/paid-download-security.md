@@ -2,6 +2,20 @@
 
 > 本教程全部采用 `example.com` 等示例，**不要直接照抄域名、目录或端口**。只需分清两个网站：WordPress 网站和 OpenList 文件网站。OpenList 绑定直连/CDN 两个域名时，如果都指向同一 Nginx 站点配置，只需要保护这一个站点配置。
 
+## 两种中转交付方式（不会因下载页视觉皮肤切换而改变）
+
+| 插件设置 | 实际交付链路 |
+|---|---|
+| 私有交付关闭 | 不注册子比 `zibpay_download_file_local` 钩子，普通下载保持子比处理 |
+| **私有交付开启，自定义出口关闭** | 子比验证购买资格 → WordPress 下载请求 → `X-Accel-Redirect` → 同机 Nginx 内部 OpenList 代理 → 浏览器收到文件数据 |
+| **私有交付开启，自定义出口开启** | 子比验证购买资格 → WordPress 生成短期票据 → 302 到管理员配置的下载域名 → 同一 WordPress 实例校验票据与 Host → `X-Accel-Redirect` → Nginx 内部代理 → 文件数据 |
+
+这里的“中转”不表示把完整 ZIP 读入 PHP 内存，也**不保证 CDN 缓存或加速付费 ZIP**。无论选择何种模式，浏览器不应看到付费 OpenList 真实文件直链，公开源站必须单独拒绝付费目录。旧站点升级后会保留 `private_enabled`、`delivery_enabled`、`delivery_host` 等已有配置，不会因为下载页在“完整经典模板 / 原生兼容皮肤”间切换而自动开启第二种模式。
+
+对尚未部署的站点，`delivery_enabled` 默认关闭；这不意味着内部 Nginx 中转关闭。**不要把下载出口域名指向 OpenList**，只能指向可以执行本插件 WordPress 的站点。
+
+新增的 PHP HTTP 集成测试验证短期票据的 302、下载域名 Host 校验、随机票据、`X-Accel-Redirect`、错误票据 404 以及无重复 Content-Disposition。它不模拟真实 Nginx/OpenList 文件字节传输；上线仍需使用已购测试资源完成真实文件验收。
+
 ## 1. 先弄清楚安全边界
 
 - 子比主题负责购买资格、Nonce、会员和下载资格；**本插件不修改子比主题文件**。
