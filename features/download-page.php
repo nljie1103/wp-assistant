@@ -18,8 +18,10 @@ class JLWA_Download_Page_Feature {
         // Block unpurchased download-page requests before *any* template emits
         // preview images, post metadata or resource link markup.
         add_action( 'template_redirect', array( $this, 'guard_paid_download_page' ), 0 );
-        // No template override, custom download PHP include, or exit:
-        // Zibll renders the canonical page and all purchase/download buttons.
+        // WordPress loads the classic template at the normal template_include
+        // stage, not via an early template_redirect include/exit. Native mode
+        // never replaces Zibll markup or native checkout handlers.
+        add_filter( 'template_include', array( $this, 'choose_download_template' ), 99 );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_native_assets' ), 20 );
         add_filter( 'body_class', array( $this, 'native_body_class' ) );
         add_action( 'wp_footer', array( $this, 'render_native_support' ), 15 );
@@ -30,6 +32,9 @@ class JLWA_Download_Page_Feature {
         return array(
             'enabled' => 0,
             'template' => 'technology',
+            // Existing sites retain the v3.0.6 full download-page design.
+            // Select "native" explicitly for minimal Zibll interaction.
+            'render_mode' => 'classic',
             'cover_mode' => 'auto',
             'default_image_url' => '',
             // Public plugin: never ship one site's Telegram/customer-service links.
@@ -69,7 +74,7 @@ class JLWA_Download_Page_Feature {
         $scope = isset( $input['jlwa_settings_scope'] ) ? (string) $input['jlwa_settings_scope'] : '';
         if ( in_array( $scope, array( 'templates', 'security', 'advanced' ), true ) ) {
             $previous = self::options();
-            $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url', 'support_title', 'support_description', 'support_primary_url', 'support_primary_label', 'support_secondary_url', 'support_secondary_label' );
+            $template_keys = array( 'enabled', 'template', 'render_mode', 'cover_mode', 'default_image_url', 'support_title', 'support_description', 'support_primary_url', 'support_primary_label', 'support_secondary_url', 'support_secondary_label' );
             $security_keys = array( 'private_enabled', 'private_hosts', 'private_source_prefix', 'private_internal_prefix' );
             $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'openlist_public_images', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
             $chosen = 'templates' === $scope ? $template_keys : ( 'security' === $scope ? $security_keys : $advanced_keys );
@@ -96,6 +101,7 @@ class JLWA_Download_Page_Feature {
                 array(
                     'enabled' => empty( $input['enabled'] ) ? 0 : 1,
                     'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
+                    'render_mode' => 'native' === ( $input['render_mode'] ?? '' ) ? 'native' : 'classic',
                     'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
                     'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
                 ),
@@ -116,6 +122,7 @@ class JLWA_Download_Page_Feature {
         return array(
             'enabled' => empty( $input['enabled'] ) ? 0 : 1,
             'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
+            'render_mode' => 'native' === ( $input['render_mode'] ?? '' ) ? 'native' : 'classic',
             'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
             'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
         ) + self::sanitize_support_fields( $input ) + JLWA_Private_Download::sanitized( $input );
@@ -309,6 +316,39 @@ class JLWA_Download_Page_Feature {
     }
 
     /**
+     * Full-size v3.0.6 download layouts are still shipped with the plugin.
+     * Restore those layouts without ending the WordPress template lifecycle:
+     * return a theme-compatible template path instead of include/exit.
+     *
+     * The independent purchase gate runs earlier on template_redirect for
+     * either presentation mode, before any paid resource HTML is emitted.
+     */
+    public function choose_download_template( $template ) {
+        $options = self::options();
+        if ( empty( $options['enabled'] ) || 'native' === ( $options['render_mode'] ?? 'classic' )
+            || is_admin() || wp_doing_ajax() || ! $this->compatible() ) {
+            return $template;
+        }
+        $post_id = $this->target_post_id();
+        if ( ! $post_id || ! self::has_purchase_rights( $post_id ) ) {
+            return $template;
+        }
+        $templates = array(
+            'technology' => 'technology',
+            'business' => 'business',
+            'vip' => 'vip',
+            // Additional designs reuse the same audited renderer + its skin.
+            'aurora' => 'technology',
+            'editorial' => 'technology',
+            'midnight' => 'technology',
+        );
+        $skin = $options['template'] ?? 'technology';
+        $file = JLWA_PLUGIN_DIR . 'features/download-page-templates/' .
+            ( $templates[ $skin ] ?? 'technology' ) . '.php';
+        return is_readable( $file ) ? $file : $template;
+    }
+
+    /**
      * Frontend appearance is additive. The theme owns all paid-state checks,
      * download buttons, markup, redirects and AJAX; this class only loads its
      * own stylesheet and a tiny support-panel placement helper.
@@ -338,8 +378,8 @@ class JLWA_Download_Page_Feature {
             return false;
         }
         $options = self::options();
-        return ! empty( $options['enabled'] ) && $this->compatible()
-            && $this->target_request()
+        return ! empty( $options['enabled'] ) && 'native' === ( $options['render_mode'] ?? 'classic' )
+            && $this->compatible() && $this->target_request()
             && self::has_purchase_rights( $this->target_post_id() );
     }
 
@@ -398,9 +438,9 @@ class JLWA_Download_Page_Feature {
         $options = self::options();
         $tab = self::admin_tab();
         $templates = array(
-            'technology' => array( '科技蓝紫版', '保留子比原生内容与下载按钮，使用蓝紫科技外观。' ),
-            'business' => array( '简洁商务版', '保留子比原生内容，使用浅色商务外观。' ),
-            'vip' => array( 'VIP 资源中心版', '保留子比原生内容，使用象牙金视觉。' ),
+            'technology' => array( '科技蓝紫版', '完整经典科技资源中心布局；原生模式使用科技外观。' ),
+            'business' => array( '简洁商务版', '完整简洁商务资源页面；原生模式使用商务外观。' ),
+            'vip' => array( 'VIP 资源中心版', '完整 VIP 资源中心布局；原生模式使用象牙金外观。' ),
             'aurora' => array( '流光极光版', '深蓝青绿光幕，适合科技及创意资源。' ),
             'editorial' => array( '杂志留白版', '暖白纸张与深墨标题，适合文字与素材资源。' ),
             'midnight' => array( '曜石夜幕版', '石墨黑与冷金细节，适合高端付费资源。' ),
@@ -421,9 +461,15 @@ class JLWA_Download_Page_Feature {
             <?php settings_fields( 'jlwa_download_page' ); ?>
             <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[jlwa_settings_scope]" value="<?php echo esc_attr( $tab ); ?>">
             <?php if ( 'templates' === $tab ) : ?>
-            <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，仅美化子比原生下载页面；不替换页面、不拦截原生支付和 AJAX。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
-            <div class="jlwa-download-section"><h3>选择子比原生页面视觉皮肤</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
-            <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>相关推荐封面回退策略</h3><p>保留子比主封面原生实现；仅在相关推荐无特色图时提供图片回退，不改动下载按钮。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会加载本插件的皮肤。'; ?></p></section></div>
+            <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>完整经典模板已恢复；可切换到不替换子比 HTML 的原生兼容皮肤。两种模式都不会修改子比主题源码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
+            <section class="jlwa-download-section" id="jlwa-download-render-mode">
+                <h3>下载页渲染方式</h3>
+                <label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[render_mode]" value="classic" <?php checked( $options['render_mode'], 'classic' ); ?>><span><strong>完整经典模板（恢复原先设计）</strong> — 保留全部六种原版布局、左上角封面、卡片、资源区块与客服面板。仅在确认已购的下载页替换展示模板，不修改子比授权或 AJAX。需要在子比更新后检查兼容性。</span></label>
+                <label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[render_mode]" value="native" <?php checked( $options['render_mode'], 'native' ); ?>><span><strong>子比原生兼容皮肤</strong> — 不替换子比下载页面，只叠加轻量 CSS 和本站客服；布局会与完整经典模板不同。</span></label>
+                <p class="description"><strong>升级兼容：</strong>历史未保存此选项的站点默认恢复完整经典模板。两种模式均保留服务端未购买拦截；独立 OpenList 安全交付设置不受切换影响。</p>
+            </section>
+            <div class="jlwa-download-section"><h3>选择下载页视觉方案</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
+            <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>资源封面策略</h3><p>完整经典模板控制左上角大封面；原生模式保持子比自身封面展示规则。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会加载本插件的下载页模板或皮肤。'; ?></p></section></div>
             <section class="jlwa-download-section" id="jlwa-download-support">
                 <h3>售前咨询与售后服务 · 自定义联系方式</h3>
                 <p class="description">六种下载页皮肤共用以下设置，可填写 Telegram、WhatsApp、QQ 客服网页、邮件链接等。默认不填写任何网址，未配置时不显示联系区块，绝不指向插件作者的账号。</p>
