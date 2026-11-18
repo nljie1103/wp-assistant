@@ -543,6 +543,12 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			if ( $this->is_authentication_path( $path ) ) {
 				return false;
 			}
+			// A payment redirect or opaque download ticket must not be delayed
+			// by browser debugging defenses, even under strict protection.
+			$query = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_QUERY ) : '';
+			if ( preg_match( '~(?:^|&)(?:jlwa_dl|rest_route|wc-ajax|zibpay|order_id|payment)=~i', $query ) ) {
+				return false;
+			}
 			foreach ( preg_split( '/\r\n|\r|\n/', (string) $scope['exclude_paths'] ) as $excluded ) {
 				$excluded = trim( $excluded );
 				if ( '' !== $excluded && 0 === strpos( (string) $path, $excluded ) ) {
@@ -572,7 +578,7 @@ if ( ! class_exists( 'JLWA_Anti_Debug_Feature' ) ) {
 			// Match path segments, including WordPress subdirectory installs.
 			// Do not accidentally exempt /user-sign-article.
 			return (bool) preg_match(
-				'~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset)(?:/|$)~',
+				'~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset)(?:/|$)~',
 				$path
 			);
 		}
