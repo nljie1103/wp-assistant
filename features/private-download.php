@@ -184,11 +184,23 @@ class JLWA_Private_Download {
         return array( 'uri' => $internal . implode( '/', $safe ), 'filename' => $filename );
     }
 
+    /** Never attach a Zibll filter on sites not using private delivery. */
+    public static function private_delivery_enabled() {
+        $saved = get_option( 'jlwa_download_page_options', array() );
+        return is_array( $saved ) && ! empty( $saved['private_enabled'] );
+    }
+
     public static function boot() {
-        // This hook is called by Zibll only after its paid/limit gate in download.php.
-        // Keep normal downloads unchanged until the administrator explicitly enables it.
-        add_filter( 'zibpay_download_file_local', array( __CLASS__, 'intercept' ), 30, 5 );
-        add_action( 'init', array( __CLASS__, 'redeem_ticket' ), 1 );
+        // Zero Zibll hooks by default. Explicitly enabled private files are the
+        // sole exception: the theme calls this *after* its own paid/limit gate.
+        if ( self::private_delivery_enabled() ) {
+            add_filter( 'zibpay_download_file_local', array( __CLASS__, 'intercept' ), 30, 5 );
+        }
+        // Opaque one-time ticket URLs have their own namespace. Ordinary WP,
+        // Zibll, login, payment and AJAX requests never enter this handler.
+        if ( isset( $_GET['jlwa_dl'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            add_action( 'init', array( __CLASS__, 'redeem_ticket' ), 1 );
+        }
     }
 
     public static function intercept( $file_local, $file_url, $post_id, $down_id, $paid ) {
