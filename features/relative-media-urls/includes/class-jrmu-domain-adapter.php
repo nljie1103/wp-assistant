@@ -45,9 +45,15 @@ class JRMU_Domain_Adapter {
 			return;
 		}
 
-		// Never override WordPress's home/siteurl options. Zibll and other themes
-		// may bind a license or auth callback to that canonical site identity.
-		// Multi-domain display is handled only at selected front-end URL/asset hooks.
+		// Legacy dynamic WordPress identity is risky for Zibll domain licensing:
+		// *never* enable it implicitly for sites upgrading from older releases.
+		// Only the new explicitly checked advanced opt-in may register these.
+		if ( ! empty( $options['domain_legacy_identity_override'] ) ) {
+			add_filter( 'pre_option_home', array( $this, 'filter_pre_option_home' ), 10, 3 );
+			if ( ! empty( $options['domain_dynamic_siteurl'] ) ) {
+				add_filter( 'pre_option_siteurl', array( $this, 'filter_pre_option_siteurl' ), 10, 3 );
+			}
+		}
 
 		// This changes CSS/JS/font origins beyond normal site URL adaptation.
 		// Keep it explicitly opt-in, even for existing multi-domain installations.
@@ -68,14 +74,24 @@ class JRMU_Domain_Adapter {
 		}
 	}
 
-	/** Compatibility shim: reads of canonical WordPress options stay untouched. */
+	/** Dangerous legacy mode: explicit opt-in only, honor other plugins' filters. */
 	public function filter_pre_option_home( $pre_option = false, $option = 'home', $default = false ) {
-		return $pre_option;
+		if ( false !== $pre_option ) { return $pre_option; }
+		$options = JRMU_Settings::get_options();
+		if ( empty( $options['domain_legacy_identity_override'] ) ) { return $pre_option; }
+		$dynamic = $this->get_dynamic_base_url_or_false();
+		return false !== $dynamic ? $dynamic : $pre_option;
 	}
 
-	/** Compatibility shim: never impersonate another licensed siteurl. */
+	/** Legacy dynamic siteurl, independently controlled within legacy mode. */
 	public function filter_pre_option_siteurl( $pre_option = false, $option = 'siteurl', $default = false ) {
-		return $pre_option;
+		if ( false !== $pre_option ) { return $pre_option; }
+		$options = JRMU_Settings::get_options();
+		if ( empty( $options['domain_legacy_identity_override'] ) || empty( $options['domain_dynamic_siteurl'] ) ) {
+			return $pre_option;
+		}
+		$dynamic = $this->get_dynamic_base_url_or_false();
+		return false !== $dynamic ? $dynamic : $pre_option;
 	}
 
 	/**
@@ -432,7 +448,7 @@ class JRMU_Domain_Adapter {
 	private function is_sensitive_request() {
 		$uri = strtolower( (string) ( $_SERVER['REQUEST_URI'] ?? '' ) );
 		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
-		if ( preg_match( '~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|checkout|zibpay)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+		if ( preg_match( '~(?:^|/)(?:wp-login\\.php|user-sign|wp-admin|pay-download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
 			return true;
 		}
 		if ( preg_match( '~(?:^|/)(?:wp-json|api|rest)(?:/|$)~i', $path ) ) {

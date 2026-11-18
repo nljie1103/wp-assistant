@@ -33,6 +33,8 @@ final class MediaSettingsTest extends TestCase {
 
     public function test_asset_rewrite_is_default_off_and_domain_save_is_scoped(): void {
         $this->assertSame( 0, JRMU_Settings::get_defaults()['domain_asset_rewrite_enabled'] );
+        $this->assertSame( 0, JRMU_Settings::get_defaults()['domain_legacy_identity_override'] );
+        $this->assertContains( 'domain_legacy_identity_override', JRMU_Settings::tab_fields()['domains'] );
         $this->assertSame( 0, JRMU_Settings::get_options()['domain_asset_rewrite_enabled'] );
         $this->assertContains( 'domain_asset_rewrite_enabled', JRMU_Settings::tab_fields()['domains'] );
         $result = JRMU_Settings::sanitize( array(
@@ -107,4 +109,35 @@ final class MediaSettingsTest extends TestCase {
         $settings['media_nginx_target_host'] = 'origin.example.com';
         $this->assertSame('', JRMU_Admin::media_nginx_command('apply', $settings, '/opt/wp/wp-content/plugins/jlwa'));
     }
+
+    public function test_old_dynamic_siteurl_option_does_not_implicitly_enable_legacy_override(): void {
+        $saved = $this->before;
+        $saved['domain_dynamic_siteurl'] = 1;
+        unset( $saved['domain_legacy_identity_override'] );
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] = $saved;
+        $this->assertSame( 0, JRMU_Settings::get_options()['domain_legacy_identity_override'] );
+
+        $new = JRMU_Settings::sanitize( array(
+            'jrmu_settings_scope' => 'domains',
+            'domain_adaptation_enabled' => 1,
+            'domain_dynamic_siteurl' => 1,
+            'domain_allowed_hosts' => 'proxy.example.com',
+        ) );
+        $this->assertSame( 0, $new['domain_legacy_identity_override'] );
+
+        $new['domain_legacy_identity_override'] = 1;
+        $GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY] = $new;
+        $retained = JRMU_Settings::sanitize( array( 'jrmu_settings_scope' => 'media' ) );
+        $this->assertSame( 1, $retained['domain_legacy_identity_override'] );
+
+        $disabled = JRMU_Settings::sanitize( array(
+            'jrmu_settings_scope' => 'domains',
+            'domain_adaptation_enabled' => 1,
+            'domain_dynamic_siteurl' => 1,
+            'domain_allowed_hosts' => 'proxy.example.com',
+        ) );
+        $this->assertSame( 0, $disabled['domain_legacy_identity_override'] );
+        $this->assertSame( 1, $disabled['domain_dynamic_siteurl'] );
+    }
+
 }
