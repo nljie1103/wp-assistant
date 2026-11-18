@@ -110,8 +110,9 @@ final class MediaDomainAdapterTest extends TestCase {
         $this->assertFalse( $this->adapter->filter_pre_option_siteurl( false ) );
 
         $source = file_get_contents( dirname( __DIR__ ) . '/features/relative-media-urls/includes/class-jrmu-domain-adapter.php' );
-        $this->assertStringNotContainsString( "add_filter( 'pre_option_home'", $source );
-        $this->assertStringNotContainsString( "add_filter( 'pre_option_siteurl'", $source );
+        $this->assertStringContainsString( "add_filter( 'pre_option_home'", $source );
+        $this->assertStringContainsString( "add_filter( 'pre_option_siteurl'", $source );
+        $this->assertStringContainsString( "if ( ! empty( \$options['domain_legacy_identity_override'] ) )", $source );
         // Static assets remain independently configurable.
         $this->assertSame(
             'https://mirror.example.com/wp-content/themes/zibll/css/main.css',
@@ -159,6 +160,46 @@ final class MediaDomainAdapterTest extends TestCase {
             'https://mirror.example.com/normal-post/',
             $this->adapter->rewrite_url( 'https://origin.example.com/normal-post/' )
         );
+    }
+
+
+    public function test_legacy_dynamic_identity_requires_new_explicit_opt_in(): void {
+        // This saved preference existed before v3.0.7, but alone cannot
+        // re-enable site-wide pre_option_home/siteurl overrides.
+        $opts = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $opts['domain_dynamic_siteurl'] = 1;
+        unset( $opts['domain_legacy_identity_override'] );
+        $this->assertSame( 0, JRMU_Settings::get_options()['domain_legacy_identity_override'] );
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
+        $this->assertFalse( $this->adapter->filter_pre_option_siteurl( false ) );
+        $this->assertSame( 'https://origin.example.com', get_option( 'siteurl' ) );
+
+        // Opt-in is explicit, applies only to trusted, non-sensitive frontend
+        // entry routes and does not bypass previously installed pre_option data.
+        $opts['domain_legacy_identity_override'] = 1;
+        $this->assertSame( 'https://mirror.example.com', $this->adapter->filter_pre_option_home( false ) );
+        $this->assertSame( 'https://mirror.example.com', $this->adapter->filter_pre_option_siteurl( false ) );
+        $this->assertSame( 'other-plugin-value', $this->adapter->filter_pre_option_home( 'other-plugin-value' ) );
+        $opts['domain_dynamic_siteurl'] = 0;
+        $this->assertFalse( $this->adapter->filter_pre_option_siteurl( false ) );
+        $this->assertSame( 'https://mirror.example.com', $this->adapter->filter_pre_option_home( false ) );
+
+        $_SERVER['REQUEST_URI'] = '/user-sign';
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
+        $_SERVER['REQUEST_URI'] = '/order/';
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
+        $_SERVER['REQUEST_URI'] = '/wp-admin/admin-ajax.php?action=zibpay';
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
+    }
+
+    public function test_classic_option_override_switch_is_not_required_for_asset_whitelist(): void {
+        $options = &$GLOBALS['jlwa_test_stored_options'][JRMU_OPTION_KEY];
+        $options['domain_legacy_identity_override'] = 0;
+        $this->assertSame(
+            'https://mirror.example.com/wp-content/themes/zibll/css/main.css',
+            $this->adapter->rewrite_asset_url( 'https://origin.example.com/wp-content/themes/zibll/css/main.css' )
+        );
+        $this->assertFalse( $this->adapter->filter_pre_option_home( false ) );
     }
 
 }
