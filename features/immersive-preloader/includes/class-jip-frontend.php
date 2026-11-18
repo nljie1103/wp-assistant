@@ -92,7 +92,7 @@ class JIP_Frontend {
 	private function is_native_transaction_request() {
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
 		$path = strtolower( rawurldecode( (string) wp_parse_url( $uri, PHP_URL_PATH ) ) );
-		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|user-sign|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
+		if ( preg_match( '~(?:^|/)(?:wp-login\.php|wp-admin|wp-json|api|rest|user-sign|pay-download|download|checkout|zibpay|pay|order|orders|oauth|callback)(?:/|$)|(?:^|/)user/(?:login|register|forgot|reset|sign|logout)(?:/|$)~i', $path ) ) {
 			return true;
 		}
 		$query = (string) wp_parse_url( $uri, PHP_URL_QUERY );
