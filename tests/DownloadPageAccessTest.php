@@ -11,6 +11,7 @@ function add_settings_error( $setting, $code, $message, $type = 'error' ) {
 function get_settings_errors() { return $GLOBALS['jlwa_test_settings_errors'] ?? array(); }
 function wp_parse_args( $args, $defaults = array() ) { return array_merge( $defaults, (array) $args ); }
 function esc_url_raw( $url ) { return (string) $url; }
+function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
 function sanitize_key( $value ) { return preg_replace( "/[^a-z0-9_-]/", "", strtolower( (string) $value ) ); }
 
 function get_post_meta( $id, $key, $single = false ) {
@@ -517,4 +518,104 @@ final class DownloadPageAccessTest extends TestCase {
         $this->feature->render_purchase_required_notice();
         $this->assertSame( '', ob_get_clean() );
     }
+
+    public function test_default_download_support_does_not_redirect_users_to_plugin_author() {
+        $defaults = JLWA_Download_Page_Feature::defaults();
+        $this->assertSame( '', $defaults['support_primary_url'] );
+        $this->assertSame( '', $defaults['support_secondary_url'] );
+
+        ob_start();
+        JLWA_Download_Page_Feature::render_support_panel( $defaults );
+        $this->assertSame( '', ob_get_clean() );
+
+        foreach ( array( 'technology', 'business', 'vip' ) as $skin ) {
+            $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page-templates/' . $skin . '.php' );
+            $this->assertStringNotContainsString( 't.me/jiuliu_org', $source );
+            $this->assertStringNotContainsString( 't.me/jiuliu_group', $source );
+            $this->assertStringContainsString( 'render_support_panel( $jlwa_download_options )', $source );
+        }
+    }
+
+    public function test_contact_links_and_button_labels_are_sanitized_and_rendered() {
+        $input = array(
+            'jlwa_settings_scope' => 'templates',
+            'enabled' => 1,
+            'template' => 'aurora',
+            'support_title' => '<b>售前与售后</b>',
+            'support_description' => '<i>所有订单问题</i>',
+            'support_primary_url' => 'https://t.me/example_support',
+            'support_primary_label' => '<b>立即咨询</b>',
+            'support_secondary_url' => 'https://example.com/community?from=download&join=1',
+            'support_secondary_label' => '<i>社区交流</i>',
+        );
+        $saved = $this->feature->sanitize( $input );
+        $this->assertSame( '售前与售后', $saved['support_title'] );
+        $this->assertSame( '立即咨询', $saved['support_primary_label'] );
+        $this->assertSame( '社区交流', $saved['support_secondary_label'] );
+        $this->assertSame( 'aurora', $saved['template'] );
+        ob_start();
+        JLWA_Download_Page_Feature::render_support_panel( $saved );
+        $html = ob_get_clean();
+        $this->assertStringContainsString( 'href="https://t.me/example_support"', $html );
+        $this->assertStringContainsString( 'href="https://example.com/community?from=download&amp;join=1"', $html );
+        $this->assertStringContainsString( '售前与售后', $html );
+        $this->assertStringContainsString( '立即咨询', $html );
+        $this->assertStringContainsString( '社区交流', $html );
+        $this->assertSame( 2, substr_count( $html, '<a ' ) );
+        $this->assertStringNotContainsString( 't.me/jiuliu_org', $html );
+        $this->assertStringNotContainsString( '<b>', $html );
+    }
+
+    public function test_invalid_contact_urls_are_rejected_without_php_warnings() {
+        foreach ( array( 'javascript:alert(1)', 'data:text/html,abc', '//example.com/contact', array( 'https://evil.example' ) ) as $bad ) {
+            $submitted = $this->feature->sanitize( array(
+                'jlwa_settings_scope' => 'templates',
+                'support_primary_url' => $bad,
+                'support_secondary_url' => 'mailto:help@example.com',
+            ) );
+            $this->assertSame( '', $submitted['support_primary_url'] );
+            $this->assertSame( 'mailto:help@example.com', $submitted['support_secondary_url'] );
+        }
+    }
+
+    public function test_contact_configuration_survives_other_tabs_and_legacy_forms_but_can_be_cleared() {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['support_primary_url'] = 'https://support.example.com';
+        $old['support_primary_label'] = '售后专线';
+        $old['support_secondary_url'] = 'https://example.com/community';
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+
+        $secure = $this->feature->sanitize( array( 'jlwa_settings_scope' => 'security', 'private_enabled' => 0 ) );
+        $this->assertSame( $old['support_primary_url'], $secure['support_primary_url'] );
+        $this->assertSame( $old['support_secondary_url'], $secure['support_secondary_url'] );
+        $this->assertSame( $old['support_primary_label'], $secure['support_primary_label'] );
+        $legacy = $this->feature->sanitize( array( 'enabled' => 1, 'template' => 'vip' ) );
+        $this->assertSame( $old['support_primary_url'], $legacy['support_primary_url'] );
+        $this->assertSame( $old['support_secondary_url'], $legacy['support_secondary_url'] );
+
+        $cleared = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'support_primary_url' => '',
+            'support_secondary_url' => '',
+        ) );
+        $this->assertSame( '', $cleared['support_primary_url'] );
+        $this->assertSame( '', $cleared['support_secondary_url'] );
+        $this->assertSame( $old['private_source_prefix'], $cleared['private_source_prefix'] );
+        ob_start();
+        JLWA_Download_Page_Feature::render_support_panel( $cleared );
+        $this->assertSame( '', ob_get_clean() );
+    }
+
+    public function test_one_custom_support_link_only_renders_one_button() {
+        $options = JLWA_Download_Page_Feature::defaults();
+        $options['support_secondary_url'] = 'https://example.com/chat';
+        ob_start();
+        JLWA_Download_Page_Feature::render_support_panel( $options );
+        $html = ob_get_clean();
+        $this->assertSame( 1, substr_count( $html, '<a ' ) );
+        $this->assertStringContainsString( 'href="https://example.com/chat"', $html );
+    }
+
 }

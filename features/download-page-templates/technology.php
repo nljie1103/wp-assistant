@@ -286,7 +286,7 @@ if (!function_exists('jldv4_normalize_cover_url')) {
         }
 
         // 排除常见透明占位图，防止懒加载文章误把占位图当作封面。
-        if (preg_match('#(?:transparent|spacer|blank|loading)(?:[-_.][^/?#]*)?\.(?:gif|png|webp)(?:[?#]|$)#i', $url)) {
+        if (preg_match('~(?:transparent|spacer|blank|loading)(?:[-_.][^/?#]*)?\.(?:gif|png|webp)(?:[?#]|$)~i', $url)) {
             return '';
         }
 
@@ -490,7 +490,7 @@ if (!function_exists('jldv4_normalize_cover_url')) {
         if (!preg_match('#^https?://#i', $url)) {
             return '';
         }
-        if (preg_match('#(?:transparent|spacer|blank|loading|placeholder|spinner|pixel)(?:[-_.][^/?#]*)?\.(?:gif|png|webp|svg)(?:[?#]|$)#i', $url)) {
+        if (preg_match('~(?:transparent|spacer|blank|loading|placeholder|spinner|pixel)(?:[-_.][^/?#]*)?\.(?:gif|png|webp|svg)(?:[?#]|$)~i', $url)) {
             return '';
         }
         return esc_url_raw($url);
@@ -858,7 +858,7 @@ if (!$site_notice_title) {
     $site_notice_title = '网站公告';
 }
 if (!$site_notice) {
-    $site_notice = '资源链接如有失效，或网站充值、支付后未及时到账，请先刷新订单状态；仍未解决时再联系 Telegram 客服核查。';
+    $site_notice = '资源链接失效或充值、支付后未及时到账时，请先刷新订单状态并核对订单记录。如需帮助，请使用网站提供的联系方式。';
 }
 
 $content_style = zib_get_page_content_style();
@@ -1365,18 +1365,12 @@ if ($jlwa_skin && defined('JLWA_PLUGIN_URL')) : ?>
                                     </div>
                                 </section>
 
-                                <section class="jld-panel jld-help-panel jld-help-panel-v4">
-                                    <div class="jld-help-icon"><i class="fa fa-telegram" aria-hidden="true"></i></div>
-                                    <div>
-                                        <span class="jld-panel-kicker">SUPPORT</span>
-                                        <h3>售前咨询与支付售后</h3>
-                                        <p>会员权益咨询、充值未到账、支付异常或资源链接失效，可联系 Telegram 客服。</p>
-                                    </div>
-                                    <div class="jld-help-actions">
-                                        <a target="_blank" rel="noopener noreferrer" href="https://t.me/jiuliu_org"><i class="fa fa-paper-plane" aria-hidden="true"></i>联系客户服务</a>
-                                        <a target="_blank" rel="noopener noreferrer" href="https://t.me/jiuliu_group"><i class="fa fa-users" aria-hidden="true"></i>加入官方群聊</a>
-                                    </div>
-                                </section>
+                                <?php
+                                // One shared renderer for all six skins; no developer-owned links.
+                                if ( class_exists( 'JLWA_Download_Page_Feature' ) ) {
+                                    JLWA_Download_Page_Feature::render_support_panel( $jlwa_download_options );
+                                }
+                                ?>                      </section>
                             </aside>
                         </div>
 

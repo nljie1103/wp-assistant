@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.5
+Stable tag: 3.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 3. AI 文章摘要：多服务商模型、按模型保存 API Key、文章元数据缓存、装饰图标/透明图片、动画样式、编辑器操作和访客额度保护。
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
-6. 下载页美化：六种子比资源页；未获购买权限者禁止打开资源下载页，跳回文章并提示；可选 OpenList 私有交付需配套 Nginx 内部通道和公网封锁。
+6. 下载页美化：六种子比资源页；站长可分别设置客服与社群链接、按钮文本、标题和说明；无配置时不显示作者联系方式。未购买者跳回文章；可选 OpenList 私有交付需配套 Nginx 内部通道和公网封锁。
 
 == Installation ==
 
@@ -39,6 +39,12 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.0.6 =
+* 下载页客服／社群联系方式由站长自行配置，支持自定义链接、按钮文字及区块文案；六种皮肤共享设置，不再向访客展示写死的 Telegram 地址。
+* 默认不附带任何作者联系方式。未填写时自动隐藏联系区块，保存其他安全设置不会覆盖联系方式；支持安全 URL 协议过滤。
+* 修复下载页三个封面占位图正则表达式导致的 preg_match(): Unknown modifier ']' 警告，补充 PHP 运行时回归测试。
+
 
 = 3.0.5 =
 * 修复严格模式常见的登录页错误拦截：Zibll 子比主题 /wp-login.php 自动跳转至 /user-sign 时，旧版可能在真实登录页执行反调试。

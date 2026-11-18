@@ -28,6 +28,13 @@ class JLWA_Download_Page_Feature {
             'template' => 'technology',
             'cover_mode' => 'auto',
             'default_image_url' => '',
+            // Public plugin: never ship one site's Telegram/customer-service links.
+            'support_title' => '售前咨询与售后服务',
+            'support_description' => '会员、订单、支付或资源下载遇到问题？请通过以下方式联系我们。',
+            'support_primary_url' => '',
+            'support_primary_label' => '联系客服',
+            'support_secondary_url' => '',
+            'support_secondary_label' => '加入交流群',
         ) + JLWA_Private_Download::defaults();
     }
 
@@ -58,7 +65,7 @@ class JLWA_Download_Page_Feature {
         $scope = isset( $input['jlwa_settings_scope'] ) ? (string) $input['jlwa_settings_scope'] : '';
         if ( in_array( $scope, array( 'templates', 'security', 'advanced' ), true ) ) {
             $previous = self::options();
-            $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url' );
+            $template_keys = array( 'enabled', 'template', 'cover_mode', 'default_image_url', 'support_title', 'support_description', 'support_primary_url', 'support_primary_label', 'support_secondary_url', 'support_secondary_label' );
             $security_keys = array( 'private_enabled', 'private_hosts', 'private_source_prefix', 'private_internal_prefix' );
             $advanced_keys = array( 'openlist_host_port', 'openlist_container', 'openlist_public_images', 'delivery_host', 'delivery_enabled', 'ticket_lifetime', 'audit_enabled', 'rate_enabled', 'rate_limit' );
             $chosen = 'templates' === $scope ? $template_keys : ( 'security' === $scope ? $security_keys : $advanced_keys );
@@ -87,7 +94,8 @@ class JLWA_Download_Page_Feature {
                     'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
                     'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
                     'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
-                )
+                ),
+                self::sanitize_support_fields( $input )
             );
         }
         $errors = JLWA_Private_Download::validation_errors( $input );
@@ -106,7 +114,72 @@ class JLWA_Download_Page_Feature {
             'template' => in_array( $input['template'] ?? '', $templates, true ) ? $input['template'] : 'technology',
             'cover_mode' => in_array( $input['cover_mode'] ?? '', $modes, true ) ? $input['cover_mode'] : 'auto',
             'default_image_url' => esc_url_raw( $input['default_image_url'] ?? '' ),
-        ) + JLWA_Private_Download::sanitized( $input );
+        ) + self::sanitize_support_fields( $input ) + JLWA_Private_Download::sanitized( $input );
+    }
+
+    /** Allow only explicit external links / contact protocols (no javascript:, data: or relative URLs). */
+    private static function support_url( $value ) {
+        if ( ! is_string( $value ) ) {
+            return '';
+        }
+        $value = trim( $value );
+        if ( '' === $value || ! preg_match( '~^(?:https?://|mailto:|tel:)~i', $value ) ) {
+            return '';
+        }
+        return esc_url_raw( $value, array( 'http', 'https', 'mailto', 'tel' ) );
+    }
+
+    /** Scope-aware option sanitization, preserving links across legacy and security-only saves. */
+    private static function sanitize_support_fields( $input ) {
+        $old = self::options();
+        $defaults = self::defaults();
+        $fields = array(
+            'support_title', 'support_description',
+            'support_primary_url', 'support_primary_label',
+            'support_secondary_url', 'support_secondary_label',
+        );
+        $clean = array();
+        foreach ( $fields as $key ) {
+            $value = array_key_exists( $key, $input ) ? $input[ $key ] : ( $old[ $key ] ?? $defaults[ $key ] );
+            if ( false !== strpos( $key, '_url' ) ) {
+                $clean[ $key ] = self::support_url( $value );
+            } else {
+                $clean[ $key ] = is_scalar( $value ) ? sanitize_text_field( (string) $value ) : $defaults[ $key ];
+            }
+        }
+        return $clean;
+    }
+
+    /** Shared across all six skins. Empty contact links never expose the developer's account. */
+    public static function render_support_panel( $options = array() ) {
+        $options = wp_parse_args( is_array( $options ) ? $options : array(), self::defaults() );
+        $primary = self::support_url( $options['support_primary_url'] );
+        $secondary = self::support_url( $options['support_secondary_url'] );
+        if ( '' === $primary && '' === $secondary ) {
+            return;
+        }
+        $title = trim( (string) $options['support_title'] );
+        $description = trim( (string) $options['support_description'] );
+        $primary_label = trim( (string) $options['support_primary_label'] );
+        $secondary_label = trim( (string) $options['support_secondary_label'] );
+        ?>
+        <section class="jld-panel jld-help-panel jld-help-panel-v4">
+            <div class="jld-help-icon"><i class="fa fa-comments" aria-hidden="true"></i></div>
+            <div>
+                <span class="jld-panel-kicker">SUPPORT</span>
+                <h3><?php echo esc_html( $title ?: '售前咨询与售后服务' ); ?></h3>
+                <?php if ( '' !== $description ) : ?><p><?php echo esc_html( $description ); ?></p><?php endif; ?>
+            </div>
+            <div class="jld-help-actions">
+                <?php if ( '' !== $primary ) : ?>
+                    <a target="_blank" rel="noopener noreferrer" href="<?php echo esc_url( $primary ); ?>"><i class="fa fa-paper-plane" aria-hidden="true"></i><?php echo esc_html( $primary_label ?: '联系客服' ); ?></a>
+                <?php endif; ?>
+                <?php if ( '' !== $secondary ) : ?>
+                    <a target="_blank" rel="noopener noreferrer" href="<?php echo esc_url( $secondary ); ?>"><i class="fa fa-users" aria-hidden="true"></i><?php echo esc_html( $secondary_label ?: '加入交流群' ); ?></a>
+                <?php endif; ?>
+            </div>
+        </section>
+        <?php
     }
 
     /** Show the Settings API result inside the custom feature panel after its PRG redirect. */
@@ -306,6 +379,29 @@ class JLWA_Download_Page_Feature {
             <section class="jlwa-download-intro"><div><span>DOWNLOAD EXPERIENCE</span><h2>子比下载页美化</h2><p>六种视觉方案共用已有下载、支付与权限逻辑，新增主题不复制支付代码。</p></div><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><b>启用功能</b></label></section>
             <div class="jlwa-download-section"><h3>选择完整页面模板</h3><div class="jlwa-template-grid"><?php foreach ( $templates as $key => $item ) : ?><label class="jlwa-template-card is-<?php echo esc_attr( $key ); ?>"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[template]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['template'], $key ); ?>><span class="preview"></span><strong><?php echo esc_html( $item[0] ); ?></strong><small><?php echo esc_html( $item[1] ); ?></small></label><?php endforeach; ?></div></div>
             <div class="jlwa-download-columns"><section class="jlwa-download-section"><h3>左上角封面策略</h3><p>六种视觉方案都自动识别横图、方图和竖图，并适配封面比例。</p><?php foreach ( $modes as $key => $label ) : ?><label class="jlwa-mode-row"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[cover_mode]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $options['cover_mode'], $key ); ?>><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></section><section class="jlwa-download-section"><h3>默认图片</h3><input class="regular-text" type="url" id="jlwa-default-cover" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_image_url]" value="<?php echo esc_attr( $options['default_image_url'] ); ?>" placeholder="留空使用插件内置默认图"><button type="button" class="button" id="jlwa-select-cover">从媒体库选择</button><p><?php echo $this->compatible() ? '已检测到子比支付、权限与下载接口。' : '未检测到完整子比接口，前台不会强行接管。'; ?></p></section></div>
+            <section class="jlwa-download-section" id="jlwa-download-support">
+                <h3>售前咨询与售后服务 · 自定义联系方式</h3>
+                <p class="description">六种下载页皮肤共用以下设置，可填写 Telegram、WhatsApp、QQ 客服网页、邮件链接等。默认不填写任何网址，未配置时不显示联系区块，绝不指向插件作者的账号。</p>
+                <p><label for="jlwa-support-title"><strong>联系区块标题</strong></label></p>
+                <input id="jlwa-support-title" class="regular-text" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_title]" value="<?php echo esc_attr( $options['support_title'] ); ?>">
+                <p><label for="jlwa-support-description"><strong>联系说明</strong></label></p>
+                <input id="jlwa-support-description" class="large-text" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_description]" value="<?php echo esc_attr( $options['support_description'] ); ?>">
+                <div class="jlwa-download-columns">
+                    <div>
+                        <p><label for="jlwa-support-primary-url"><strong>客服链接</strong>（留空不显示）</label></p>
+                        <input id="jlwa-support-primary-url" class="large-text code" type="url" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_primary_url]" value="<?php echo esc_attr( $options['support_primary_url'] ); ?>" placeholder="https://example.com/contact">
+                        <p><label for="jlwa-support-primary-label"><strong>客服按钮文字</strong></label></p>
+                        <input id="jlwa-support-primary-label" class="regular-text" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_primary_label]" value="<?php echo esc_attr( $options['support_primary_label'] ); ?>">
+                    </div>
+                    <div>
+                        <p><label for="jlwa-support-secondary-url"><strong>社群／第二联系方式</strong>（留空不显示）</label></p>
+                        <input id="jlwa-support-secondary-url" class="large-text code" type="url" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_secondary_url]" value="<?php echo esc_attr( $options['support_secondary_url'] ); ?>" placeholder="https://example.com/community">
+                        <p><label for="jlwa-support-secondary-label"><strong>第二按钮文字</strong></label></p>
+                        <input id="jlwa-support-secondary-label" class="regular-text" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[support_secondary_label]" value="<?php echo esc_attr( $options['support_secondary_label'] ); ?>">
+                    </div>
+                </div>
+                <p class="description">仅接受 http(s)、mailto:、tel: 链接；全部留空表示关闭联系区块，不影响下载或订单逻辑。</p>
+            </section>
             <?php endif; ?>
             <?php if ( 'security' === $tab ) : ?>
             <section class="jlwa-download-section" id="jlwa-private-delivery">
