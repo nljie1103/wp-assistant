@@ -647,8 +647,8 @@ final class DownloadPageAccessTest extends TestCase {
 
         $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page.php' );
         $this->assertStringNotContainsString( 'include $selected;', $source );
-        $this->assertStringNotContainsString( "add_action( 'template_redirect', array( $this, 'maybe_render' )", $source );
-        $this->assertStringContainsString( "add_action( 'template_redirect', array( $this, 'guard_paid_download_page' )", $source );
+        $this->assertStringNotContainsString( "add_action( 'template_redirect', array( " . '$this' . ", 'maybe_render' )", $source );
+        $this->assertStringContainsString( "add_action( 'template_redirect', array( " . '$this' . ", 'guard_paid_download_page' )", $source );
         $this->assertFileExists( dirname( __DIR__ ) . '/assets/css/download-page-native.css' );
         $this->assertFileExists( dirname( __DIR__ ) . '/assets/js/download-page-native.js' );
     }
