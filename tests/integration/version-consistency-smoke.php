@@ -1,7 +1,10 @@
 <?php
 /** Read-only version/asset validation in an isolated WordPress fixture. */
 if ( ! defined( 'ABSPATH' ) ) { exit( 1 ); }
-$expected = '2.6.0';
+$expected = defined( 'JLWA_VERSION' ) ? JLWA_VERSION : '';
+if ( ! preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+$/D', $expected ) ) {
+    throw new RuntimeException( 'Missing or invalid plugin version' );
+}
 if ( ! defined( 'JLWA_VERSION' ) || JLWA_VERSION !== $expected ) {
     throw new RuntimeException( 'Invalid plugin version: ' . ( defined( 'JLWA_VERSION' ) ? JLWA_VERSION : 'undefined' ) );
 }
@@ -15,7 +18,7 @@ foreach ( $features as $key => $item ) {
 if ( JLWA_Feature_Registry::version( 'unknown' ) !== '-' ) {
     throw new RuntimeException( 'Unknown feature was assigned a fake version' );
 }
-echo "六个功能域统一显示 v2.6.0，缺失功能不误报版本：通过\n";
+echo "六个功能域统一显示 v{$expected}，缺失功能不误报版本：通过\n";
 
 // Migrated settings must preserve the historical, independent schema markers.
 if ( JLWA_Page_Effects_Feature::VERSION !== '1.8.0'

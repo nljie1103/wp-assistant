@@ -25,4 +25,5 @@ bash tests/private-deploy-status-open-basedir.test.sh
 bash tests/public-docs-privacy.test.sh
 python3 tools/version-policy.py check
 bash tests/version-policy.test.sh
+bash tests/version-smoke-current.test.sh
 bash tests/release-format.test.sh
