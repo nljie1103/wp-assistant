@@ -458,9 +458,11 @@ if (!function_exists('jldv4_get_default_cover_url')) {
     }
 }
 
+// WordPress template_include loads this file without the previous PHP local
+// scope; obtain this plugin's visual settings directly (read-only) if needed.
 $jlwa_download_options = isset($jlwa_download_page_options) && is_array($jlwa_download_page_options)
     ? $jlwa_download_page_options
-    : array();
+    : (class_exists('JLWA_Download_Page_Feature') ? JLWA_Download_Page_Feature::options() : array());
 $jld_cover_strategy = isset($jlwa_download_options['cover_mode'])
     ? sanitize_key((string) $jlwa_download_options['cover_mode'])
     : 'auto';
