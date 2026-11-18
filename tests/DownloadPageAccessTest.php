@@ -2,6 +2,7 @@
 /** Paid page gate tests: no browser-side HTML may be generated before redirect. */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 require_once dirname( __DIR__ ) . '/features/private-download.php';
+if ( ! defined( 'JLWA_PLUGIN_DIR' ) ) { define( 'JLWA_PLUGIN_DIR', dirname( __DIR__ ) . '/' ); }
 
 // Explicit doubles for option reads because this test loads the real feature.
 function get_option( $key, $default = false ) { return $GLOBALS['jlwa_test_stored_options'][$key] ?? $default; }
