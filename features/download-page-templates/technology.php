@@ -490,7 +490,7 @@ if (!function_exists('jldv4_normalize_cover_url')) {
         if (!preg_match('#^https?://#i', $url)) {
             return '';
         }
-        if (preg_match('#(?:transparent|spacer|blank|loading|placeholder|spinner|pixel)(?:[-_.][^/?#]*)?\.(?:gif|png|webp|svg)(?:[?#]|$)#i', $url)) {
+        if (preg_match('~(?:transparent|spacer|blank|loading|placeholder|spinner|pixel)(?:[-_.][^/?#]*)?\.(?:gif|png|webp|svg)(?:[?#]|$)~i', $url)) {
             return '';
         }
         return esc_url_raw($url);
