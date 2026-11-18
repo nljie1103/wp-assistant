@@ -12,6 +12,10 @@ function add_settings_error( $setting, $code, $message, $type = 'error' ) {
 function get_settings_errors() { return $GLOBALS['jlwa_test_settings_errors'] ?? array(); }
 function wp_parse_args( $args, $defaults = array() ) { return array_merge( $defaults, (array) $args ); }
 function esc_url_raw( $url ) { return (string) $url; }
+function get_page_by_path( $path ) {
+    $GLOBALS['jlwa_test_membership_lookup_path'] = $path;
+    return $GLOBALS['jlwa_test_membership_page'] ?? null;
+}
 function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
 function sanitize_key( $value ) { return preg_replace( "/[^a-z0-9_-]/", "", strtolower( (string) $value ) ); }
 
@@ -769,6 +773,69 @@ final class DownloadPageAccessTest extends TestCase {
             $this->assertStringContainsString( 'JLWA_Download_Page_Feature::options()', $source );
             $this->assertStringContainsString( 'render_support_panel( $jlwa_download_options )', $source );
         }
+    }
+
+
+    public function test_full_download_templates_use_site_brand_instead_of_author_brand(): void {
+        foreach ( array( 'technology', 'business', 'vip' ) as $skin ) {
+            $source = file_get_contents( dirname( __DIR__ ) . '/features/download-page-templates/' . $skin . '.php' );
+            $this->assertStringContainsString( "get_bloginfo('name')", $source, $skin );
+            $this->assertStringContainsString( 'esc_html($jld_site_name)', $source, $skin );
+            $this->assertStringNotContainsString( '九流网络', $source, $skin );
+            $this->assertStringNotContainsString( "home_url('/join-vip/')", $source, $skin );
+            $this->assertStringContainsString( 'if ($membership_url)', $source, $skin );
+            $this->assertStringContainsString( 'render_support_panel( $jlwa_download_options )', $source, $skin );
+        }
+        $cover = file_get_contents( dirname( __DIR__ ) . '/assets/default-download-cover.svg' );
+        $this->assertStringNotContainsString( 'JIULIU NETWORK', $cover );
+        $this->assertStringNotContainsString( '九流网络', $cover );
+        $this->assertStringContainsString( 'DIGITAL RESOURCES', $cover );
+    }
+
+    public function test_membership_page_is_configurable_with_safe_legacy_fallback(): void {
+        $options = JLWA_Download_Page_Feature::defaults();
+        $this->assertSame( '', $options['membership_url'] );
+        unset( $GLOBALS['jlwa_test_membership_page'] );
+        $this->assertSame( '', JLWA_Download_Page_Feature::membership_url( $options ) );
+        $this->assertSame( 'join-vip', $GLOBALS['jlwa_test_membership_lookup_path'] );
+
+        $GLOBALS['jlwa_test_membership_page'] = (object) array( 'ID' => 906, 'post_status' => 'publish' );
+        $this->assertSame( 'https://example.test/906.html', JLWA_Download_Page_Feature::membership_url( $options ) );
+        $GLOBALS['jlwa_test_membership_page']->post_status = 'draft';
+        $this->assertSame( '', JLWA_Download_Page_Feature::membership_url( $options ) );
+
+        $options['membership_url'] = 'https://other-site.example/membership/';
+        $this->assertSame( 'https://other-site.example/membership/', JLWA_Download_Page_Feature::membership_url( $options ) );
+        $options['membership_url'] = 'javascript:alert(1)';
+        $this->assertSame( '', JLWA_Download_Page_Feature::membership_url( $options ) );
+        $this->assertSame( '', JLWA_Download_Page_Feature::safe_membership_url( 'data:text/html,x' ) );
+        $this->assertSame( '', JLWA_Download_Page_Feature::safe_membership_url( '/join-vip/' ) );
+
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_enabled'] = 1;
+        $old['private_hosts'] = 'openlist.example.test';
+        $old['membership_url'] = 'https://example.test/old-vip/';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'templates',
+            'enabled' => 1,
+            'render_mode' => 'classic',
+            'membership_url' => 'https://example.test/membership/',
+        ) );
+        $this->assertSame( 'https://example.test/membership/', $saved['membership_url'] );
+        $this->assertSame( 1, $saved['private_enabled'] );
+        $this->assertSame( 'openlist.example.test', $saved['private_hosts'] );
+
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $saved;
+        $securitySaved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'security',
+            'private_enabled' => 1,
+            'private_hosts' => 'openlist.example.test',
+            'private_source_prefix' => '/d/storage/private/',
+            'private_internal_prefix' => '/_jlwa_private_openlist/',
+        ) );
+        $this->assertSame( 'https://example.test/membership/', $securitySaved['membership_url'] );
+        unset( $GLOBALS['jlwa_test_membership_page'], $GLOBALS['jlwa_test_membership_lookup_path'] );
     }
 
 }
