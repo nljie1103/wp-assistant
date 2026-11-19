@@ -401,6 +401,8 @@ class JLWA_Updater {
 			'assets/css/admin-content.css',
 			'assets/js/admin.js',
 			'assets/js/admin-content.js',
+			'assets/vue/admin.js',
+			'assets/vue/admin.css',
 			'includes/class-jlwa-admin.php',
 			'includes/class-jlwa-feature-registry.php',
 			'includes/class-jlwa-updater.php',
