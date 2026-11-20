@@ -24,7 +24,7 @@
 | 功能 | 真实能力 |
 |:---|:---|
 | 🌸 **页面美化** | 18 项紧凑管理：樱花、雪花、星光、微光流星、柔和无缝波浪、纸艺灯笼、鼠标交互等；按需展开配置并支持筛选 |
-| 🔐 **登录安全** | 彩虹聚合 OAuth 登录强制 Turnstile 人机验证：服务端 Siteverify、90 秒一次性准入、默认关闭；无需 CF 橙云代理 |
+| 🔐 **登录安全** | 彩虹聚合 OAuth 智能 Turnstile、按需保护 WordPress 原生后台登录与自定义 PHP 路径；默认按风险触发，无需 CF 橙云 |
 | 🛡️ **反调试保护** | 检测部分 DevTools 信号、阻碍快捷键与普通复制，支持安全能力自检；敏感内容依赖独立的服务端授权，不承诺阻止浏览器菜单或 JS 禁用 |
 | 🤖 **AI 文章摘要** | 多服务商与模型、按服务商/模型保存 API Key、管理员按需显示已存密钥、连接测试、缓存及摘要外观 |
 | 🌌 **沉浸式预加载** | 12 种开屏（含极光光幕、极简聚焦）、自定义 Logo、展示时长上限、首屏关键资源策略、移动端与减少动画适配 |
@@ -34,6 +34,8 @@
 ### 🔑 登录安全：Site Key / Secret Key 在哪里获取？
 
 前往 Cloudflare **Turnstile** 创建 Widget，然后将 **Site Key** 与 **Secret Key** 填入「九流 WP 助手 → 登录安全」。详细操作及密钥安全注意事项请看 **[Turnstile 密钥获取与配置教程](docs/turnstile-keys-guide.md)**（无需开启 Cloudflare CDN）。
+
+**v3.1.5 登录安全智能验证：** 默认低风险无验证码，短时间单 IP 或全站大量登录请求时才触发；可选始终验证，支持 WordPress 原生密码登录与自定义动态 PHP 路径。注意 `/wp-admin` 应通过 `/wp-login.php` 专用保护，不能直接屏蔽 admin-ajax。详细边界见 [智能验证与自定义路径说明](docs/login-security-adaptive.md)。
 
 **v3.1.3 新增登录安全：** 可为子比彩虹聚合 OAuth 发起入口强制启用 Cloudflare Turnstile 验证，不需要 Cloudflare CDN，且不修改主题 SDK 或回调。默认关闭，需自行配置有效密钥并实测中国大陆浏览器体验。参阅 [OAuth 登录安全部署说明](docs/oauth-turnstile-security.md)。
 

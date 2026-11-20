@@ -9,7 +9,7 @@ if ( ! defined( 'JLWA_VERSION' ) || JLWA_VERSION !== $expected ) {
     throw new RuntimeException( 'Invalid plugin version: ' . ( defined( 'JLWA_VERSION' ) ? JLWA_VERSION : 'undefined' ) );
 }
 $features = JLWA_Feature_Registry::features();
-if ( count( $features ) !== 6 ) { throw new RuntimeException( 'Feature count changed unexpectedly' ); }
+if ( count( $features ) !== 7 ) { throw new RuntimeException( 'Feature count changed unexpectedly' ); }
 foreach ( $features as $key => $item ) {
     if ( $item['version'] !== $expected || JLWA_Feature_Registry::version( $key ) !== $expected ) {
         throw new RuntimeException( 'Visible feature version mismatch: ' . $key );

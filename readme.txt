@@ -4,11 +4,11 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.4
+Stable tag: 3.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-一个真正统一的 WordPress 增强插件：页面美化、反调试保护、沉浸式预加载、AI 文章摘要、媒体与多域名链接管理和子比下载页美化。
+一个真正统一的 WordPress 增强插件：页面美化、反调试保护、登录安全、沉浸式预加载、AI 文章摘要、媒体与多域名链接管理和子比下载页美化。
 
 == Description ==
 
@@ -29,7 +29,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
 6. 下载页美化：恢复原版完整六款资源中心页面（默认经典模式），亦可切换不替换主题 HTML 的子比原生兼容皮肤；客服与群组可自行设置。未购下载页保护及明确启用的 OpenList 私有交付继续保留，私有源站必须由 Nginx 封锁。
 
-7. 登录安全：新增彩虹聚合登录 /oauth/clogin 发起阶段的 Turnstile 强制验证，后端 Siteverify 校验与单次短期授权，默认关闭、不要求 CF 代理，原 OAuth 回调保留。
+7. 登录安全：彩虹聚合 OAuth 登录可按风险触发 Turnstile，后端 Siteverify 校验与单次短期授权；可选 WordPress 原生密码登录与自定义动态路径保护，默认关闭、不要求 CF 代理，不影响原 OAuth 回调。
 
 == Installation ==
 
@@ -41,6 +41,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.5 =
+* 登录安全升级为自适应人机验证：优化前台提示、按单来源/全站频率触发风险、保护 wp-login.php 原生密码验证并支持自定义 WordPress 动态路径，保留原 OAuth 回调；默认仅智能触发而非每次展示。
 
 = 3.1.4 =
 * 增加 Cloudflare Turnstile Site Key/Secret Key 获取教程，README 和登录安全后台增加入口；沿用现有默认关闭与服务端验证。
