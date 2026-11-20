@@ -370,15 +370,46 @@ class JLWA_Updater {
 		return $this->rollback( $backup_dir, $destination );
 	}
 
-	/** @param string $backup Backup. @param string $destination Destination. */
+	/**
+	 * Restore a full backup without deleting the current directory first.
+	 * Failed staging must leave the current plugin untouched. On a failed swap,
+	 * preserve the displaced directory for manual recovery if move-back fails.
+	 *
+	 * @param string $backup Backup directory.
+	 * @param string $destination Active plugin directory.
+	 * @return true|WP_Error
+	 */
 	protected function rollback( $backup, $destination ) {
 		global $wp_filesystem;
-		$wp_filesystem->delete( $destination, true );
-		if ( ! $wp_filesystem->mkdir( $destination, FS_CHMOD_DIR ) && ! $wp_filesystem->is_dir( $destination ) ) {
-			return new WP_Error( 'jlwa_rollback_dir', '无法重新创建插件目录。' );
+		$parent = trailingslashit( dirname( $destination ) );
+		$suffix = wp_generate_uuid4();
+		$staging = $parent . '.jlwa-restore-stage-' . $suffix;
+		$displaced = $parent . '.jlwa-restore-displaced-' . $suffix;
+		$copy = copy_dir( $backup, $staging );
+		if ( is_wp_error( $copy ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_rollback_stage', '恢复备份暂存失败，当前目录未删除：' . $copy->get_error_message() );
 		}
-		$result = copy_dir( $backup, $destination );
-		return is_wp_error( $result ) ? $result : true;
+		if ( ! $wp_filesystem->exists( trailingslashit( $staging ) . self::MAIN_FILE ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_rollback_incomplete', '恢复备份缺少主插件文件，当前目录未删除。' );
+		}
+		$had_destination = $wp_filesystem->exists( $destination );
+		if ( $had_destination && ! $wp_filesystem->move( $destination, $displaced ) ) {
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_rollback_swap_old', '无法安全暂存当前插件目录，未覆盖现有文件。' );
+		}
+		if ( ! $wp_filesystem->move( $staging, $destination ) ) {
+			$restored = ! $had_destination || $wp_filesystem->move( $displaced, $destination );
+			$this->cleanup( $staging );
+			return new WP_Error( 'jlwa_rollback_swap_new', $restored
+				? '无法启用恢复备份，已恢复切换前的目录。'
+				: '无法启用恢复备份，原目录保留在：' . $displaced );
+		}
+		if ( $had_destination ) {
+			$wp_filesystem->delete( $displaced, true );
+		}
+		return true;
 	}
 
 	/** @param string $root Package root. @param array<string,string> $info Remote info. */

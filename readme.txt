@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.1
+Stable tag: 3.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,7 +40,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 == Changelog ==
 
-= 3.1.1 =
+= 3.1.2 =
+* 更新失败回滚先暂存完整备份，再安全切换目录；暂存复制失败时不再删除当前插件。
+
+
+= 3.1.2 =
 * 自动更新在替换现有插件前必须同时检查 Vue 3 后台 JS 和 CSS 资源，缺少任一文件均拒绝安装并保留旧版。
 
 
