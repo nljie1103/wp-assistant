@@ -8,6 +8,8 @@
 
 ## 初始化
 
+第一次配置 Site Key / Secret Key：请先阅读 [Cloudflare Turnstile 密钥获取与配置教程](turnstile-keys-guide.md)。
+
 1. Cloudflare Turnstile 创建 Widget（Managed 模式），允许主机名填写实际 WordPress `home_url()` 域名。
 2. 九流WP助手 → 登录安全：填 Site Key 和 Secret Key，保存。Secret Key 不会回显。建议通过 `wp-config.php` 设置 `define('JLWA_TURNSTILE_SECRET_KEY', '...');`，然后仅在插件界面录入 Site Key。
 3. 先用中国大陆网络打开 Turnstile 并完成正常 QQ/微信登录发起、授权、回调、返回文章页；确认没有浏览器拦截/验证码网络故障，再开启“保护状态”。
