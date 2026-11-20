@@ -153,6 +153,7 @@ final class JLWA_Login_Security_Feature {
         $options = self::settings();
         $configured = self::configured();
         $constant = defined( 'JLWA_TURNSTILE_SECRET_KEY' );
+        $keys_guide_url = 'https://github.com/nljie1103/wp-assistant/blob/main/docs/turnstile-keys-guide.md';
         $notice = isset( $_GET['jlwa_login_notice'] ) ? sanitize_key( wp_unslash( $_GET['jlwa_login_notice'] ) ) : '';
         ?>
         <div class="wrap jlwa-login-security">
@@ -160,14 +161,14 @@ final class JLWA_Login_Security_Feature {
           <?php if ( 'saved' === $notice ) : ?><div class="notice notice-success inline"><p>配置已保存。</p></div><?php elseif ( 'incomplete' === $notice ) : ?><div class="notice notice-warning inline"><p>配置已保存，但缺少有效 Site Key 或 Secret Key，防护保持关闭。</p></div><?php endif; ?>
           <div class="jlwa-system-grid">
             <section class="jlwa-update-panel">
-              <div class="jlwa-update-panel__head"><div><span class="jlwa-kicker">LOGIN PROTECTION</span><h2>入口验证设置</h2><p>Turnstile 由浏览器加载；WordPress 服务器必须通过 Siteverify 执行强制校验。开启前请先用中国大陆网络测试验证码可用性。</p></div></div>
+              <div class="jlwa-update-panel__head"><div><span class="jlwa-kicker">LOGIN PROTECTION</span><h2>入口验证设置</h2><p>Turnstile 由浏览器加载；WordPress 服务器必须通过 Siteverify 执行强制校验。开启前请先用中国大陆网络测试验证码可用性。<a href="<?php echo esc_url( $keys_guide_url ); ?>" target="_blank" rel="noopener noreferrer">查看 Site Key / Secret Key 获取教程</a></p></div></div>
               <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <input type="hidden" name="action" value="jlwa_login_security_save" />
                 <?php wp_nonce_field( 'jlwa_login_security_save' ); ?>
                 <table class="form-table" role="presentation"><tbody>
                   <tr><th scope="row">保护状态</th><td><label><input type="checkbox" name="jlwa_login_security[enabled]" value="1" <?php checked( $options['enabled'], 1 ); ?> /> 开启彩虹 OAuth 登录前的强制人机验证</label><p class="description">默认关闭；缺少密钥时不能开启。已有 Nginx 异常 rurl 防护不受此开关影响。</p></td></tr>
-                  <tr><th scope="row"><label for="jlwa-ts-site-key">Site Key</label></th><td><input id="jlwa-ts-site-key" class="regular-text" autocomplete="off" name="jlwa_login_security[site_key]" type="text" value="<?php echo esc_attr( $options['site_key'] ); ?>" /><p class="description">Cloudflare Turnstile Widget 的公开站点密钥，允许主机名需包含本博客主域名。</p></td></tr>
-                  <tr><th scope="row"><label for="jlwa-ts-secret-key">Secret Key</label></th><td><input id="jlwa-ts-secret-key" class="regular-text" autocomplete="new-password" name="jlwa_login_security[secret_key]" type="password" value="" placeholder="<?php echo $configured ? '已配置（留空不修改）' : '输入 Secret Key'; ?>" <?php disabled( $constant, true ); ?> /><p class="description"><?php echo $constant ? 'Secret Key 已通过 wp-config.php 常量 JLWA_TURNSTILE_SECRET_KEY 提供。' : '已保存的密钥不会回显；新密钥仅在填写时更新。也可在 wp-config.php 中使用 JLWA_TURNSTILE_SECRET_KEY 常量。'; ?></p></td></tr>
+                  <tr><th scope="row"><label for="jlwa-ts-site-key">Site Key</label></th><td><input id="jlwa-ts-site-key" class="regular-text" autocomplete="off" name="jlwa_login_security[site_key]" type="text" value="<?php echo esc_attr( $options['site_key'] ); ?>" /><p class="description">Cloudflare Turnstile Widget 的公开站点密钥，允许主机名需包含本博客主域名。<a href="<?php echo esc_url( $keys_guide_url ); ?>" target="_blank" rel="noopener noreferrer">如何获取？</a></p></td></tr>
+                  <tr><th scope="row"><label for="jlwa-ts-secret-key">Secret Key</label></th><td><input id="jlwa-ts-secret-key" class="regular-text" autocomplete="new-password" name="jlwa_login_security[secret_key]" type="password" value="" placeholder="<?php echo $configured ? '已配置（留空不修改）' : '输入 Secret Key'; ?>" <?php disabled( $constant, true ); ?> /><p class="description"><?php echo $constant ? 'Secret Key 已通过 wp-config.php 常量 JLWA_TURNSTILE_SECRET_KEY 提供。' : '已保存的密钥不会回显；新密钥仅在填写时更新。也可在 wp-config.php 中使用 JLWA_TURNSTILE_SECRET_KEY 常量。'; ?> <a href="<?php echo esc_url( $keys_guide_url ); ?>" target="_blank" rel="noopener noreferrer">密钥获取与安全说明</a></p></td></tr>
                 </tbody></table>
                 <?php submit_button( '保存登录安全设置' ); ?>
               </form>

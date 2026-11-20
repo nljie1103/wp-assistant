@@ -31,6 +31,10 @@
 | 🔗 **媒体与链接** | 多入口域名适配（静态 CSS/JS 与图标字体同源改写可选）、分类设置、相对媒体 URL、扫描修复、可选 Nginx 静态缓存 |
 | 📦 **下载页美化** | 恢复六款完整经典下载页布局，另提供不替换主题页面的原生兼容模式；客服／社群可配置，私有文件交付独立管理 |
 
+### 🔑 登录安全：Site Key / Secret Key 在哪里获取？
+
+前往 Cloudflare **Turnstile** 创建 Widget，然后将 **Site Key** 与 **Secret Key** 填入「九流 WP 助手 → 登录安全」。详细操作及密钥安全注意事项请看 **[Turnstile 密钥获取与配置教程](docs/turnstile-keys-guide.md)**（无需开启 Cloudflare CDN）。
+
 **v3.1.3 新增登录安全：** 可为子比彩虹聚合 OAuth 发起入口强制启用 Cloudflare Turnstile 验证，不需要 Cloudflare CDN，且不修改主题 SDK 或回调。默认关闭，需自行配置有效密钥并实测中国大陆浏览器体验。参阅 [OAuth 登录安全部署说明](docs/oauth-turnstile-security.md)。
 
 **v3.1.0 兼容与安全边界审计：** 修复多域名白名单改写遗漏子比 `/download?post=...` 和 `?jlwa_dl=` 票据的风险；全站预加载、页面特效（含输出缓冲）与严格反调试默认跳过子比登录、支付、订单和文件交付路由，避免遮挡或干扰原生处理。访客购买下载不再共用用户 ID 0 的限流配额，站内正规购买鉴权与 Nginx 源站封锁仍然有效。预加载杂志版不再写入作者品牌。详见 [子比原生兼容说明](docs/zibll-native-compat.md)。

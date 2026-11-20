@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.3
+Stable tag: 3.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -41,6 +41,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.4 =
+* 增加 Cloudflare Turnstile Site Key/Secret Key 获取教程，README 和登录安全后台增加入口；沿用现有默认关闭与服务端验证。
 
 = 3.1.3 =
 * 新增登录安全功能区：可选彩虹聚合 OAuth 发起验证，Cloudflare Turnstile 无需开启橙云 CDN，后台可配置及启停。默认关闭，不接管原 OAuth 回调。
