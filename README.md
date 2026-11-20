@@ -4,7 +4,7 @@
 
 **一个插件，统一管理 WordPress 网站的视觉体验、内容智能与资源交付。**
 
-六个功能域、一个后台控制台、一套设置与更新流程。支持按需启用、保留旧配置，并用明确的状态与操作指引减少配置成本。
+七个功能域、一个后台控制台、一套设置与更新流程。支持按需启用、保留旧配置，并用明确的状态与操作指引减少配置成本。
 
 [![Release](https://img.shields.io/github/v/release/nljie1103/wp-assistant?style=for-the-badge&color=7356d8&label=Release)](https://github.com/nljie1103/wp-assistant/releases/latest)
 [![Tests](https://img.shields.io/github/actions/workflow/status/nljie1103/wp-assistant/test.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/nljie1103/wp-assistant/actions/workflows/test.yml)
@@ -19,16 +19,19 @@
 
 <a id="features"></a>
 
-## 🧩 六个功能域，一套体验
+## 🧩 七个功能域，一套体验
 
 | 功能 | 真实能力 |
 |:---|:---|
 | 🌸 **页面美化** | 18 项紧凑管理：樱花、雪花、星光、微光流星、柔和无缝波浪、纸艺灯笼、鼠标交互等；按需展开配置并支持筛选 |
+| 🔐 **登录安全** | 彩虹聚合 OAuth 登录强制 Turnstile 人机验证：服务端 Siteverify、90 秒一次性准入、默认关闭；无需 CF 橙云代理 |
 | 🛡️ **反调试保护** | 检测部分 DevTools 信号、阻碍快捷键与普通复制，支持安全能力自检；敏感内容依赖独立的服务端授权，不承诺阻止浏览器菜单或 JS 禁用 |
 | 🤖 **AI 文章摘要** | 多服务商与模型、按服务商/模型保存 API Key、管理员按需显示已存密钥、连接测试、缓存及摘要外观 |
 | 🌌 **沉浸式预加载** | 12 种开屏（含极光光幕、极简聚焦）、自定义 Logo、展示时长上限、首屏关键资源策略、移动端与减少动画适配 |
 | 🔗 **媒体与链接** | 多入口域名适配（静态 CSS/JS 与图标字体同源改写可选）、分类设置、相对媒体 URL、扫描修复、可选 Nginx 静态缓存 |
 | 📦 **下载页美化** | 恢复六款完整经典下载页布局，另提供不替换主题页面的原生兼容模式；客服／社群可配置，私有文件交付独立管理 |
+
+**v3.1.3 新增登录安全：** 可为子比彩虹聚合 OAuth 发起入口强制启用 Cloudflare Turnstile 验证，不需要 Cloudflare CDN，且不修改主题 SDK 或回调。默认关闭，需自行配置有效密钥并实测中国大陆浏览器体验。参阅 [OAuth 登录安全部署说明](docs/oauth-turnstile-security.md)。
 
 **v3.1.0 兼容与安全边界审计：** 修复多域名白名单改写遗漏子比 `/download?post=...` 和 `?jlwa_dl=` 票据的风险；全站预加载、页面特效（含输出缓冲）与严格反调试默认跳过子比登录、支付、订单和文件交付路由，避免遮挡或干扰原生处理。访客购买下载不再共用用户 ID 0 的限流配额，站内正规购买鉴权与 Nginx 源站封锁仍然有效。预加载杂志版不再写入作者品牌。详见 [子比原生兼容说明](docs/zibll-native-compat.md)。
 
@@ -40,9 +43,9 @@
 
 **严格模式登录兼容性已加固。** v3.0.5 起 Zibll 登录 /user-sign 自动豁免反调试；点击登录后暂停高风险动作，误报弱信号不再触发跳转，旧页面会话锁不会影响登录后返回。详见 [登录兼容性说明](docs/anti-debug-login-compat.md)。
 
-**后台导航已改为顶部横向模式。** 站点在 WordPress 原生菜单下使用全宽工作台，顶部可直接进入全部六项功能、控制台和系统与更新；窄屏可横向滑动菜单，原有搜索、通知和深色模式不变。
+**后台导航已改为顶部横向模式。** 站点在 WordPress 原生菜单下使用全宽工作台，顶部可直接进入全部七项功能、控制台和系统与更新；窄屏可横向滑动菜单，原有搜索、通知和深色模式不变。
 
-**六个功能区的组件外观也已经统一。** 后台板块、卡片、悬停反馈、表单、状态、通知和危险确认均按同一套规则显示；卡片不再有的悬浮有的不浮动。详细规则见 [后台组件设计规范](docs/admin-design-system.md)。
+**七个功能区的组件外观也已经统一。** 后台板块、卡片、悬停反馈、表单、状态、通知和危险确认均按同一套规则显示；卡片不再有的悬浮有的不浮动。详细规则见 [后台组件设计规范](docs/admin-design-system.md)。
 
 **不是所有模块都默认启用。** 总览页区分“模块已加载”“功能已启用”和“依赖未满足”，并提示下一步操作。各模块有独立开关与设置，但共用主插件版本。
 
@@ -182,7 +185,7 @@ Logo、结束策略与展示时间可在后台调整；更新插件不会自动�
 wp-assistant/
 ├── jiuliu-wp-assistant.php        # 唯一 WordPress 插件入口
 ├── includes/
-│   ├── class-jlwa-feature-registry.php  # 六个功能域的注册与加载状态
+│   ├── class-jlwa-feature-registry.php  # 七个功能域的注册与加载状态
 │   ├── class-jlwa-admin.php             # 统一后台
 │   └── class-jlwa-updater.php           # GitHub Release 更新器
 ├── features/

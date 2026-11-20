@@ -2,6 +2,7 @@ export const PAGE_ICONS = {
   dashboard: 'layout-dashboard',
   'page-effects': 'sparkles',
   'anti-debug': 'shield-check',
+  'login-security': 'shield',
   'ai-summary': 'bot',
   preloader: 'clapperboard',
   'media-urls': 'images',

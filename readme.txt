@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.2
+Stable tag: 3.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,11 +16,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 * WordPress 只识别一个插件头、一个激活入口和一个更新源。
 * 所有后台菜单、页面标题、导航、状态提示和视觉组件由统一控制台负责。
-* 六项能力作为内部功能域启动，不再注册各自的插件生命周期、顶级菜单或更新器。
+* 七项能力作为内部功能域启动，不再注册各自的插件生命周期、顶级菜单或更新器。
 * 保留成熟业务逻辑与旧设置键，升级后无需重新填写 API、动画参数、域名规则和 Logo。
 * 在线更新先校验版本和 SHA-256，再完整备份插件目录；失败自动回滚。
 
-六项内置能力：
+七项内置能力：
 
 1. 页面美化：樱花、雪花、落叶、气泡、仅在页脚上方出现的底部波浪、粒子、鼠标轨迹、右键菜单、内容保护、复制版权、背景音乐和自定义代码。
 2. 反调试保护：多探测器评分、连续确认、四级可组合防御链，以及可选的持续 Debugger、循环刷新、循环关闭、会话锁定和紧急旁路。
@@ -28,6 +28,8 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 4. 沉浸式预加载：十二种开屏效果、自定义 Logo、首屏关键资源策略、从第一帧开始计时的硬超时、减少动态效果和动画资源清理。
 5. 媒体与链接：媒体相对地址、安全域名白名单、明确源站、反向代理诊断、扫描预览、安全修复和 SEO 辅助。
 6. 下载页美化：恢复原版完整六款资源中心页面（默认经典模式），亦可切换不替换主题 HTML 的子比原生兼容皮肤；客服与群组可自行设置。未购下载页保护及明确启用的 OpenList 私有交付继续保留，私有源站必须由 Nginx 封锁。
+
+7. 登录安全：新增彩虹聚合登录 /oauth/clogin 发起阶段的 Turnstile 强制验证，后端 Siteverify 校验与单次短期授权，默认关闭、不要求 CF 代理，原 OAuth 回调保留。
 
 == Installation ==
 
@@ -39,6 +41,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.3 =
+* 新增登录安全功能区：可选彩虹聚合 OAuth 发起验证，Cloudflare Turnstile 无需开启橙云 CDN，后台可配置及启停。默认关闭，不接管原 OAuth 回调。
 
 = 3.1.2 =
 * 更新失败回滚先暂存完整备份，再安全切换目录；暂存复制失败时不再删除当前插件。

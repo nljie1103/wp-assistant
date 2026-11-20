@@ -76,6 +76,7 @@ class JLWA_Admin {
 			'preloader'    => 'render_preloader',
 			'media-urls'   => 'render_media_urls',
 			'download-page' => 'render_download_page',
+			'login-security' => 'render_login_security',
 		);
 		return array( $this, isset( $map[ $key ] ) ? $map[ $key ] : 'render_dashboard' );
 	}
@@ -311,7 +312,7 @@ class JLWA_Admin {
 			<?php endif; ?>
 		</section>
 		<div class="jlwa-section-title" id="jlwa-feature-list">
-			<div><span>功能与下一步</span><h2>六项功能，逐项配置</h2></div>
+			<div><span>功能与下一步</span><h2>全部功能，逐项配置</h2></div>
 			<p>查看当前实际启用情况，点击对应入口进入设置；不会因为模块已加载就标记为已启用。</p>
 		</div>
 		<div class="jlwa-feature-grid">
@@ -379,6 +380,7 @@ class JLWA_Admin {
 	public function render_preloader() { $this->render_feature( 'preloader' ); }
 	public function render_media_urls() { $this->render_feature( 'media-urls' ); }
 	public function render_download_page() { $this->render_feature( 'download-page' ); }
+	public function render_login_security() { $this->render_feature( 'login-security' ); }
 
 	/** @param string $key Feature key. */
 	protected function render_feature( $key ) {
@@ -429,7 +431,7 @@ class JLWA_Admin {
 			<aside class="jlwa-system-side">
 				<h2>统一版本管理</h2>
 				<div class="jlwa-system-version"><span class="dashicons dashicons-admin-plugins"></span><div><strong>九流WP助手</strong><span>v<?php echo esc_html( JLWA_VERSION ); ?></span></div></div>
-				<div class="jlwa-system-tip"><strong>功能域策略</strong><p>六项功能共用主插件版本，安装、更新与恢复均按完整插件包进行。</p></div>
+				<div class="jlwa-system-tip"><strong>功能域策略</strong><p>所有功能共用主插件版本，安装、更新与恢复均按完整插件包进行。</p></div>
 				<div class="jlwa-system-tip"><strong>数据策略</strong><p>插件升级设计为保留设置、文章和 AI 缓存；正式站点操作前仍建议备份，失败恢复也依赖服务器文件系统状态。</p></div>
 				<div class="jlwa-system-tip"><strong>无法在线检查版本？</strong><p>请检查服务器到 <code>api.github.com</code> 的 DNS、HTTPS 与代理设置；也可从 <a href="https://github.com/nljie1103/wp-assistant/releases" target="_blank" rel="noopener noreferrer">GitHub 官方发布页</a> 获取经过校验的 ZIP。</p></div>
 			</aside>

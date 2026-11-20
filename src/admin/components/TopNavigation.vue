@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   LayoutDashboard, Sparkles, ShieldCheck, Bot, Clapperboard,
-  Images, Download, Settings, Search, ExternalLink, CircleHelp
+  Images, Download, Settings, Shield, Search, ExternalLink, CircleHelp
 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -19,6 +19,7 @@ const shortNames: Record<string, string> = {
   dashboard: '控制台',
   'page-effects': '页面特效',
   'anti-debug': '反调试',
+  'login-security': '登录安全',
   'ai-summary': 'AI 摘要',
   preloader: '预加载',
   'media-urls': '媒体链接',
@@ -29,6 +30,7 @@ const icons: Record<string, any> = {
   dashboard: LayoutDashboard,
   'page-effects': Sparkles,
   'anti-debug': ShieldCheck,
+  'login-security': Shield,
   'ai-summary': Bot,
   preloader: Clapperboard,
   'media-urls': Images,

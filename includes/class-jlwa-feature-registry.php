@@ -95,6 +95,18 @@ class JLWA_Feature_Registry {
 				'standalone'  => array(),
 			),
 
+			'login-security' => array(
+				'label'       => '登录安全',
+				'short_label' => '登录安全',
+				'icon'        => 'dashicons-shield',
+				'slug'        => 'jlwa-login-security',
+				'version'     => JLWA_VERSION,
+				'entry_class' => 'JLWA_Login_Security_Feature',
+				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/login-security/bootstrap.php',
+				'description' => '彩虹 OAuth 登录 Turnstile 强制验证、服务端 Siteverify 与短时单次准入；无需 CF CDN。',
+				'eyebrow'     => 'LOGIN & OAUTH SECURITY',
+				'standalone'  => array(),
+			),
 			'media-urls' => array(
 				'label'       => '媒体与链接',
 				'short_label' => '媒体与链接',
@@ -216,6 +228,11 @@ class JLWA_Feature_Registry {
 					JLWA_Download_Page_Feature::instance()->render_admin_page();
 				}
 				break;
+			case 'login-security':
+				if ( class_exists( 'JLWA_Login_Security_Feature' ) ) {
+					JLWA_Login_Security_Feature::instance()->render_admin_page();
+				}
+				break;
 			case 'media-urls':
 				if ( class_exists( 'JRMU_Admin' ) ) {
 					JRMU_Admin::instance()->render_page();
@@ -231,6 +248,9 @@ class JLWA_Feature_Registry {
 			return array( 'ready' => false, 'enabled' => false, 'label' => '需处理冲突', 'tone' => 'danger', 'hint' => isset( $status['message'] ) ? $status['message'] : '模块未成功加载。' );
 		}
 		$enabled = self::is_enabled( $key );
+		if ( 'login-security' === $key && $enabled && class_exists( 'JLWA_Login_Security_Feature' ) && ! JLWA_Login_Security_Feature::configured() ) {
+			return array( 'ready' => false, 'enabled' => true, 'label' => '缺少密钥', 'tone' => 'warning', 'hint' => 'Turnstile 密钥不完整，已启用入口会拒绝请求。' );
+		}
 		if ( 'download-page' === $key && ( ! class_exists( 'JLWA_Download_Page_Feature' ) || ! JLWA_Download_Page_Feature::is_compatible() ) ) {
 			return array( 'ready' => false, 'enabled' => $enabled, 'label' => '需子比主题', 'tone' => 'warning', 'hint' => '当前缺少子比下载/付费接口，即使开启设置，前台也不会接管下载页。' );
 		}
@@ -267,6 +287,9 @@ class JLWA_Feature_Registry {
 			case 'download-page':
 				$options = get_option( 'jlwa_download_page_options', array() );
 				return ! empty( $options['enabled'] ) || ! empty( $options['private_enabled'] );
+			case 'login-security':
+				$options = get_option( 'jlwa_login_security_options', array() );
+				return ! empty( $options['enabled'] );
 			case 'media-urls':
 				$options = get_option( 'jiuliu_relative_media_urls_options', array() );
 				foreach ( array( 'convert_existing_media_output', 'convert_future_media_output', 'convert_post_on_save', 'convert_post_on_frontend', 'domain_adaptation_enabled', 'canonical_enabled' ) as $setting ) {
