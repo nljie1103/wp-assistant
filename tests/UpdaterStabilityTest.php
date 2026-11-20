@@ -9,6 +9,7 @@ class Test_Updater extends JLWA_Updater {
     protected function get_release_info() { return new WP_Error( 'release_unavailable', 'Simulated unavailable GitHub release' ); }
     public function probe_remote() { return $this->get_remote_info( true ); }
     public function probe_install_info( $info ) { return $this->perform_update( $info ); }
+    public function restore_backup( $backup, $destination ) { return $this->rollback( $backup, $destination ); }
     public function restore_prior( $previous, $destination, $backup ) { return $this->restore_previous( $previous, $destination, $backup ); }
     public function swap_package( $source, $destination ) { return $this->install_package( $source, $destination ); }
     public function inspect_package( $root, $info ) { return $this->validate_package( $root, $info ); }
@@ -75,6 +76,54 @@ final class UpdaterStabilityTest extends TestCase {
         $this->assertInstanceOf( WP_Error::class, $result, 'Missing Vue CSS must be rejected' );
         file_put_contents( $root . '/assets/vue/admin.css', '.jlwa{}' );
         $this->assertTrue( $this->updater->inspect_package( $root, $info ) );
+        $this->assertSame( 'previous working code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
+    }
+
+    public function test_failed_backup_copy_during_rollback_must_keep_current_directory(): void {
+        $backup = $this->root . '/backup';
+        mkdir( $backup );
+        file_put_contents( $backup . '/jiuliu-wp-assistant.php', 'backup code' );
+        $GLOBALS['test_copy_fail'] = true;
+        $result = $this->updater->restore_backup( $backup, $this->current );
+        $this->assertInstanceOf( WP_Error::class, $result );
+        $this->assertSame( 'previous working code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
+    }
+
+    public function test_successful_backup_rollback_replaces_destination_only_after_staging(): void {
+        $backup = $this->root . '/backup';
+        mkdir( $backup );
+        file_put_contents( $backup . '/jiuliu-wp-assistant.php', 'backup code' );
+        $this->assertTrue( $this->updater->restore_backup( $backup, $this->current ) );
+        $this->assertSame( 'backup code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
+    }
+
+    public function test_backup_rollback_first_move_failure_preserves_current_plugin(): void {
+        $backup = $this->root . '/backup';
+        mkdir( $backup );
+        file_put_contents( $backup . '/jiuliu-wp-assistant.php', 'backup code' );
+        $GLOBALS['wp_filesystem']->fail_move_number = 1;
+        $result = $this->updater->restore_backup( $backup, $this->current );
+        $this->assertInstanceOf( WP_Error::class, $result );
+        $this->assertSame( 'previous working code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
+    }
+
+    public function test_backup_rollback_second_move_failure_restores_current_plugin(): void {
+        $backup = $this->root . '/backup';
+        mkdir( $backup );
+        file_put_contents( $backup . '/jiuliu-wp-assistant.php', 'backup code' );
+        $GLOBALS['wp_filesystem']->fail_move_number = 2;
+        $result = $this->updater->restore_backup( $backup, $this->current );
+        $this->assertInstanceOf( WP_Error::class, $result );
+        $this->assertSame( 'previous working code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
+    }
+
+    public function test_incomplete_backup_rollback_keeps_current_plugin(): void {
+        $backup = $this->root . '/backup';
+        mkdir( $backup );
+        file_put_contents( $backup . '/unrelated.txt', 'incomplete' );
+        $result = $this->updater->restore_backup( $backup, $this->current );
+        $this->assertInstanceOf( WP_Error::class, $result );
+        $this->assertSame( 'jlwa_rollback_incomplete', $result->get_error_code() );
         $this->assertSame( 'previous working code', file_get_contents( $this->current . '/jiuliu-wp-assistant.php' ) );
     }
 
