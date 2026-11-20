@@ -1,3 +1,11 @@
+## 3.1.5 — 2026-11-20
+
+- **按风险触发 Turnstile**：登录安全升级为默认智能模式，不再让每次正常 OAuth 登录都显示验证码；60 秒窗口同时评估单来源与全站登录请求量（默认 6/50 次），触发风险后保留 300 秒，支持后台调整与始终验证模式。请求计数使用带文件锁的临时私有状态，不以海量匿名 IP 创建 WordPress options。
+- **前台提示人性化**：移除访客验证页面的「不经过 Cloudflare CDN 代理」技术说明，改成「请完成安全验证」与简短的安全原因。始终验证模式不错误宣称发生异常。
+- **WordPress 原生后台登录防爆破**：新增可选 /wp-login.php 表单验证码，风险触发后服务端在 `authenticate` 过滤器校验 Turnstile，避免只靠前端显示。未登录 /wp-admin/ 会正常跳至原生登录，不拦后台 AJAX、admin-post、找回密码等内部路径。此功能不自动接管子比自定义 AJAX 或 XML-RPC 登录。
+- **自定义动态路径**：支持精确 `/private` 与前缀 `/private/*` 规则，风险后验证获取短时签名 Cookie；保护范围仅限由 WordPress 加载的动态请求，禁止误配置支付、OAuth、wp-admin 等关键路由，不把验证码当作业务授权。
+- **兼容和回归**：继承 v3.1.4 已保存 Site Key、Secret Key、总开关与已有 Nginx 自引用 rurl 防护；功能仍需线上真实 QQ/微信/后台登录和大陆网络验收，不自动修改生产站点。
+
 ## 3.1.4 — 2026-11-20
 
 - **登录安全密钥指引**：README 新增简短的 Cloudflare Turnstile 密钥帮助入口，具体创建 Widget、复制 Site Key / Secret Key、配置主机名、轮换密钥及安全边界全部收敛到 `docs/turnstile-keys-guide.md`，不在 README 展开长教程。

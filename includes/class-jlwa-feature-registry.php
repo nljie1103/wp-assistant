@@ -103,7 +103,7 @@ class JLWA_Feature_Registry {
 				'version'     => JLWA_VERSION,
 				'entry_class' => 'JLWA_Login_Security_Feature',
 				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/login-security/bootstrap.php',
-				'description' => '彩虹 OAuth 登录 Turnstile 强制验证、服务端 Siteverify 与短时单次准入；无需 CF CDN。',
+				'description' => '彩虹 OAuth 智能人机验证、原生密码登录防护与自定义动态路径；无需 CF CDN。',
 				'eyebrow'     => 'LOGIN & OAUTH SECURITY',
 				'standalone'  => array(),
 			),
