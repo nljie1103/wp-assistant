@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { safeNavigationEntries, searchItems, collectPageHeadings, PAGE_ICONS } from '../../src/admin/registry.mjs'
 
-test('Vue navigation preserves safe WordPress admin URLs and six module keys', () => {
+test('Vue navigation preserves safe WordPress admin URLs and seven module keys', () => {
   const entries = [
     { key: 'dashboard', label: '控制台', href: 'https://example.org/wp-admin/admin.php?page=jiuliu-wp-assistant' },
     { key: 'ai-summary', label: 'AI 文章摘要', href: '/wp-admin/admin.php?page=jlwa-ai-summary' },
@@ -14,7 +14,7 @@ test('Vue navigation preserves safe WordPress admin URLs and six module keys', (
   assert.deepEqual(valid.map(item => item.key), ['dashboard', 'ai-summary'])
   assert.equal(valid[0].href, entries[0].href)
   assert.equal(valid[1].href, entries[1].href)
-  assert.equal(Object.keys(PAGE_ICONS).length, 8)
+  assert.equal(Object.keys(PAGE_ICONS).length, 9)
 })
 
 test('functional search filters Chinese content and description without deleting controls', () => {
@@ -52,7 +52,7 @@ test('top navigation is horizontal, complete, scrollable and has an accessible a
   const css = readFileSync(new URL('../../src/admin/style.css', import.meta.url), 'utf8')
   const vue = readFileSync(new URL('../../src/admin/components/TopNavigation.vue', import.meta.url), 'utf8')
   const app = readFileSync(new URL('../../src/admin/main.ts', import.meta.url), 'utf8')
-  for (const key of ['dashboard', 'page-effects', 'anti-debug', 'ai-summary', 'preloader', 'media-urls', 'download-page', 'system']) {
+  for (const key of ['dashboard', 'page-effects', 'anti-debug', 'login-security', 'ai-summary', 'preloader', 'media-urls', 'download-page', 'system']) {
     assert.ok(vue.includes(key), 'Navigation includes ' + key)
   }
   assert.match(vue, /jlwa-ui-top-navigation/)

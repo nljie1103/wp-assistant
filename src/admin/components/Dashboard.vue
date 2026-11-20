@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Activity, ArrowUpRight, Bot, CheckCircle2, Clapperboard, Download, Images, LayoutDashboard, Search, Settings2, ShieldCheck, Sparkles, AlertTriangle, ChevronRight, Boxes } from 'lucide-vue-next'
+import { Activity, ArrowUpRight, Bot, CheckCircle2, Clapperboard, Download, Images, LayoutDashboard, Search, Settings2, ShieldCheck, Shield, Sparkles, AlertTriangle, ChevronRight, Boxes } from 'lucide-vue-next'
 import { searchItems } from '../registry.mjs'
 const props = defineProps<{ modules: any[]; version: string; updateUrl: string; state: any }>()
 const filter = ref('')
@@ -8,7 +8,7 @@ const cards = computed(() => searchItems(props.modules, filter.value))
 const enabled = computed(() => props.modules.filter(item => item.enabled && item.ready).length)
 const ready = computed(() => props.modules.filter(item => item.ready).length)
 const attention = computed(() => props.modules.filter(item => !item.ready))
-const icons: Record<string,any> = { 'page-effects': Sparkles, 'anti-debug': ShieldCheck, 'ai-summary': Bot, preloader: Clapperboard, 'media-urls': Images, 'download-page': Download }
+const icons: Record<string,any> = { 'page-effects': Sparkles, 'anti-debug': ShieldCheck, 'login-security': Shield, 'ai-summary': Bot, preloader: Clapperboard, 'media-urls': Images, 'download-page': Download }
 function follow(event: MouseEvent) {
   if (props.state.dirtyCount > 0 && !window.confirm('当前页面有未保存的更改。仍要离开吗？')) event.preventDefault()
 }
@@ -58,7 +58,7 @@ function follow(event: MouseEvent) {
 
     <section class="jlwa-ui-feature-section" id="jlwa-feature-list">
       <div class="jlwa-ui-section-heading">
-        <div><span class="jlwa-ui-label-muted">FEATURES</span><h2>功能模块</h2><p>独立配置六大功能，保存原有 WordPress 数据和前台逻辑。</p></div>
+        <div><span class="jlwa-ui-label-muted">FEATURES</span><h2>功能模块</h2><p>独立配置各项功能，保存原有 WordPress 数据和前台逻辑。</p></div>
         <label class="jlwa-ui-feature-search"><Search :size="17"/><input v-model="filter" type="search" placeholder="筛选模块..." aria-label="筛选功能模块"/><span>{{ cards.length }} 项</span></label>
       </div>
       <div v-if="cards.length" class="jlwa-ui-module-grid">
