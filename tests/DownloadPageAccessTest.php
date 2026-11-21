@@ -159,46 +159,21 @@ final class DownloadPageAccessTest extends TestCase {
         $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( 'sudo -i' ) );
     }
 
-    public function test_public_images_only_upgrade_generates_root_review_and_apply_commands(): void {
+    public function test_fresh_installer_requires_public_images_and_no_legacy_operations(): void {
         $settings = JLWA_Private_Download::defaults();
+        $settings['private_hosts'] = 'files.example.com';
         $settings['private_source_prefix'] = '/d/storage/private/';
+        $settings['openlist_host_port'] = '5244';
+        $dir = '/opt/wp/wp-content/plugins/wp-assistant';
+        $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', $dir, 'www' ) );
         $settings['openlist_public_images'] = '/d/storage/图片/';
-        $directory = '/opt/wp/wp-content/plugins/wp-assistant';
-        $preview = JLWA_Private_Deploy::public_images_command( $settings, 'preview-images-only', $directory );
-        $apply = JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory );
-        $this->assertStringContainsString( ' preview-images-only --public-images ', $preview );
-        $this->assertStringContainsString( ' upgrade-images-only --public-images ', $apply );
-        $this->assertStringContainsString( "'/d/storage/图片/'", $preview );
-        $this->assertStringContainsString( "'/d/storage/图片/'", $apply );
-        $this->assertStringContainsString( "'/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py'", $apply );
-        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'status', $directory ) );
-        $settings['openlist_public_images'] = '/d/storage/private/';
-        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory ) );
-        $settings['openlist_public_images'] = '/d/another/图片/';
-        $this->assertSame( '', JLWA_Private_Deploy::public_images_command( $settings, 'upgrade-images-only', $directory ) );
-    }
-
-    public function test_image_only_root_rollback_command_is_distinct_from_full_restore(): void {
-        $command = JLWA_Private_Deploy::public_images_rollback_command( '/opt/wp/wp-content/plugins/wp-assistant' );
-        $this->assertSame(
-            "sudo python3 '/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py' rollback-images-only",
-            $command
-        );
-        $this->assertStringNotContainsString( ' rollback', substr( $command, 0, -strlen('rollback-images-only') ) );
-        $this->assertSame( '', JLWA_Private_Deploy::public_images_rollback_command( './relative' ) );
-    }
-
-    public function test_strict_public_root_commands_are_read_only_or_explicit_and_never_sudo_web(): void {
-        $folder = '/opt/wp/wp-content/plugins/wp-assistant';
-        foreach ( array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public', 'preview-strict-refresh', 'refresh-strict-public' ) as $op ) {
-            $this->assertSame(
-                "sudo python3 '/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py' " . $op,
-                JLWA_Private_Deploy::strict_public_command( $op, $folder )
-            );
-            $this->assertSame( '', JLWA_Private_Deploy::strict_public_command( $op, 'relative/path' ) );
+        $command = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', $dir, 'www' );
+        $this->assertStringContainsString( ' install-auto', $command );
+        $this->assertStringContainsString( "--public-images '/d/storage/图片/'", $command );
+        $this->assertStringNotContainsString( 'upgrade-images-only', $command );
+        foreach ( array( 'install-auto', 'preview-strict-public', 'rollback-images-only', 'sudo -i' ) as $op ) {
             $this->assertSame( array( 'ok' => false, 'message' => '不支持的部署操作。' ), JLWA_Private_Deploy::call( $op ) );
         }
-        $this->assertSame( '', JLWA_Private_Deploy::strict_public_command( 'rollback', $folder ) );
     }
 
     public function test_image_whitelist_setting_saves_only_in_advanced_scope(): void {
@@ -224,7 +199,7 @@ final class DownloadPageAccessTest extends TestCase {
         $old['private_hosts'] = 'files.example.com';
         $old['private_source_prefix'] = '/d/storage/private/';
         $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
-        foreach ( array( '/d/storage/private/', '/d/storage/private/sub/', '/d/storage/', '/d/other/图片/', '/p/storage/图片/' ) as $bad ) {
+        foreach ( array( '/d/storage/private/', '/d/storage/private/sub/', '/d/storage/', '/p/storage/图片/' ) as $bad ) {
             $GLOBALS['jlwa_test_settings_errors'] = array();
             $saved = $this->feature->sanitize( array(
                 'jlwa_settings_scope' => 'advanced',
@@ -233,6 +208,20 @@ final class DownloadPageAccessTest extends TestCase {
             $this->assertSame( $old, $saved, $bad );
             $this->assertNotEmpty( $GLOBALS['jlwa_test_settings_errors'], $bad );
         }
+    }
+
+    public function test_public_images_can_use_an_independent_openlist_mount(): void {
+        $old = JLWA_Download_Page_Feature::defaults();
+        $old['private_hosts'] = 'files.example.com';
+        $old['private_source_prefix'] = '/d/storage/private/';
+        $GLOBALS['jlwa_test_stored_options'][JLWA_Download_Page_Feature::OPTION_KEY] = $old;
+        $GLOBALS['jlwa_test_settings_errors'] = array();
+        $saved = $this->feature->sanitize( array(
+            'jlwa_settings_scope' => 'advanced',
+            'openlist_public_images' => '/d/another/图片/',
+        ) );
+        $this->assertSame( '/d/another/图片/', $saved['openlist_public_images'] );
+        $this->assertSame( array(), $GLOBALS['jlwa_test_settings_errors'] );
     }
 
     public function test_nginx_operations_return_to_deployment_tab_and_result_anchor(): void {
@@ -256,13 +245,21 @@ final class DownloadPageAccessTest extends TestCase {
         $settings['private_hosts'] = "files.example.com\nfiles-cdn.example.com";
         $settings['private_source_prefix'] = '/d/storage/private/';
         $settings['openlist_host_port'] = '5244';
+        $this->assertSame( '', JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' ) );
+        $settings['openlist_public_images'] = '/d/storage/图片/';
         $command = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
         $this->assertStringContainsString( 'install-auto', $command );
         $this->assertStringContainsString( "--wordpress-host 'site.example.com'", $command );
         $this->assertStringContainsString( "--openlist-host 'files.example.com'", $command );
         $this->assertStringContainsString( "--port '5244'", $command );
         $this->assertStringContainsString( "--source '/d/storage/private/'", $command );
-        $this->assertStringNotContainsString( '--public-images', $command );
+        $this->assertStringContainsString( "--public-images '/d/storage/图片/'", $command );
+        $this->assertStringContainsString( "--openlist-hosts 'files.example.com,files-cdn.example.com'", $command );
+        $portable = JLWA_Private_Deploy::portable_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
+        $this->assertStringContainsString( ' render-config', $portable );
+        $this->assertStringNotContainsString( 'sudo python3', $portable );
+        $this->assertStringContainsString( "--public-images '/d/storage/图片/'", $portable );
+
         $settings['openlist_public_images'] = '/d/storage/图片/';
         $direct = JLWA_Private_Deploy::installer_command( $settings, 'site.example.com', '/opt/wordpress/wp-content/plugins/wp-assistant', 'www' );
         $this->assertStringContainsString( "--public-images '/d/storage/图片/'", $direct );

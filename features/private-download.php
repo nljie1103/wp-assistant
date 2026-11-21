@@ -92,10 +92,10 @@ class JLWA_Private_Download {
         }
         $images = trim( (string) ( $input['openlist_public_images'] ?? '' ) );
         if ( '' !== $images ) {
-            $mount = '/' . implode( '/', array_slice( explode( '/', trim( $source, '/' ) ), 0, 2 ) ) . '/';
-            if ( ! self::prefix( $images ) || 0 !== strpos( $images, $mount ) || $images === $mount ||
+            if ( ! self::prefix( $images ) ||
+                ! preg_match( '#^/d/(?:[\p{L}\p{N}_-]+/){2,}$#u', $images ) ||
                 0 === strpos( $images, $source ) || 0 === strpos( $source, $images ) ) {
-                $errors[] = '「唯一公开图片目录」无效：须为同一 OpenList 挂载下独立于付费目录的 /d/<挂载>/<图片目录>/，不得与付费资源目录重叠。';
+                $errors[] = '「唯一公开图片目录」无效：请输入独立于私有目录的 /d/<挂载>/<图片目录>/（可使用其它挂载），不可重叠且不允许特殊字符。';
             }
         }
         if ( ! empty( $input['private_enabled'] ) && '' === $hosts ) {
