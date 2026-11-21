@@ -5,7 +5,7 @@ $user = get_user_by( 'login', 'jlwaadmin' );
 if ( ! $user || ! user_can( $user, 'manage_options' ) ) { throw new RuntimeException( 'Missing isolated test administrator' ); }
 wp_set_current_user( $user->ID );
 $features = JLWA_Feature_Registry::features();
-if ( 7 !== count( $features ) ) { throw new RuntimeException( 'Unexpected feature count' ); }
+if ( count( $features ) < 8 || ! isset( $features['anti-scraping'] ) ) { throw new RuntimeException( 'Missing anti-scraping feature' ); }
 foreach ( $features as $key => $feature ) {
     $state = JLWA_Feature_Registry::state( $key );
     foreach ( array( 'ready', 'enabled', 'label', 'tone', 'hint' ) as $field ) {
@@ -26,9 +26,9 @@ if ( ! JLWA_Download_Page_Feature::is_compatible() && false === strpos( $html, '
     throw new RuntimeException( 'Missing incompatible-theme guidance' );
 }
 if ( ! preg_match( '/aria-current="page"/', $html ) ) { throw new RuntimeException( 'Active navigation has no aria-current' ); }
-if ( 7 !== substr_count( $html, 'class="jlwa-feature-card jlwa-feature-card--' ) ) { throw new RuntimeException( 'Missing feature cards' ); }
+if ( count( $features ) !== substr_count( $html, 'class="jlwa-feature-card jlwa-feature-card--' ) ) { throw new RuntimeException( 'Missing feature cards' ); }
 if ( false !== strpos( $html, '统一生命周期，功能域内部解耦' ) ) { throw new RuntimeException( 'Legacy non-actionable architecture banner remains' ); }
-echo "后台总览：7 个功能卡片、状态诊断、操作入口和导航无障碍标记全部通过\n";
+echo "后台总览：" . count( $features ) . " 个功能卡片、状态诊断、操作入口和导航无障碍标记全部通过\n";
 // Simulate an enabled AI summary with no usable key, without changing the DB.
 $mock_settings = JLWA_AI_Summary_Feature::get_settings();
 $mock_settings['enabled'] = 1;

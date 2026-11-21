@@ -96,10 +96,10 @@ def check():
     if not re.fullmatch(r'<!-- release-title: [^<>]+ -->', first):
         fail('当前发布说明缺少中文 Release 标题')
 
-    # All seven visible feature versions must follow the one plugin lifecycle.
+    # Every registered feature must follow the one plugin lifecycle. Avoid a fixed count when adding modules.
     registry = (ROOT / 'includes/class-jlwa-feature-registry.php').read_text(encoding='utf-8')
     reg_versions = re.findall(r"'version'\s*=>\s*([^,\n]+),", registry)
-    if len(reg_versions) != 7 or any(v.strip() != 'JLWA_VERSION' for v in reg_versions):
+    if not reg_versions or any(v.strip() != 'JLWA_VERSION' for v in reg_versions):
         fail('功能注册表版本不统一：' + str(reg_versions))
 
     total = 0
@@ -115,7 +115,7 @@ def check():
                     total += 1
     if total < 25:
         fail('检查到的 CSS/JS 资源数量异常，可能遗漏了资源：{}'.format(total))
-    print('版本校验通过：v{}；功能域=7；带统一版本的资源注册={} 项'.format(version, total))
+    print('版本校验通过：v{}；功能域={}；带统一版本的资源注册={} 项'.format(version, len(reg_versions), total))
     return version
 
 

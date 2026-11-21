@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.6
+Stable tag: 3.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,11 +16,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 * WordPress 只识别一个插件头、一个激活入口和一个更新源。
 * 所有后台菜单、页面标题、导航、状态提示和视觉组件由统一控制台负责。
-* 七项能力作为内部功能域启动，不再注册各自的插件生命周期、顶级菜单或更新器。
+* 八项能力作为内部功能域启动，不再注册各自的插件生命周期、顶级菜单或更新器。
 * 保留成熟业务逻辑与旧设置键，升级后无需重新填写 API、动画参数、域名规则和 Logo。
 * 在线更新先校验版本和 SHA-256，再完整备份插件目录；失败自动回滚。
 
-七项内置能力：
+八项内置能力：
 
 1. 页面美化：樱花、雪花、落叶、气泡、仅在页脚上方出现的底部波浪、粒子、鼠标轨迹、右键菜单、内容保护、复制版权、背景音乐和自定义代码。
 2. 反调试保护：多探测器评分、连续确认、四级可组合防御链，以及可选的持续 Debugger、循环刷新、循环关闭、会话锁定和紧急旁路。
@@ -30,6 +30,8 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 6. 下载页美化：恢复原版完整六款资源中心页面（默认经典模式），亦可切换不替换主题 HTML 的子比原生兼容皮肤；客服与群组可自行设置。未购下载页保护及明确启用的 OpenList 私有交付继续保留，私有源站必须由 Nginx 封锁。
 
 7. 登录安全：彩虹聚合 OAuth 登录可按风险触发 Turnstile，后端 Siteverify 校验与单次短期授权；可选 WordPress 原生密码登录与自定义动态路径保护，默认关闭、不要求 CF 代理，不影响原 OAuth 回调。
+
+8. 反采集防护：内置严格内容 REST API、RSS、oEmbed、XML-RPC 关闭选项，所有用户包括管理员不豁免，默认关闭；严苛模式可能影响 Gutenberg，启用前需确认。
 
 == Installation ==
 
@@ -41,6 +43,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.7 =
+* 新增统一后台「反采集防护」设置区：可独立限制 WordPress REST 内容读取（包括 `?rest_route=`）、RSS、oEmbed 和 XML-RPC，登录用户也不豁免；默认关闭，严格 REST 需额外确认编辑器兼容风险。
+* 保留其他插件 REST 命名空间及原有登录、支付和下载业务，补充回归测试，完整插件可通过后台统一更新。
+
 
 = 3.1.6 =
 * 彩虹 OAuth 安全修复：清理不安全的 redirect_to、阻断自引用 rurl、回调最终跳转到登录入口时回退首页；别名域名发起登录自动归一到主域名。无需改商业主题。

@@ -77,6 +77,7 @@ class JLWA_Admin {
 			'media-urls'   => 'render_media_urls',
 			'download-page' => 'render_download_page',
 			'login-security' => 'render_login_security',
+			'anti-scraping' => 'render_anti_scraping',
 		);
 		return array( $this, isset( $map[ $key ] ) ? $map[ $key ] : 'render_dashboard' );
 	}
@@ -358,6 +359,7 @@ class JLWA_Admin {
 			'preloader' => '选择开屏动画，注意移动端和减少动态效果设置。',
 			'download-page' => '确认子比下载接口兼容，再选择资源页模板。',
 			'media-urls' => '先运行诊断和扫描预览，确认后再执行永久修改。',
+			'anti-scraping' => '默认关闭；开启前确认区块编辑器与 REST 接口兼容性。',
 		);
 		return isset( $steps[ $key ] ) ? $steps[ $key ] : '打开设置并检查前端效果。';
 	}
@@ -381,6 +383,7 @@ class JLWA_Admin {
 	public function render_media_urls() { $this->render_feature( 'media-urls' ); }
 	public function render_download_page() { $this->render_feature( 'download-page' ); }
 	public function render_login_security() { $this->render_feature( 'login-security' ); }
+	public function render_anti_scraping() { $this->render_feature( 'anti-scraping' ); }
 
 	/** @param string $key Feature key. */
 	protected function render_feature( $key ) {
