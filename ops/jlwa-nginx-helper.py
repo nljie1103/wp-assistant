@@ -235,6 +235,7 @@ def init_install(args):
                 "public_access_policy": "strict_images_only" if approved_images else "paid_only"}
     if approved_images:
         manifest["public_images"] = approved_images
+        manifest["strict_rule_revision"] = 2
     # Copy binary OUT of WordPress: subsequent plugin updates cannot modify
     # the root-owned helper without another explicit administrator action.
     source_script = Path(__file__).resolve()
@@ -293,6 +294,8 @@ def read_manifest():
         fatal("invalid root-approved public access policy")
     if policy in ("images_only", "strict_images_only"):
         obj["public_images"] = validate_public_images(obj.get("public_images", ""), obj)
+    if policy == "strict_images_only" and obj.get("strict_rule_revision", 1) not in (1, 2):
+        fatal("unsupported strict public boundary revision")
     return obj
 
 
@@ -338,6 +341,17 @@ location = /__jlwa_private_upstream_error { internal; return 502; }""" % (data["
             'if ($jlwa_openlist_public_allowed = 0) { return 403; }'
             % re.escape(subtree)
         )
+        if data.get("strict_rule_revision", 1) >= 2:
+            # The normalized $uri alone is insufficient for double percent
+            # encoding: OpenList may decode a second time and return 500.
+            # Reject encoded separators, dot escapes, NUL and second escapes
+            # at the public boundary BEFORE any upstream proxying.
+            text = text.replace(
+                'if ($remote_addr ~',
+                'if ($request_uri ~* "%(?:25|2e|2f|5c|00)") { set $jlwa_openlist_public_allowed 0; }\n'
+                'if ($remote_addr ~',
+                1
+            )
     elif data.get("public_access_policy") == "images_only":
         # Use the normalized $uri at server rewrite phase, BEFORE the site's
         # existing reverse-proxy location/caching rules. Restrict all /d and
@@ -595,14 +609,22 @@ def migrate_strict_images(op):
         fatal("strict public migration requires explicit root approval")
     config = read_manifest()
     old_policy = config.get("public_access_policy")
+    refresh = op in ("preview-strict-refresh", "refresh-strict-public")
     upgrade = op in ("preview-strict-public", "upgrade-strict-public")
-    preview = op == "preview-strict-public"
-    wanted = "strict_images_only" if upgrade else "images_only"
-    if old_policy == wanted:
-        print("requested public access policy already applied; no changes")
-        return
-    if old_policy != ("images_only" if upgrade else "strict_images_only"):
-        fatal("incompatible current public access policy; refuse migration")
+    preview = op in ("preview-strict-public", "preview-strict-refresh")
+    wanted = "strict_images_only" if (upgrade or refresh) else "images_only"
+    if refresh:
+        if old_policy != "strict_images_only":
+            fatal("strict rule revision requires an already protected strict vhost")
+        if config.get("strict_rule_revision", 1) == 2:
+            print("strict public boundary revision 2 already installed; no changes")
+            return
+    else:
+        if old_policy == wanted:
+            print("requested public access policy already applied; no changes")
+            return
+        if old_policy != ("images_only" if upgrade else "strict_images_only"):
+            fatal("incompatible current public access policy; refuse migration")
     statefile = STATE / "state.json"
     if not statefile.is_file() or statefile.is_symlink():
         fatal("existing protected state missing")
@@ -630,7 +652,26 @@ def migrate_strict_images(op):
             fatal("OpenList config differs from approved recorded SHA")
         if snippet("wp", config) not in current_wp:
             fatal("WordPress X-Accel-Redirect internal proxy missing")
-        proposed = strict_images_proposal(current, config, to_strict=upgrade)
+        if refresh:
+            old = snippet("openlist", config)
+            if current.count(old) != 1:
+                fatal("managed strict v1 block differs from recorded policy")
+            proposed = current.replace(
+                old, snippet("openlist", dict(config, strict_rule_revision=2)), 1
+            )
+        else:
+            # An image-only to strict migration always installs the latest
+            # fail-closed rule revision, even for previously installed sites.
+            new_rule_config = dict(config, strict_rule_revision=2) if upgrade else config
+            if upgrade:
+                old = snippet("openlist", config)
+                if current.count(old) != 1:
+                    fatal("managed images-only block differs from recorded policy")
+                proposed = current.replace(
+                    old, snippet("openlist", dict(new_rule_config, public_access_policy=wanted)), 1
+                )
+            else:
+                proposed = strict_images_proposal(current, config, to_strict=False)
         run_nginx(check=True)
         if preview:
             print("--- Strict public OpenList boundary: READ-ONLY PREVIEW ---")
@@ -642,6 +683,10 @@ def migrate_strict_images(op):
                      statefile: statefile.read_text(encoding="utf-8"),
                      source_vhost: current}
         new_manifest = dict(config, public_access_policy=wanted)
+        if upgrade or refresh:
+            new_manifest["strict_rule_revision"] = 2
+        else:
+            new_manifest.pop("strict_rule_revision", None)
         new_state = dict(state, public_access_policy=wanted)
         new_state["after"] = dict(state["after"], openlist=digest(proposed))
         try:
@@ -657,7 +702,7 @@ def migrate_strict_images(op):
             run_nginx(check=True)
             run_nginx(check=False)
             raise
-        print("strict image-only public access" if upgrade else "prior images-only public rule", "deployed; backups and private download unchanged")
+        print("strict image-only public access" if upgrade else ("strict encoded-path hardening" if refresh else "prior images-only public rule"), "deployed; backups and private download unchanged")
         print("Verify: image GET 200, external root/API/WebDAV/private 403, local OpenList and buyer download work")
 
 
@@ -762,13 +807,15 @@ def main():
         cmd = commands.add_parser(op)
         cmd.add_argument("--public-images", required=True)
     commands.add_parser("rollback-images-only")
-    for op in ("preview-strict-public", "upgrade-strict-public", "rollback-strict-public"):
+    for op in ("preview-strict-public", "upgrade-strict-public", "rollback-strict-public",
+               "preview-strict-refresh", "refresh-strict-public"):
         commands.add_parser(op)
     args = parser.parse_args()
     if args.op in ("preview-images-only", "upgrade-images-only"):
         migrate_public_images(args)
         return
-    if args.op in ("preview-strict-public", "upgrade-strict-public", "rollback-strict-public"):
+    if args.op in ("preview-strict-public", "upgrade-strict-public", "rollback-strict-public",
+                    "preview-strict-refresh", "refresh-strict-public"):
         migrate_strict_images(args.op)
         return
     if args.op == "rollback-images-only":
@@ -802,6 +849,7 @@ def main():
                               "approved_port": config["port"],
                               "docker_container_detected": bool(config.get("docker_container_detected")),
                               "public_access_policy": config.get("public_access_policy", "paid_only"),
+                              "strict_rule_revision": config.get("strict_rule_revision", 1) if config.get("public_access_policy") == "strict_images_only" else 0,
                               "approved_public_images": config.get("public_images", "")}, ensure_ascii=False))
         elif args.op == "preview":
             for kind, vhost in (("wp", config["wordpress_vhost"]), ("openlist", config["openlist_vhost"])):

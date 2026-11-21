@@ -1,3 +1,10 @@
+## 3.2.2 — 2026-11-21
+
+- **OpenList 畸形编码前置拒绝**：实机验证发现 v3.2.1 规范路径规则能够禁止公网 API 与付费 ZIP，但带双重百分号编码的伪图片路径仍可能绕过 URI 前缀检查，进入 OpenList 并返回 500。新增公网入口原始 URI 拦截 `%25`、`%2e`、`%2f`、`%5c`、`%00` 等危险编码，避免交给后端处理；本机接口仍正常。
+- **保留 root 批准与原子升级机制**：现有严格 `strict_images_only` v1 不直接被插件更新篡改；root-only `preview-strict-refresh`、`refresh-strict-public` 先核验站点 SHA、现有托管块、备份及内部代理，独立将严格规则修订为 v2，可定向回退到旧图片白名单。新安装和旧图片白名单升级直接使用修订 v2。
+- **真实 Nginx 验证**：独立本地 Nginx 监听模拟非本机访问，畸形双重编码返回 403、正常图片返回 200、本机请求允许。PHPUnit、Python 和发布流水线覆盖升级幂等、回退、编码检测和拒绝 PHP 任意 root 操作。
+- **边界**：仍需校验 WordPress 实际已购账号的端到端 ZIP 下载及 CDN 历史缓存。只更新插件不会自动修改 Nginx；生产须执行受控 root 刷新。
+
 ## 3.2.1 — 2026-11-21
 
 - **OpenList 公网严格仅图片**：现有 `images_only` 原先仅限制 /d 与 /p，首页、API、WebDAV 仍可能到达 OpenList。新增 `strict_images_only` 策略，在 Nginx server rewrite 阶段仅放行批准的图片目录 GET/HEAD，其它公网路径一律 403；本机回环与子比已购 `X-Accel-Redirect` 私有代理不变。
