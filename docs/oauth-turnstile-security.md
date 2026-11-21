@@ -17,6 +17,9 @@
 
 ## 安全边界
 
+彩虹 OAuth 返回地址的自引用和回调递归修补（v3.1.6 起）另见 [OAuth 返回地址防循环与主域名归一化](oauth-return-guard.md)；不代表可以阻止正确伪造 HTTP Host 的直接 IP 连接。
+
+
 - 插件总开关默认关闭，密钥缺失时管理界面无法开启；开启后新旧设置默认采用智能风险模式（单 IP 与全站频率），可切换「始终验证」。
 - 彩虹 OAuth 默认只保护 `/oauth/clogin` 的登录发起，不干扰 `/oauth/clogin/callback` 和第三方 SDK。可独立开启 WordPress 原生密码登录验证及自定义动态路径防护，细节见智能模式专门说明。
 - 后端每次向 Turnstile Siteverify 验证令牌，要求成功、对应主机和 `jlwa_oauth_login` action；令牌不能只在浏览器检查。

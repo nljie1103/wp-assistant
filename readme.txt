@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.5
+Stable tag: 3.1.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -41,6 +41,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.6 =
+* 彩虹 OAuth 安全修复：清理不安全的 redirect_to、阻断自引用 rurl、回调最终跳转到登录入口时回退首页；别名域名发起登录自动归一到主域名。无需改商业主题。
 
 = 3.1.5 =
 * 登录安全升级为自适应人机验证：优化前台提示、按单来源/全站频率触发风险、保护 wp-login.php 原生密码验证并支持自定义 WordPress 动态路径，保留原 OAuth 回调；默认仅智能触发而非每次展示。

@@ -35,6 +35,8 @@
 
 前往 Cloudflare **Turnstile** 创建 Widget，然后将 **Site Key** 与 **Secret Key** 填入「九流 WP 助手 → 登录安全」。详细操作及密钥安全注意事项请看 **[Turnstile 密钥获取与配置教程](docs/turnstile-keys-guide.md)**（无需开启 Cloudflare CDN）。
 
+**v3.1.6 OAuth 返回地址防循环：** 清理会再次进入登录入口的 `redirect_to`，阻断递归 `rurl`，并在彩虹 OAuth 回调的最终重定向中做双重校验。非主域名的 OAuth 发起统一到 WordPress 主域名，避免不同 Host 下的验证码和 Session 混乱。详见 [OAuth 返回地址防循环与主域名方案](docs/oauth-return-guard.md)。此功能不等于防止 IP 直连时伪造 `Host`；该问题需要 Nginx 默认拒绝及代理/源站双重认证。
+
 **v3.1.5 登录安全智能验证：** 默认低风险无验证码，短时间单 IP 或全站大量登录请求时才触发；可选始终验证，支持 WordPress 原生密码登录与自定义动态 PHP 路径。注意 `/wp-admin` 应通过 `/wp-login.php` 专用保护，不能直接屏蔽 admin-ajax。详细边界见 [智能验证与自定义路径说明](docs/login-security-adaptive.md)。
 
 **v3.1.3 新增登录安全：** 可为子比彩虹聚合 OAuth 发起入口强制启用 Cloudflare Turnstile 验证，不需要 Cloudflare CDN，且不修改主题 SDK 或回调。默认关闭，需自行配置有效密钥并实测中国大陆浏览器体验。参阅 [OAuth 登录安全部署说明](docs/oauth-turnstile-security.md)。

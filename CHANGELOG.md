@@ -1,3 +1,10 @@
+## 3.1.6 — 2026-11-21
+
+- **修补彩虹聚合 OAuth 的循环返回风险**：在 Zibll 生成登录链接前，清理递归登录 `redirect_to`，并将 OAuth 自身的错误页面登录入口返回地址归一到首页。由子比内部显式传入 `$rurl` 的定制调用无法完全通过此钩子改写，但入口及回调仍会二次校验。
+- **回调最终目的地校验**：仅在 `/oauth/clogin/callback` 请求的 `wp_safe_redirect_fallback` / `wp_redirect` 阶段校验跳转路径与主机，防止再次跳入 `/oauth/clogin`、`/user-sign` 和 `wp-login.php`，拒绝多重编码及跨主机返回目的地。
+- **统一 OAuth 主域名**：`boke.jiuliu.org` 等站点别名的 OAuth GET 发起安全转至 WordPress `home_url()` 主域名，避免 Turnstile hostname、会话和 Cookie 分裂；别名的异常 POST 不接收。对于正确伪造 Host/SNI 的源站 IP 直连，HTTP 层无法以域名判别其真实来路，仍需代理认证、源站网络防护或应用授权。
+- **独立于 Turnstile 开关**：递归返回地址拒绝及主域名归一化持续生效；原有 Nginx 自引用 `rurl` 拦截与 Turnstile 密钥保持不变。新增纯逻辑单元测试、真实 WordPress 回调过滤器验证。
+
 ## 3.1.5 — 2026-11-20
 
 - **按风险触发 Turnstile**：登录安全升级为默认智能模式，不再让每次正常 OAuth 登录都显示验证码；60 秒窗口同时评估单来源与全站登录请求量（默认 6/50 次），触发风险后保留 300 秒，支持后台调整与始终验证模式。请求计数使用带文件锁的临时私有状态，不以海量匿名 IP 创建 WordPress options。
