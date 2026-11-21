@@ -9,7 +9,10 @@ if ( ! defined( 'JLWA_VERSION' ) || JLWA_VERSION !== $expected ) {
     throw new RuntimeException( 'Invalid plugin version: ' . ( defined( 'JLWA_VERSION' ) ? JLWA_VERSION : 'undefined' ) );
 }
 $features = JLWA_Feature_Registry::features();
-if ( count( $features ) < 8 || ! isset( $features['anti-scraping'] ) ) { throw new RuntimeException( 'Missing required feature or anti-scraping module' ); }
+$required_features = array( 'page-effects', 'anti-debug', 'ai-summary', 'preloader', 'download-page', 'anti-scraping', 'login-security', 'media-urls' );
+if ( array_diff( $required_features, array_keys( $features ) ) ) {
+    throw new RuntimeException( 'Required feature missing: ' . implode( ', ', array_diff( $required_features, array_keys( $features ) ) );
+}
 foreach ( $features as $key => $item ) {
     if ( $item['version'] !== $expected || JLWA_Feature_Registry::version( $key ) !== $expected ) {
         throw new RuntimeException( 'Visible feature version mismatch: ' . $key );

@@ -15,6 +15,7 @@ while IFS= read -r -d '' file; do
 done < <(find . -name '*.js' -type f -not -path './vendor/*' -not -path './node_modules/*' -not -path './.git/*' -print0)
 printf 'JavaScript syntax: %s files OK\n' "$count_js"
 phpunit --configuration phpunit.xml.dist --no-coverage
+php tests/activation-ai-legacy-key.test.php
 node --test tests/js/*.test.js tests/js/*.test.mjs
 node tools/check-vue-build.mjs
 python3 -m unittest discover -s tests -p test_nginx_helper.py -v

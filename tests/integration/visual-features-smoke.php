@@ -1,6 +1,8 @@
 <?php
 /** Run only in the isolated WordPress fixture via wp-cli eval-file. */
 if ( ! defined( 'ABSPATH' ) ) { exit( 1 ); }
+// Direct PHP CLI runners must load admin render helpers before calling forms.
+if ( ! function_exists( 'submit_button' ) ) { require_once ABSPATH . 'wp-admin/includes/template.php'; }
 $user = get_user_by( 'login', 'jlwaadmin' );
 if ( ! $user || ! user_can( $user, 'manage_options' ) ) { throw new RuntimeException( 'Isolated admin fixture unavailable' ); }
 wp_set_current_user( $user->ID );

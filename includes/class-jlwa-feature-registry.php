@@ -158,12 +158,11 @@ class JLWA_Feature_Registry {
 			JLWA_Anti_Debug_Feature::activate();
 		}
 		if ( ! empty( self::$statuses['ai-summary']['loaded'] ) && class_exists( 'JLWA_AI_Summary_Feature' ) ) {
-			$current  = get_option( WPAIAS_OPTION_KEY, array() );
-			$current  = is_array( $current ) ? $current : array();
-			$defaults = JLWA_AI_Summary_Feature::get_default_settings();
-			$merged   = wp_parse_args( $current, $defaults );
-			unset( $merged['api_key'] );
-			update_option( WPAIAS_OPTION_KEY, $merged );
+			// Reuse the AI module's legacy-key migration before persisting defaults.
+			// Simply unsetting the old api_key here discards credentials on
+			// first activation, even though get_settings() can migrate them.
+			$settings = JLWA_AI_Summary_Feature::get_settings();
+			update_option( WPAIAS_OPTION_KEY, $settings, false );
 		}
 		if ( ! empty( self::$statuses['preloader']['loaded'] ) && class_exists( 'JLWA_Immersive_Preloader_Feature' ) ) {
 			JLWA_Immersive_Preloader_Feature::instance()->on_activate();
