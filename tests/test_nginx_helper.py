@@ -239,7 +239,7 @@ class NginxHelperTests(unittest.TestCase):
                 with patch.object(sys, "argv", install), contextlib.redirect_stdout(io.StringIO()):
                     mod.main()
                 authorized = json.loads(config.read_text())
-                self.assertEqual("images_only", authorized["public_access_policy"])
+                self.assertEqual("strict_images_only", authorized["public_access_policy"])
                 self.assertEqual(images, authorized["public_images"])
                 self.assertEqual(WP_VHOST, wp_file.read_text())
                 self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
@@ -247,16 +247,16 @@ class NginxHelperTests(unittest.TestCase):
                     with patch.object(sys, "argv", ["helper", operation]), contextlib.redirect_stdout(io.StringIO()) as output:
                         mod.main()
                     if operation == "status":
-                        self.assertEqual("images_only", json.loads(output.getvalue())["public_access_policy"])
+                        self.assertEqual("strict_images_only", json.loads(output.getvalue())["public_access_policy"])
                     if operation == "preview":
-                        self.assertIn('if ($uri ~ ', output.getvalue())
+                        self.assertIn('set $jlwa_openlist_public_allowed', output.getvalue())
                         self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
                     if operation == "prepare":
                         self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
                     if operation == "protect":
-                        self.assertIn("approved image directory", output.getvalue())
+                        self.assertIn("all other public routes", output.getvalue())
                 final = openlist_file.read_text()
-                self.assertIn('if ($uri ~ ', final)
+                self.assertIn('set $jlwa_openlist_public_allowed', final)
                 self.assertNotIn("location ^~ /d/storage/private/", final)
                 self.assertIn('internal;', wp_file.read_text())
                 result = json.loads((state / "state.json").read_text())
@@ -264,7 +264,7 @@ class NginxHelperTests(unittest.TestCase):
                 self.assertTrue(result["confirmed"])
                 self.assertTrue(Path(result["backups"]["wp"]).exists())
                 self.assertTrue(Path(result["backups"]["openlist"]).exists())
-                self.assertEqual("images_only", json.loads(config.read_text())["public_access_policy"])
+                self.assertEqual("strict_images_only", json.loads(config.read_text())["public_access_policy"])
                 with patch.object(sys, "argv", ["helper", "rollback"]), contextlib.redirect_stdout(io.StringIO()):
                     mod.main()
                 self.assertEqual(WP_VHOST, wp_file.read_text())
@@ -590,3 +590,112 @@ class NginxHelperTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StrictPublicImagesTests(unittest.TestCase):
+    IMAGES = "/d/storage/图片/"
+
+    def _config(self):
+        return dict(SETTINGS, public_access_policy="images_only", public_images=self.IMAGES)
+
+    def test_strict_rules_cover_every_public_route_not_just_files(self):
+        cfg = dict(self._config(), public_access_policy="strict_images_only")
+        fragment = mod.snippet("openlist", cfg)
+        self.assertIn('set $jlwa_openlist_public_allowed 0;', fragment)
+        self.assertIn('if ($request_method !~ "^(?:GET|HEAD)$")', fragment)
+        self.assertIn('if ($remote_addr ~ "^(?:127\\.0\\.0\\.1|::1)$")', fragment)
+        self.assertIn('if ($jlwa_openlist_public_allowed = 0) { return 403; }', fragment)
+        import re
+        m = re.search(r'if \(\$uri ~ "([^"]+)"\)', fragment)
+        self.assertIsNotNone(m)
+        allowed = re.compile(m.group(1))
+        for url in ("/d/storage/图片", "/d/storage/图片/", "/d/storage/图片/a.jpg", "/d/storage/图片/sub/x.png"):
+            self.assertIsNotNone(allowed.search(url), url)
+        for url in ("/", "/api/fs/list", "/api/fs/get", "/api/auth/login", "/dav/", "/webdav/",
+                    "/d/", "/d/storage/private/a.zip", "/p/storage/图片/a.jpg",
+                    "/d/storage/图片-evil/payload", "/d/other/图片/a.jpg", "/.well-known/acme-challenge/x"):
+            self.assertIsNone(allowed.search(url), url)
+
+    def test_strict_upgrade_and_rollback_do_not_touch_wp_or_old_backups(self):
+        with tempfile.TemporaryDirectory() as root:
+            d = Path(root)
+            wp, files = d/"wp.conf", d/"files.conf"
+            cfg = self._config()
+            cfg.update(wordpress_vhost=str(wp), openlist_vhost=str(files))
+            wp_text = mod.transform(WP_VHOST, "wp", cfg) + "\n# independent Cloudflare ACL change\n"
+            old_files = mod.transform(OPENLIST_VHOST, "openlist", cfg)
+            wp.write_text(wp_text)
+            files.write_text(old_files)
+            state = d/"state"
+            state.mkdir()
+            (state/"lock").write_text("")
+            orig_wp, orig_files = d/"original-wp", d/"original-files"
+            orig_wp.write_text(WP_VHOST)
+            orig_files.write_text(OPENLIST_VHOST)
+            state_data = {
+                "phase": "protected", "confirmed": True,
+                "backups": {"wp":str(orig_wp), "openlist":str(orig_files)},
+                "after": {"wp":"historical-sha-not-equal-after-cf-acl", "openlist":mod.digest(old_files)}
+            }
+            (state/"state.json").write_text(json.dumps(state_data))
+            manifest, helper, sudoers = d/"manifest", d/"helper", d/"sudoers"
+            manifest.write_text(json.dumps(cfg))
+            helper.write_text("previous root installed helper")
+            sudoers.write_text("original restricted sudoers")
+            with (patch.object(mod,"STATE",state), patch.object(mod,"CONFIG",manifest),
+                  patch.object(mod,"TARGET",helper),patch.object(mod,"SUDOERS",sudoers),
+                  patch.object(mod,"secure_file"),patch.object(mod.os,"geteuid",return_value=0),
+                  patch.object(mod,"read_manifest",side_effect=lambda:json.loads(manifest.read_text())),
+                  patch.object(mod,"run_nginx")):
+                with contextlib.redirect_stdout(io.StringIO()) as view:
+                    mod.migrate_strict_images("preview-strict-public")
+                self.assertIn("Strict public",view.getvalue())
+                self.assertEqual(old_files,files.read_text())
+                mod.migrate_strict_images("upgrade-strict-public")
+                strict = json.loads(manifest.read_text())
+                self.assertEqual(strict["public_access_policy"],"strict_images_only")
+                self.assertEqual(wp_text,wp.read_text())
+                self.assertEqual("historical-sha-not-equal-after-cf-acl",json.loads((state/"state.json").read_text())["after"]["wp"])
+                self.assertIn("$jlwa_openlist_public_allowed",files.read_text())
+                mod.migrate_strict_images("upgrade-strict-public")
+                mod.migrate_strict_images("rollback-strict-public")
+                self.assertEqual("images_only",json.loads(manifest.read_text())["public_access_policy"])
+                self.assertEqual(old_files,files.read_text())
+                self.assertEqual(wp_text,wp.read_text())
+                self.assertEqual(WP_VHOST,orig_wp.read_text())
+                self.assertEqual(OPENLIST_VHOST,orig_files.read_text())
+
+    def test_strict_upgrade_refuses_out_of_band_source_change(self):
+        cfg = self._config()
+        original = mod.transform(OPENLIST_VHOST, "openlist", cfg)
+        with self.assertRaisesRegex(ValueError, "managed source"):
+            mod.strict_images_proposal(original.replace("return 403", "return 200"), cfg)
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            mod.strict_images_proposal(OPENLIST_VHOST, cfg)
+
+    def test_strict_failed_nginx_check_restores_manifest_vhost_helper_state(self):
+        with tempfile.TemporaryDirectory() as root:
+            d=Path(root)
+            cfg=self._config()
+            wp,files=d/"wp",d/"files"
+            cfg.update(wordpress_vhost=str(wp),openlist_vhost=str(files))
+            pw=mod.transform(WP_VHOST,"wp",cfg)
+            pf=mod.transform(OPENLIST_VHOST,"openlist",cfg)
+            wp.write_text(pw)
+            files.write_text(pf)
+            state=d/"state";state.mkdir();(state/"lock").write_text("")
+            wb,fb=d/"wb",d/"fb";wb.write_text(WP_VHOST);fb.write_text(OPENLIST_VHOST)
+            (state/"state.json").write_text(json.dumps({"phase":"protected","confirmed":True,
+                "backups":{"wp":str(wb),"openlist":str(fb)},
+                "after":{"wp":mod.digest(pw),"openlist":mod.digest(pf)}}))
+            manifest,helper,sudoers=d/"manifest",d/"helper",d/"sudoers"
+            manifest.write_text(json.dumps(cfg));helper.write_text("old installed");sudoers.write_text("sudo")
+            originals={x:x.read_text() for x in (wp,files,manifest,helper,state/"state.json")}
+            with (patch.object(mod,"STATE",state),patch.object(mod,"CONFIG",manifest),
+                  patch.object(mod,"TARGET",helper),patch.object(mod,"SUDOERS",sudoers),
+                  patch.object(mod,"secure_file"),patch.object(mod.os,"geteuid",return_value=0),
+                  patch.object(mod,"read_manifest",side_effect=lambda:json.loads(manifest.read_text())),
+                  patch.object(mod,"run_nginx",side_effect=[None,ValueError("nginx -t fails"),None,None])):
+                with self.assertRaisesRegex(ValueError,"nginx -t fails"):
+                    mod.migrate_strict_images("upgrade-strict-public")
+            for x,expected in originals.items():self.assertEqual(expected,x.read_text(),str(x))

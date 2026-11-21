@@ -1,3 +1,10 @@
+## 3.2.1 — 2026-11-21
+
+- **OpenList 公网严格仅图片**：现有 `images_only` 原先仅限制 /d 与 /p，首页、API、WebDAV 仍可能到达 OpenList。新增 `strict_images_only` 策略，在 Nginx server rewrite 阶段仅放行批准的图片目录 GET/HEAD，其它公网路径一律 403；本机回环与子比已购 `X-Accel-Redirect` 私有代理不变。
+- **原子迁移与定向回滚**：新增 root-only `preview-strict-public`、`upgrade-strict-public`、`rollback-strict-public`，校验现有 OpenList vhost 的 SHA、root 授权清单、WordPress 内部代理代码块及既有备份。生产 WordPress vhost 若增加无关的 Cloudflare 源站 ACL 不被覆盖。失败恢复原文件和配置，不给 PHP-FPM 添加新的 sudo 权限。
+- **UI/兼容**：部署页新增只读预览、严格升级、仅回退严格规则的明确命令；已有 `images_only` 保持原行为直至 root 明确授权升级。新站点选择公开图片目录后的首次保护默认严格。禁止将本版本 WordPress 插件更新直接解释为服务器 Nginx 已保护。
+- **边界与验收**：严格模式会禁用这两个公开 OpenList 域名的远端 WebDAV、API 和 HTTP-01 验证，需提前确认管理链与证书续期；CDN 历史缓存、其它虚拟主机和公开 Docker 端口需另外验证。已增加精确图片前缀、方法、URL API、root 漂移、事务失败恢复与回退测试。
+
 ## 3.2.0 — 2026-11-21
 
 - **修复 AI 摘要旧版密钥在激活时丢失**：此前统一插件的激活入口在合并默认设置后直接移除旧 `api_key` 字段，导致尚未迁移的密钥被丢弃。现在激活时先通过 AI 摘要现有迁移逻辑转换为 `api_keys` 的模型及服务商映射，随后保存设置；已保存的新式密钥优先，不覆盖其他模型或服务商的密钥。
