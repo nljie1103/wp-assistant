@@ -102,6 +102,19 @@ class JLWA_Private_Deploy {
             ' rollback-images-only';
     }
 
+    /** Strict-public migration never runs under PHP-FPM or broad sudo privileges. */
+    public static function strict_public_command( $operation, $plugin_dir = null ) {
+        if ( ! in_array( $operation, array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public' ), true ) ) {
+            return '';
+        }
+        $plugin_dir = null === $plugin_dir ? JLWA_PLUGIN_DIR : (string) $plugin_dir;
+        if ( '' === $plugin_dir || '/' !== $plugin_dir[0] ) {
+            return '';
+        }
+        return 'sudo python3 ' . escapeshellarg( rtrim( $plugin_dir, '/' ) . '/ops/jlwa-nginx-helper.py' ) .
+            ' ' . $operation;
+    }
+
     public static function boot() {
         add_action( 'admin_post_jlwa_private_deploy', array( __CLASS__, 'handle' ) );
         add_action( 'admin_post_jlwa_private_probe', array( __CLASS__, 'probe' ) );
@@ -287,7 +300,9 @@ class JLWA_Private_Deploy {
             <p>一套 OpenList 即使绑定多个域名，也只维护一份源站站点规则。默认不修改任何系统文件。首次使用需要服务器管理员授权一次；之后所有操作都在九流 WP 助手后台执行。</p>
             <p><strong>当前状态：</strong><?php echo esc_html( $phases[ $phase ] ?? '需要人工检查配置' ); ?></p>
             <?php if ( $has_helper ) : ?>
-                <p><strong>已授权公网文件策略：</strong><?php if ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                <p><strong>已授权公网文件策略：</strong><?php if ( 'strict_images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                    严格模式：公网仅可 GET/HEAD <code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>；首页、API、WebDAV、其它资源仅限本机访问。
+                <?php elseif ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
                     仅公开图片目录 <code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>；其余所有 <code>/d/</code>、<code>/p/</code> 文件路由禁止公网访问（第④步执行后生效）。
                 <?php else : ?>
                     仅封锁当前付费资源目录；如需仅开放图片，请使用下方的旧部署兼容工具或在首次安装前先设置图片目录。
@@ -342,14 +357,33 @@ class JLWA_Private_Deploy {
                 <?php self::op_form( 'prepare', '② 自动备份并配置内部代理' ); ?>
                 <?php self::op_form( 'confirm', '③ 确认已购用户下载测试' ); ?>
                 <?php self::op_form( 'protect', '④ 应用公网文件访问保护规则' ); ?>
-                <?php self::op_form( 'rollback', '恢复本次配置备份', '', true ); ?>
+                <?php if ( 'strict_images_only' !== ( $status['public_access_policy'] ?? '' ) ) { self::op_form( 'rollback', '恢复本次配置备份', '', true ); } ?>
             <?php endif; ?>
 
             <?php if ( $has_helper && 'protected' === $phase ) : ?>
                 <hr>
                 <h4>🔐 公网文件访问策略</h4>
-                <?php if ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                <?php if ( 'strict_images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
+                    <p><strong>严格公网入口限制已启用：</strong>仅允许公网 GET/HEAD <code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>。OpenList 首页、API、WebDAV、登录与其它资源公网拒绝，本机端口和 WordPress 已购内部代理保留。</p>
+                    <details style="margin:12px 0">
+                        <summary>紧急回退到旧版图片白名单（保留付费文件封锁）</summary>
+                        <p>仅当严格规则误伤业务时由 root 执行。回退后 OpenList 首页、API 可能重新向公网开放；不会卸载 WordPress 私有代理。</p>
+                        <textarea id="jlwa-strict-rollback" class="large-text code" rows="2" readonly><?php echo esc_textarea( self::strict_public_command( 'rollback-strict-public' ) ); ?></textarea>
+                        <button type="button" class="button button-secondary" onclick="var e=document.getElementById('jlwa-strict-rollback');e.focus();e.select();document.execCommand('copy')">复制严格模式回退命令</button>
+                    </details>
+                <?php elseif ( 'images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
                     <p><strong>已启用图片白名单：</strong>公网 /d/、/p/ 仅允许以下目录及其文件：<code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>。请继续检查真实图片、旧文件直链与已购下载。</p>
+                    <details style="margin:12px 0" open>
+                        <summary><strong>升级为严格公网仅图片模式（推荐）</strong></summary>
+                        <p>目前的白名单只拦 <code>/d/</code>、<code>/p/</code>。严格模式还拒绝公网首页、登录页、API 和 WebDAV，保持本机端口及已购 WordPress 内部代理不变。使用旧 WebDAV 的远程客户端将无法从这两个 OpenList 域名连接。</p>
+                        <p><label for="jlwa-strict-preview"><strong>① root 只读预览，不改生产</strong></label></p>
+                        <textarea id="jlwa-strict-preview" class="large-text code" rows="2" readonly><?php echo esc_textarea( self::strict_public_command( 'preview-strict-public' ) ); ?></textarea>
+                        <button type="button" class="button button-secondary" onclick="var e=document.getElementById('jlwa-strict-preview');e.focus();e.select();document.execCommand('copy')">复制预览命令</button>
+                        <p><label for="jlwa-strict-apply"><strong>② 核对后由 root 执行升级</strong></label></p>
+                        <textarea id="jlwa-strict-apply" class="large-text code" rows="2" readonly><?php echo esc_textarea( self::strict_public_command( 'upgrade-strict-public' ) ); ?></textarea>
+                        <button type="button" class="button button-secondary" onclick="var e=document.getElementById('jlwa-strict-apply');e.focus();e.select();document.execCommand('copy')">复制升级命令</button>
+                        <p class="description">部署工具核对原 OpenList 文件 SHA 与内部代理完整代码块，备份并只更新 OpenList 虚拟主机；失败恢复；不主动清理 Cloudflare 历史缓存。升级后请实测公开图片、匿名接口、已购下载和本机管理接口。</p>
+                    </details>
                     <details style="margin:12px 0">
                         <summary>仅撤销图片白名单（保留原付费资源目录封锁）</summary>
                         <p>如果图片异常，可由 root 执行以下受限回退命令，保留 WordPress 内部代理、原有付费目录的 403 封锁和完整备份。请勿把“恢复本次配置备份”当成白名单回退，它会回滚整套 Nginx 交付规则。</p>

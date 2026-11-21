@@ -16,6 +16,25 @@
 
 新增的 PHP HTTP 集成测试验证短期票据的 302、下载域名 Host 校验、随机票据、`X-Accel-Redirect`、错误票据 404 以及无重复 Content-Disposition。它不模拟真实 Nginx/OpenList 文件字节传输；上线仍需使用已购测试资源完成真实文件验收。
 
+## 严格公网仅图片模式（v3.2.1 新增）
+
+**安全目标**：仅允许公网对预先批准的图片目录（例如 `/d/storage/public-images/`）执行 GET/HEAD。**所有其它 OpenList 公网路径（首页、登录、`/api/*`、WebDAV、`/dav/*`、`/p/*`、`/d/*` 等）都返回 403**。OpenList 只能通过 Docker 宿主机回环绑定的端口（例如 `127.0.0.1:5245`）完整访问；WordPress 的 Nginx `internal` 代理继续向本机端口传送购买后的文件。
+
+- 严格模式会让所有远端 OpenList WebDAV 客户端和管理界面失效；只有本机访问 OpenList 原始端口才能继续执行 API、WebDAV 与管理操作。这是预期行为，不是故障。
+- 同一 OpenList vhost 同时绑定直接解析域名与 Cloudflare CDN 域名时，严格规则覆盖 **这一个 Nginx vhost** 下的两域名。其它单独的 Nginx vhost、Docker 端口、Cloudflare 旧缓存或额外代理入口仍需独立检查。
+- 公网图片规则只按批准路径执行，不会对原图片目录中的所有文件逐一检查类型；**不要把付费 ZIP 放进这个公开图片目录**。
+- 严格规则按 Nginx 标准化后的 `$uri` 判断，并只接受公网 GET/HEAD。不要以 `Referer` 或伪造的 X-Forwarded-For 作为唯一授权依据。
+- HTTP-01 ACME 证书续期若依赖 OpenList 域名的公网 `/.well-known/acme-challenge/`，会被严格模式拒绝；部署前改用 DNS-01 等续期方式或核对现有证书服务。不要暗中放行该路径。
+- 严格模式不会清除 Cloudflare 旧缓存；上线需要以匿名请求从不同网络分别核对两个域名。
+
+**旧站点已完成 `images_only` 的安全升级方式：** 升级 WordPress 插件后，在「下载页美化 → Nginx 安全部署 → 公网文件访问策略」复制两条 root 命令。**① `preview-strict-public`** 只读比较并检查当前部署；**② `upgrade-strict-public`** 在预览确认后原子写入完整站点公网限制。工具会保存并继续校验原有 OpenList Nginx 配置 SHA，保留历史备份、WordPress 内部付费代理和其它独立站点配置。更新过程中 `nginx -t` 或 reload 失败时自动恢复原配置。Root 管理员可使用 `rollback-strict-public` **仅退回原 `images_only`**，不取消原付费目录保护或 WordPress 内部代理。不要用旧版通用 `rollback` 回退这一改造。
+
+已有站点的 Nginx 文本受到 root 安装助手及 SHA 管控，**不要手动编辑 `JLWA-MANAGED-DOWNLOAD` 区域**。插件更新本身不会自动更改生产 Nginx；必须由管理员明确执行 root 的严格升级操作。
+
+**新安装站点：** 如果在首次安装前已经填写「唯一公开图片目录」，从 v3.2.1 起首次 `install-auto` / `protect` 会直接应用严格公网仅图片模式。未填写图片目录的既有兼容模式仍为 `paid_only`，不能声称全站安全。
+
+**上线验收矩阵**：两个公网域名的首页、`/api/fs/list`、`/api/auth/login`、WebDAV、付费 ZIP、伪装图片前缀、图片目录下的 POST 均应返回 403；公网真实图片 GET/HEAD 返回 200/206；本机 `127.0.0.1:5245` API 正常；子比已购买账号经 WordPress `X-Accel-Redirect` 实际下载 ZIP 完整。也应检测 Unicode/编码路径、已缓存旧文件、HTTPS 证书与其它开放端口。
+
 ## 1. 先弄清楚安全边界
 
 - 子比主题负责购买资格、Nonce、会员和下载资格；**本插件不修改子比主题文件**。
@@ -44,14 +63,14 @@
 
 ## 首次安装就选择最终公网文件策略（推荐：只开放图片）
 
-**最新版首次部署，无需先安装旧规则再运行迁移命令。** 在 WordPress 的“交付高级设置”中填写“唯一公开图片目录”，例如 /d/storage/public-images/，保存后，后台复制的完整 install-auto 命令会自动包含 --public-images 参数。执行该命令会直接将图片白名单策略写入 root 授权清单，但此时仍不会修改 Nginx 文件访问规则。
+**最新版首次部署，无需先安装旧规则再运行迁移命令；填写图片目录后会使用严格公网仅图片模式。** 在 WordPress 的“交付高级设置”中填写“唯一公开图片目录”，例如 /d/storage/public-images/，保存后，后台复制的完整 install-auto 命令会自动包含 --public-images 参数。执行该命令会直接将图片白名单策略写入 root 授权清单，但此时仍不会修改 Nginx 文件访问规则。
 
-随后按照统一流程：① 预览（此时显示最终图片白名单）→ ② 配置 WordPress 内部代理 → 已购账号真实测试 → ③ 确认测试 → ④ 应用公网文件访问规则。第④步就会一次性拒绝所有公网 /d/、/p/ 文件路由，只放行已指定的图片目录及其中的文件。WordPress 的已购下载仍经本机 OpenList 端口代理。
+随后按照统一流程：① 预览（此时显示最终图片白名单）→ ② 配置 WordPress 内部代理 → 已购账号真实测试 → ③ 确认测试 → ④ 应用公网文件访问规则。第④步会在公网拒绝除指定图片目录 GET/HEAD 以外的全部 OpenList 请求，包括首页、API、登录、WebDAV 及其他目录。WordPress 的已购下载仍经本机 OpenList 端口代理。
 
 - **推荐图片白名单**：只开放明确指定的一个图片目录，禁止其它 /d/、/p/ 文件目录（包括未来创建的目录）。
 - **兼容模式**：未填写图片目录时，仅封锁明确的付费资源目录，不会自动禁止其它目录。需要“仅开放图片”时不能留空。
 - 文件夹名称并不要求叫“图片”。该目录必须与付费目录位于同一个 OpenList 挂载，且不能相互包含。
-- 该规则只约束 /d/、/p/ 文件路由，OpenList 的 API、WebDAV、后台及其它域名和 CDN 缓存需要独立验收。
+- v3.2.1 首次安装的严格模式覆盖 OpenList 当前 Nginx vhost 的全部公网路由；较早部署的 `images_only` 仅约束 /d/、/p/，必须按上面的严格升级步骤迁移。其它 vhost、Docker 端口和 CDN 历史缓存仍须独立验收。
 
 ### 已经安装旧规则的站点（仅兼容处理）
 

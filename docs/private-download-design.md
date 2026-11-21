@@ -47,3 +47,8 @@
 - 版本按统一主版本十进制进位；Commit 和 Release 使用仓库现有的中文主题格式、不可变标签和 CI 流程。
 - 所有真实环境内容、测试密码、实际资源 URL 不得写入公开单测/源码/发布备注。安全测试采用 `example.com`、虚构目录和虚构文件名。
 - 发布前必须检查 Git diff、配置写入测试、Nginx 语法测试、现有 PHP/JS 回归、备份回滚与源站旁路验收。**未经过线上验收的自动部署，不得显示“已保护”。**
+
+
+## v3.2.1 公网严格仅图片模式的回环边界
+
+初始 `images_only` 只限制 /d、/p；新版 `strict_images_only` 在 OpenList Nginx vhost 的 server rewrite phase 拒绝所有公网请求，唯一例外是指定图片目录 GET/HEAD。来自回环地址 `127.0.0.1` / `::1` 的完整 OpenList 路径仍可访问；WordPress 付费内部代理直接连接已验证的本机 OpenList 端口。新 root-only CLI `preview-strict-public` / `upgrade-strict-public` / `rollback-strict-public` 只接受锁定的 approved.json 指向的虚拟主机及其源文件 SHA，保留 WordPress vhost 不动。这样既适配生产博客后续增加的独立源站 ACL，也不扩大 WordPress PHP 的 sudo 权限。严格回退只恢复旧的图片目录文件路由白名单，依然禁止付费资源直链，不接受通用全量回滚操作代替。
