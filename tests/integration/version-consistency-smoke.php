@@ -9,7 +9,7 @@ if ( ! defined( 'JLWA_VERSION' ) || JLWA_VERSION !== $expected ) {
     throw new RuntimeException( 'Invalid plugin version: ' . ( defined( 'JLWA_VERSION' ) ? JLWA_VERSION : 'undefined' ) );
 }
 $features = JLWA_Feature_Registry::features();
-if ( count( $features ) !== 7 ) { throw new RuntimeException( 'Feature count changed unexpectedly' ); }
+if ( count( $features ) < 8 || ! isset( $features['anti-scraping'] ) ) { throw new RuntimeException( 'Missing required feature or anti-scraping module' ); }
 foreach ( $features as $key => $item ) {
     if ( $item['version'] !== $expected || JLWA_Feature_Registry::version( $key ) !== $expected ) {
         throw new RuntimeException( 'Visible feature version mismatch: ' . $key );
@@ -18,7 +18,7 @@ foreach ( $features as $key => $item ) {
 if ( JLWA_Feature_Registry::version( 'unknown' ) !== '-' ) {
     throw new RuntimeException( 'Unknown feature was assigned a fake version' );
 }
-echo "六个功能域统一显示 v{$expected}，缺失功能不误报版本：通过\n";
+echo count( $features ) . " 个功能域统一显示 v{$expected}，缺失功能不误报版本：通过\n";
 
 // Migrated settings must preserve the historical, independent schema markers.
 if ( JLWA_Page_Effects_Feature::VERSION !== '1.8.0'

@@ -13,6 +13,7 @@ class Test_Updater extends JLWA_Updater {
     public function restore_prior( $previous, $destination, $backup ) { return $this->restore_previous( $previous, $destination, $backup ); }
     public function swap_package( $source, $destination ) { return $this->install_package( $source, $destination ); }
     public function inspect_package( $root, $info ) { return $this->validate_package( $root, $info ); }
+    public function parse_checksum( $body, $filename ) { return $this->parse_release_checksum( $body, $filename ); }
 }
 
 final class UpdaterStabilityTest extends TestCase {
@@ -36,6 +37,19 @@ final class UpdaterStabilityTest extends TestCase {
 
     protected function tearDown(): void {
         $GLOBALS['wp_filesystem']->delete( $this->root, true );
+    }
+
+    public function test_release_checksum_must_match_expected_zip_filename(): void {
+        $hash = str_repeat( 'a', 64 );
+        $other = str_repeat( 'b', 64 );
+        $zip = 'jiuliu-wp-assistant-3.1.9.zip';
+        $this->assertSame( $hash, $this->updater->parse_checksum( "$hash  $zip\n", $zip ) );
+        $this->assertSame( $hash, $this->updater->parse_checksum( "$hash *$zip\n", $zip ) );
+        $this->assertSame( $hash, $this->updater->parse_checksum( "$other  other.zip\n$hash  $zip\n", $zip ) );
+        $this->assertFalse( $this->updater->parse_checksum( "$hash  other.zip\n", $zip ) );
+        $this->assertFalse( $this->updater->parse_checksum( "malicious prefix $hash\n", $zip ) );
+        $this->assertFalse( $this->updater->parse_checksum( "$hash  ../$zip\n", $zip ) );
+        $this->assertFalse( $this->updater->parse_checksum( "$hash  $zip\n$other  $zip\n", $zip ) );
     }
 
     public function test_update_rejects_package_without_vue_admin_assets_before_install(): void {

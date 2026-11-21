@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.8
+Stable tag: 3.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,6 +43,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.9 =
+* 在线更新 SHA-256 校验文件必须精确匹配当前安装包文件名，拒绝无关文件、混入文本及重复条目。
 
 = 3.1.8 =
 * 修复反采集 XML-RPC 早期拒绝使用 wp_die 导致 HTTP 200 空响应的问题，现在直接返回 403。
