@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.7
+Stable tag: 3.1.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,6 +43,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.1.8 =
+* 修复反采集 XML-RPC 早期拒绝使用 wp_die 导致 HTTP 200 空响应的问题，现在直接返回 403。
+* 使用独立 WordPress 测试站真实验证：匿名/管理员 REST 文章和媒体接口、RSS/Atom 返回 403，XML-RPC 启用时 403、关闭反采集后恢复正常方法响应。
+
 
 = 3.1.7 =
 * 新增统一后台「反采集防护」设置区：可独立限制 WordPress REST 内容读取（包括 `?rest_route=`）、RSS、oEmbed 和 XML-RPC，登录用户也不豁免；默认关闭，严格 REST 需额外确认编辑器兼容风险。

@@ -84,6 +84,17 @@ final class AntiScrapingTest extends TestCase {
         $this->assertTrue( $guard->disable_xmlrpc( true ) );
     }
 
+    public function test_xmlrpc_request_policy_rejects_all_clients_and_respects_master_switch(): void {
+        $settings = JLWA_Anti_Scraping_Feature::settings();
+        $this->assertTrue( JLWA_Anti_Scraping_Feature::blocks_xmlrpc_request( $settings, true ) );
+        $this->assertFalse( JLWA_Anti_Scraping_Feature::blocks_xmlrpc_request( $settings, false ) );
+        $settings['xmlrpc'] = 0;
+        $this->assertFalse( JLWA_Anti_Scraping_Feature::blocks_xmlrpc_request( $settings, true ) );
+        $settings['xmlrpc'] = 1;
+        $settings['enabled'] = 0;
+        $this->assertFalse( JLWA_Anti_Scraping_Feature::blocks_xmlrpc_request( $settings, true ) );
+    }
+
     public function test_guard_is_active_even_when_an_earlier_filter_supplies_a_response(): void {
         $guard = JLWA_Anti_Scraping_Feature::instance();
         $this->assertInstanceOf( WP_Error::class, $guard->guard_rest( 'cached-content', null, new AntiScrapingRequestDouble( '/wp/v2/posts', 'GET' ) ) );
