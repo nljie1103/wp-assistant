@@ -4,7 +4,7 @@
 
 **一个插件，统一管理 WordPress 网站的视觉体验、内容智能与资源交付。**
 
-七个功能域、一个后台控制台、一套设置与更新流程。支持按需启用、保留旧配置，并用明确的状态与操作指引减少配置成本。
+八个功能域、一个后台控制台、一套设置与更新流程。支持按需启用、保留旧配置，并用明确的状态与操作指引减少配置成本。
 
 [![Release](https://img.shields.io/github/v/release/nljie1103/wp-assistant?style=for-the-badge&color=7356d8&label=Release)](https://github.com/nljie1103/wp-assistant/releases/latest)
 [![Tests](https://img.shields.io/github/actions/workflow/status/nljie1103/wp-assistant/test.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/nljie1103/wp-assistant/actions/workflows/test.yml)
@@ -19,7 +19,7 @@
 
 <a id="features"></a>
 
-## 🧩 七个功能域，一套体验
+## 🧩 八个功能域，一套体验
 
 | 功能 | 真实能力 |
 |:---|:---|
@@ -53,7 +53,7 @@
 
 **后台导航已改为顶部横向模式。** 站点在 WordPress 原生菜单下使用全宽工作台，顶部可直接进入全部七项功能、控制台和系统与更新；窄屏可横向滑动菜单，原有搜索、通知和深色模式不变。
 
-**七个功能区的组件外观也已经统一。** 后台板块、卡片、悬停反馈、表单、状态、通知和危险确认均按同一套规则显示；卡片不再有的悬浮有的不浮动。详细规则见 [后台组件设计规范](docs/admin-design-system.md)。
+**八个功能区的组件外观也已经统一。** 后台板块、卡片、悬停反馈、表单、状态、通知和危险确认均按同一套规则显示；卡片不再有的悬浮有的不浮动。详细规则见 [后台组件设计规范](docs/admin-design-system.md)。
 
 **不是所有模块都默认启用。** 总览页区分“模块已加载”“功能已启用”和“依赖未满足”，并提示下一步操作。各模块有独立开关与设置，但共用主插件版本。
 
@@ -193,7 +193,7 @@ Logo、结束策略与展示时间可在后台调整；更新插件不会自动�
 wp-assistant/
 ├── jiuliu-wp-assistant.php        # 唯一 WordPress 插件入口
 ├── includes/
-│   ├── class-jlwa-feature-registry.php  # 七个功能域的注册与加载状态
+│   ├── class-jlwa-feature-registry.php  # 八个功能域的注册与加载状态
 │   ├── class-jlwa-admin.php             # 统一后台
 │   └── class-jlwa-updater.php           # GitHub Release 更新器
 ├── features/
