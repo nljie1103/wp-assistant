@@ -296,3 +296,6 @@ bash tools/check.sh
 ### 反采集防护（内置，默认关闭）
 
 从「九流WP助手 → 反采集防护」启用针对 WordPress REST 内容读取、RSS、oEmbed、XML-RPC 的独立限制。**严格 REST 模式对登录用户与管理员同样阻止 GET/HEAD `/wp/v2/*`，可能使 Gutenberg 等编辑功能不可用**；需确认风险后主动启用。禁用主开关可立即回滚。详见 [反采集模块使用与验收说明](docs/anti-scraping-integration.md)。
+
+
+**v3.1.8 修复说明：** 反采集 XML-RPC 入口在 WordPress 初始化早期的拒绝改为直接 HTTP 403，避免使用尚未初始化完成的 XML-RPC 专用 `wp_die()` 处理器导致 HTTP 200 空响应；已在隔离的真实 WordPress HTTP 测试中复现与验收。

@@ -91,11 +91,19 @@ final class JLWA_Anti_Scraping_Feature {
         if ( ! empty( $settings['oembed'] ) && function_exists( 'is_embed' ) && is_embed() ) { self::deny(); }
     }
 
+    public static function blocks_xmlrpc_request( $settings, $is_xmlrpc ) {
+        return ! empty( $settings['enabled'] ) && ! empty( $settings['xmlrpc'] ) && (bool) $is_xmlrpc;
+    }
+
     public function guard_xmlrpc() {
-        $settings = self::settings();
-        if ( ! empty( $settings['enabled'] ) && ! empty( $settings['xmlrpc'] ) && defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST ) {
-            self::deny();
-        }
+        // At init, the XML-RPC server object does not exist yet. wp_die() uses
+        // WordPress' XML-RPC handler, which can return 200 + an empty body here.
+        // Return a proper HTTP denial before any XML-RPC method is dispatched.
+        if ( ! self::blocks_xmlrpc_request( self::settings(), defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST ) ) { return; }
+        if ( function_exists( 'nocache_headers' ) ) { nocache_headers(); }
+        status_header( 403 );
+        header( 'Content-Type: text/plain; charset=UTF-8' );
+        exit;
     }
 
     public function disable_xmlrpc( $enabled ) {
