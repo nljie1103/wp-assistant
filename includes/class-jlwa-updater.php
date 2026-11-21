@@ -165,9 +165,9 @@ class JLWA_Updater {
 		if ( is_wp_error( $sha_response ) || 200 !== (int) wp_remote_retrieve_response_code( $sha_response ) ) {
 			return new WP_Error( 'jlwa_release_checksum', '无法读取 Release SHA-256 文件。' );
 		}
-		$sha_body = strtolower( trim( (string) wp_remote_retrieve_body( $sha_response ) ) );
-		if ( ! preg_match( '/\b([a-f0-9]{64})\b/', $sha_body, $matches ) ) {
-			return new WP_Error( 'jlwa_release_checksum_invalid', 'Release SHA-256 文件格式无效。' );
+		$package_sha = self::parse_release_checksum( (string) wp_remote_retrieve_body( $sha_response ), $zip_name );
+		if ( false === $package_sha ) {
+			return new WP_Error( 'jlwa_release_checksum_invalid', 'Release SHA-256 未准确绑定当前安装包文件名。' );
 		}
 
 		$main_response = wp_safe_remote_get(
@@ -187,11 +187,40 @@ class JLWA_Updater {
 		return array(
 			'latest_version' => $version,
 			'main_sha256'    => $main_sha,
-			'package_sha256' => $matches[1],
+			'package_sha256' => $package_sha,
 			'download_url'   => $zip_url,
 			'changelog'      => isset( $data['body'] ) ? trim( (string) $data['body'] ) : '',
 			'source'         => 'release',
 		);
+	}
+
+	/**
+	 * Read an exact sha256sum entry for the expected ZIP; never accept a random
+	 * 64-character token or a checksum for a different release artifact.
+	 * Reject ambiguous duplicate entries, including conflicting hashes.
+	 *
+	 * @param string $body Checksum file body.
+	 * @param string $zip_name Expected ZIP basename.
+	 * @return string|false
+	 */
+	protected static function parse_release_checksum( $body, $zip_name ) {
+		if ( strlen( $body ) > 16384 ) {
+			return false;
+		}
+		$found = false;
+		foreach ( preg_split( '/\r\n|\n|\r/', $body ) as $line ) {
+			if ( ! preg_match( '/^([a-fA-F0-9]{64}) [ *]([^\r\n]+)$/D', $line, $parts ) ) {
+				continue;
+			}
+			if ( $parts[2] !== $zip_name ) {
+				continue;
+			}
+			if ( false !== $found ) {
+				return false;
+			}
+			$found = strtolower( $parts[1] );
+		}
+		return $found;
 	}
 
 	/**
