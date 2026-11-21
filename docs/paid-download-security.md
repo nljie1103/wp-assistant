@@ -1,214 +1,68 @@
-# 私有下载：九流 WP 助手 Nginx 安全部署与公开文件策略
+# OpenList 严格公网仅图片与 WordPress 私有交付
 
-> 本教程全部采用 `example.com` 等示例，**不要直接照抄域名、目录或端口**。只需分清两个网站：WordPress 网站和 OpenList 文件网站。OpenList 绑定直连/CDN 两个域名时，如果都指向同一 Nginx 站点配置，只需要保护这一个站点配置。
+本模块随九流 WP 助手一起发布，**不需要独立 WordPress 插件**。它将 Nginx 的 OpenList 公网入口限定为一个批准目录，同时允许 WordPress 在已有购买授权后经本机端口交付私有文件。
 
-## 两种中转交付方式（不会因下载页视觉皮肤切换而改变）
+**适用范围要分清：**
 
-| 插件设置 | 实际交付链路 |
-|---|---|
-| 私有交付关闭 | 不注册子比 `zibpay_download_file_local` 钩子，普通下载保持子比处理 |
-| **私有交付开启，自定义出口关闭** | 子比验证购买资格 → WordPress 下载请求 → `X-Accel-Redirect` → 同机 Nginx 内部 OpenList 代理 → 浏览器收到文件数据 |
-| **私有交付开启，自定义出口开启** | 子比验证购买资格 → WordPress 生成短期票据 → 302 到管理员配置的下载域名 → 同一 WordPress 实例校验票据与 Host → `X-Accel-Redirect` → Nginx 内部代理 → 文件数据 |
+- OpenList 的 Nginx 路径防护模板不含作者域名、IP 或固定目录，可供其他站长按自己的环境配置。
+- **自动部署**目前支持通过安全预检的**宝塔 Nginx、独立 WordPress/OpenList 虚拟主机和回环 OpenList 服务端口**。其它 Nginx 环境可以生成只读配置片段后由管理员手动部署。Apache、Caddy、共享主机不是自动支持对象。
+- WordPress **购买资格检查与已购文件按钮**目前依赖**子比主题**提供的 `zibpay_download_file_local` 等钩子。其它主题或商城插件不会自动获得这套付费授权集成。
+- 插件首次安装与 Nginx 实际保护是两件事。**只安装 WordPress ZIP 不会更改 Nginx**；必须先完成下面的部署流程。
 
-这里的“中转”不表示把完整 ZIP 读入 PHP 内存，也**不保证 CDN 缓存或加速付费 ZIP**。无论选择何种模式，浏览器不应看到付费 OpenList 真实文件直链，公开源站必须单独拒绝付费目录。旧站点升级后会保留 `private_enabled`、`delivery_enabled`、`delivery_host` 等已有配置，不会因为下载页在“完整经典模板 / 原生兼容皮肤”间切换而自动开启第二种模式。
+## 唯一的全新安装安全策略
 
-对尚未部署的站点，`delivery_enabled` 默认关闭；这不意味着内部 Nginx 中转关闭。**不要把下载出口域名指向 OpenList**，只能指向可以执行本插件 WordPress 的站点。
+新安装一律使用 `strict_images_only`（规则修订 2），**不提供 `paid_only`、`images_only` 等弱模式和旧版本升级链**。
 
-新增的 PHP HTTP 集成测试验证短期票据的 302、下载域名 Host 校验、随机票据、`X-Accel-Redirect`、错误票据 404 以及无重复 Content-Disposition。它不模拟真实 Nginx/OpenList 文件字节传输；上线仍需使用已购测试资源完成真实文件验收。
-
-## 严格公网仅图片模式（v3.2.1 起，v3.2.2 编码加固）
-
-**安全目标**：仅允许公网对预先批准的图片目录（例如 `/d/storage/public-images/`）执行 GET/HEAD。**所有其它 OpenList 公网路径（首页、登录、`/api/*`、WebDAV、`/dav/*`、`/p/*`、`/d/*` 等）都返回 403**。OpenList 只能通过 Docker 宿主机回环绑定的端口（例如 `127.0.0.1:5245`）完整访问；WordPress 的 Nginx `internal` 代理继续向本机端口传送购买后的文件。
-
-- 严格模式会让所有远端 OpenList WebDAV 客户端和管理界面失效；只有本机访问 OpenList 原始端口才能继续执行 API、WebDAV 与管理操作。这是预期行为，不是故障。
-- 同一 OpenList vhost 同时绑定直接解析域名与 Cloudflare CDN 域名时，严格规则覆盖 **这一个 Nginx vhost** 下的两域名。其它单独的 Nginx vhost、Docker 端口、Cloudflare 旧缓存或额外代理入口仍需独立检查。
-- 公网图片规则只按批准路径执行，不会对原图片目录中的所有文件逐一检查类型；**不要把付费 ZIP 放进这个公开图片目录**。
-- 严格规则按 Nginx 标准化后的 `$uri` 判断，并只接受公网 GET/HEAD。不要以 `Referer` 或伪造的 X-Forwarded-For 作为唯一授权依据。
-- HTTP-01 ACME 证书续期若依赖 OpenList 域名的公网 `/.well-known/acme-challenge/`，会被严格模式拒绝；部署前改用 DNS-01 等续期方式或核对现有证书服务。不要暗中放行该路径。
-- 严格模式不会清除 Cloudflare 旧缓存；上线需要以匿名请求从不同网络分别核对两个域名。
-
-**v3.2.1 严格策略已部署，但修订尚未更新的站点：** 原严格规则只检查 Nginx 标准化后的 `$uri`，双重编码的异常图片 URL 可能仍被转发给 OpenList 产生 500。v3.2.2 新增对原始 `$request_uri` 中危险编码的前置封锁。将插件升级到 v3.2.2 后，root 先执行部署页中的 **`preview-strict-refresh`** 只读预览，再执行 **`refresh-strict-public`** 原子刷新受管规则；不会改变 WordPress 私有交付、历史备份和本地 OpenList 端口。新的严格初始部署与从 `images_only` 升级将直接使用修订 v2，无需再单独刷新。
-
-**旧站点已完成 `images_only` 的安全升级方式：** 升级 WordPress 插件后，在「下载页美化 → Nginx 安全部署 → 公网文件访问策略」复制两条 root 命令。**① `preview-strict-public`** 只读比较并检查当前部署；**② `upgrade-strict-public`** 在预览确认后原子写入完整站点公网限制。工具会保存并继续校验原有 OpenList Nginx 配置 SHA，保留历史备份、WordPress 内部付费代理和其它独立站点配置。更新过程中 `nginx -t` 或 reload 失败时自动恢复原配置。Root 管理员可使用 `rollback-strict-public` **仅退回原 `images_only`**，不取消原付费目录保护或 WordPress 内部代理。不要用旧版通用 `rollback` 回退这一改造。
-
-已有站点的 Nginx 文本受到 root 安装助手及 SHA 管控，**不要手动编辑 `JLWA-MANAGED-DOWNLOAD` 区域**。插件更新本身不会自动更改生产 Nginx；必须由管理员明确执行 root 的严格升级操作。
-
-**新安装站点：** 如果在首次安装前已经填写「唯一公开图片目录」，从 v3.2.1 起首次 `install-auto` / `protect` 会直接应用严格公网仅图片模式。未填写图片目录的既有兼容模式仍为 `paid_only`，不能声称全站安全。
-
-**上线验收矩阵**：两个公网域名的首页、`/api/fs/list`、`/api/auth/login`、WebDAV、付费 ZIP、伪装图片前缀、图片目录下的 POST 均应返回 403；公网真实图片 GET/HEAD 返回 200/206；本机 `127.0.0.1:5245` API 正常；子比已购买账号经 WordPress `X-Accel-Redirect` 实际下载 ZIP 完整。也应检测 Unicode/编码路径、已缓存旧文件、HTTPS 证书与其它开放端口。
-
-## 1. 先弄清楚安全边界
-
-- 子比主题负责购买资格、Nonce、会员和下载资格；**本插件不修改子比主题文件**。
-- WordPress 通过 Nginx `internal` 在服务器内部向 OpenList 请求文件，浏览器只收到下载数据，不收到原始 OpenList 文件 URL。
-- **OpenList 公开入口必须拒绝付费目录**。如果 WordPress 与 OpenList 在同一台机器上，本机 `127.0.0.1` 是最适合的内部访问路径，不需要给访客或 CDN 的 IP 开放权限。
-- 通过 Nginx 拦截的是公网入口。仅隐藏域名、限制 `Referer`、检查前端 `Host` 都不可信；按真实网络来源限制 IP 则有作用，前提是信任链和反代配置正确。
-- 禁止访问付费目录不等于关闭整个 OpenList。公开图片应在别的公开目录，WebDAV 仍可使用原有账号；OpenList API、其它端口、历史缓存必须单独验收。
-
-## 安装成功但后台仍显示“尚未安装”
-
-在部分宝塔 PHP-FPM 环境里，open_basedir 会限制 WordPress PHP 访问 root 管理的 /usr/local/sbin 路径。旧版由 is_file 判断是否安装，因此可能误报。**从 v2.7.0 开始，后台通过已授权的 sudo 命令查询 helper 的真实 status。**
-
-如果终端已经输出 installed，请不要重复运行安装命令。更新插件后直接刷新“Nginx 自动部署”。
-
-如果提示“安装状态尚未确认”，可从系统管理员终端执行只读诊断命令：
-
-    sudo -u www /usr/bin/sudo -n /usr/local/sbin/jlwa-nginx-helper status
-
-返回包含 phase 的 JSON，说明 root 助手已允许 www 用户查询。若提示需要密码或权限错误，核对 PHP-FPM 运行用户与安装时指定的 --php-user；如果 PHP 禁用了 proc_open，不要盲目开启所有命令执行函数或扩大 sudo 权限，先核实当前站点 PHP-FPM 的最小授权。
-
-## 自动安装报错处理
-
-若旧版执行 install-auto 时出现 AttributeError: 'Namespace' object has no attribute 'host'，这是旧安装程序将自动模式的 --openlist-host 误当成手动模式 --host 导致的程序缺陷。错误发生在系统授权及 Nginx 写入之前。请升级到 v2.6.9 或更高版本，重新复制当前后台生成的完整命令。不要手动修改 Python 脚本，也不要为解决此错误开放 Nginx 文件权限。
-
-此外，自动安装要求 OpenList 的宿主机端口可通过 127.0.0.1 访问，并且不允许监听 0.0.0.0 等公网地址。如果安全检查拒绝端口映射，需先调整 Docker/宝塔绑定并确认文件数据正常，再重新执行。
-
-## 首次安装就选择最终公网文件策略（推荐：只开放图片）
-
-**最新版首次部署，无需先安装旧规则再运行迁移命令；填写图片目录后会使用严格公网仅图片模式。** 在 WordPress 的“交付高级设置”中填写“唯一公开图片目录”，例如 /d/storage/public-images/，保存后，后台复制的完整 install-auto 命令会自动包含 --public-images 参数。执行该命令会直接将图片白名单策略写入 root 授权清单，但此时仍不会修改 Nginx 文件访问规则。
-
-随后按照统一流程：① 预览（此时显示最终图片白名单）→ ② 配置 WordPress 内部代理 → 已购账号真实测试 → ③ 确认测试 → ④ 应用公网文件访问规则。第④步会在公网拒绝除指定图片目录 GET/HEAD 以外的全部 OpenList 请求，包括首页、API、登录、WebDAV 及其他目录。WordPress 的已购下载仍经本机 OpenList 端口代理。
-
-- **推荐图片白名单**：只开放明确指定的一个图片目录，禁止其它 /d/、/p/ 文件目录（包括未来创建的目录）。
-- **兼容模式**：未填写图片目录时，仅封锁明确的付费资源目录，不会自动禁止其它目录。需要“仅开放图片”时不能留空。
-- 文件夹名称并不要求叫“图片”。该目录必须与付费目录位于同一个 OpenList 挂载，且不能相互包含。
-- v3.2.1 首次安装的严格模式覆盖 OpenList 当前 Nginx vhost 的全部公网路由；较早部署的 `images_only` 仅约束 /d/、/p/，必须按上面的严格升级步骤迁移。其它 vhost、Docker 端口和 CDN 历史缓存仍须独立验收。
-
-### 已经安装旧规则的站点（仅兼容处理）
-
-既有 protected 站点若使用较早的仅付费目录封锁，可展开“Nginx 自动部署”里的旧部署兼容区域使用原有只读预览与迁移命令。全新安装不需要该步骤。
-
-已完成 protected 部署的站点依次操作：
-
-1. 到“下载页美化 → 交付高级设置”保存“唯一公开图片目录”，例如 /d/storage/public-images/；路径必须位于已授权付费目录的同一挂载且不能互相包含。
-2. 到“Nginx 自动部署”复制只读预览命令 preview-images-only，使用 root 执行，核对差异。此前的首次 install-auto、prepare、confirm、protect 不需要重新执行。
-3. 预览正确后再执行 upgrade-images-only 命令。程序先核对当前已保护状态、已购确认、root 管理文件和历史 SHA 及原备份，应用规则并执行 nginx -t + reload；失败时尝试恢复全部之前文件。
-4. 刷新 WordPress 后台确认已启用图片白名单。分别验证真实图片文件可访问、任意其它 /d 和 /p 文件路径返回 403、已购买 ZIP 仍完整下载、原有 API/WebDAV 仍需认证。
-
-升级后的**专用** rollback-images-only 命令只撤销图片白名单并恢复原有付费目录封锁，保留 WordPress 私有代理与历史备份；不要使用通用的“恢复本次配置备份”替代它。
-
-## 完成内部代理后 Chrome 提示重复 Content-Disposition？
-
-若已执行 prepare、随后打开已购下载链接出现 ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION，通常是 PHP 与 OpenList 最终文件响应在 Nginx 内部代理中同时输出了 Content-Disposition。从 **v2.7.2** 起，九流 WP 助手不再抢先发送此字段，并清除 PHP/子比可能预设的同名头，交由 OpenList 的实际文件响应提供文件名。
-
-仅需更新 WordPress 插件，不要为此重装 Nginx root 部署助手或改动已追踪的配置文件哈希。再次使用真实已购账号测试 ZIP 完整下载；如果仍然报错，继续检查真实响应是否在其它 CDN/反代层重复添加下载文件名字段。**成功测试之前不要确认已购下载，更不要封锁 OpenList 公网目录。**
-
-## 预览后跳回“下载页模板”？
-
-旧版本在执行 Nginx 的“预览配置差异”、部署或公网直链检查后，重定向时忘记保留“部署”分类参数，因此自动显示下载页的默认模板页。**从 v2.7.1 开始，部署按钮完成后直接返回“Nginx 自动部署”分类，并自动展开最新执行结果。** 预览本身是只读操作；升级前可手动点击“Nginx 自动部署”并展开“最近一次部署操作结果”查看已保存的结果，无需重复安装 root 助手。
-
-## 2. 推荐：后台填本机端口，复制一条命令
-
-不需要手动寻找 WordPress 和 OpenList 两份 Nginx 配置文件，也不必先知道 Docker 容器名。
-
-1. 打开 **九流 WP 助手 → 下载页美化 → 付费资源 · 私有安全交付**。
-2. 填写 OpenList 文件访问域名、付费目录原始路径，并在 **OpenList 本机端口** 里输入 Docker 映射到宿主机 \`127.0.0.1\` 的端口号，例如 \`5244\`。**不是容器内部端口。** 一般不必填写「Docker 容器名称」。
-3. **保存下载页设置**。下方「Nginx 安全部署向导」将自动显示一条符合当前服务器情况的**完整安装命令**，点击 **复制一键安装命令**，在该服务器的 root/sudo 终端执行即可。命令中的网站域名、插件安装路径、OpenList 源站和私有目录由插件读取已保存的配置生成，不需要手动改路径。
-4. 首次授权安装时，管理员脚本自动扫描宝塔 \`/www/server/panel/vhost/nginx/\` 的站点配置，按 Nginx \`server_name\` 匹配 WordPress 网站和 OpenList 网站。按本机端口检测 Docker 映射（容器名可选），检查该端口能从 \`127.0.0.1\` 连接、没有向公网监听，并保存允许管理的两份 Nginx 配置清单。
-5. 首次命令**只安装受限的系统助手，不会立即封锁文件**。如果已填写公开图片目录，安装时即记录最终图片白名单；返回后台依次操作「预览配置差异」→「自动备份并配置内部代理」→ **真实已购下载验证** →「确认已购用户下载测试」→「应用公网文件访问保护规则」。
-6. 用无痕浏览器验收旧 ZIP 直链返回 403、公开图片正常显示、WebDAV 正常工作；检查源 IP、其它端口、OpenList API 及 CDN 是否还能绕过访问。
-
-**示例界面里只应填写**：
-
-| 设置 | 示例 |
-|---|---|
-| OpenList 访问域名 | \`files.example.com\`（可选另填同服务的 CDN 别名） |
-| 私有源目录 | \`/d/storage/private/\` |
-| OpenList 本机端口 | \`5244\` |
-| Docker 容器名 | 留空，自动匹配；识别有误时再填写 |
-
-这比复制多行带占位符的命令更简单，但仍保留一道系统管理员授权：WordPress PHP 进程通常无权读取 root 持有的 Nginx 配置文件，**不能**为了省事赋予 PHP 全权 sudo 或将配置文件 chmod 777。生成的一条命令会复制助手到 root 所有的系统位置，之后只允许插件后台运行固定命令。
-
-**适用边界**：自动匹配要求服务器为受支持的宝塔 Nginx 结构，且每个主机名只能唯一命中一个站点配置。复杂多 \`server{}\` 配置、容器端口不通、端口监听公网、匹配有歧义，都会停止并提示；可切换下方手动方式。不能把执行安装命令理解为“源站已保护”。
-
-### 图片白名单和兼容模式有什么区别
-
-假设 OpenList 的私有目录是 \`/d/storage/private/\`，公开图片目录是 \`/d/storage/public-images/\`：
-
-| 路径 | 公网访问 | 已购内部下载 |
+| 请求方式 | OpenList 公网域名 | 本机 OpenList `127.0.0.1:<端口>` |
 |---|---|---|
-| \`/d/storage/private/\` | Nginx 返回 403 | WordPress 通过回环端口读取 |
-| \`/p/storage/private/\` | Nginx 返回 403 | 不对外公开预览 |
-| \`/d/storage/public-images/\` | 保持正常访问 | 不受影响 |
+| GET/HEAD `/d/storage/图片/a.jpg`（配置好的目录） | 允许；是否返回 200 由资源存在与否决定 | 允许 |
+| OpenList 首页、登录、`/api/*`、`/dav/*`、WebDAV | 403 | 允许，仍受 OpenList 自身权限管理 |
+| 私有目录 `/d/storage/private/a.zip`、`/p/*` | 403 | 允许，WordPress 必须先核对购买资格 |
+| 图片目录下 POST、畸形双重编码、越权路径 | 403 | 回环接口保持可用 |
 
-即使一个 OpenList 网站同时绑定两个域名（一个走 CDN，一个直连），**只要共用同一 Nginx 配置**，自动助手也只配置这一个站点，不会要求用户重复配置。这只是 URL 路径级封锁：仍须检测其它 API、WebDAV 匿名读取、Docker 端口和 CDN 缓存，不能仅凭 /d 返回 403 就宣布完全安全。
+Nginx 只根据**路径**开放指定图片目录。它不检查文件的真实类型：**绝不可把付费 ZIP、数据库备份、配置文件等放进公开图片目录**。该规则也会拒绝 OpenList 公网的 ACME HTTP-01 证书校验路径；请提前使用 DNS-01 或另行安排可靠续期方案。它不会自动清除 CDN 上的历史缓存。
 
-## 3. 无法首次安装助手时的手动方法
+## 全新站点：宝塔自动部署
 
-宝塔 → 网站 → WordPress 站点配置文件，在对应 `server {...}` 中添加：
+**准备条件：** WordPress 和 OpenList 在同一台宿主机；OpenList 宿主机端口仅绑定回环地址，例如 `127.0.0.1:5244`；两个站点各有一份 root 管理的宝塔 Nginx 配置，且每份目标配置只有一个 `server { ... }` 块。OpenList 可以有多个域名，但**所有填写的域名必须共用同一份虚拟主机配置**。例如直连与 CDN 域名分别在两份 Nginx 配置时，安装器会拒绝一半保护、一半裸奔的危险部署。
 
-```nginx
-location ^~ /_jlwa_private_openlist/ {
-    internal;
-    proxy_pass http://127.0.0.1:5244/d/storage/private/;
-    proxy_set_header Host files.example.com;
-    proxy_set_header Authorization "";
-    proxy_set_header Cookie "";
-    proxy_set_header Range $http_range;
-    proxy_set_header If-Range $http_if_range;
-    proxy_buffering off;
-    proxy_read_timeout 600s;
-    proxy_redirect off;
-    proxy_hide_header Location;
-    proxy_intercept_errors on;
-    error_page 301 302 303 307 308 =502 /__jlwa_private_upstream_error;
-    add_header Cache-Control "private, no-store" always;
-}
-location = /__jlwa_private_upstream_error { internal; return 502; }
+站长在 **九流 WP 助手 → 下载页美化 → 交付高级设置** 填写并保存：
+
+- **受保护 OpenList 域名：** 例如 `files.example.com`，有 CDN 别名再另起一行填 `files-cdn.example.com`。
+- **私有资源原路径：** 例如 `/d/storage/private/`，不能只填存储根目录。
+- **唯一公开图片目录：** 例如 `/d/storage/图片/`，必须与私有目录互不包含。也允许另一个挂载，例如 `/d/public/图片/`。
+- **OpenList 宿主机回环端口：** 例如 `5244`。Docker 需将容器端口映射到宿主机 `127.0.0.1:5244`，不可发布到 `0.0.0.0`。Docker 容器名称可选。
+
+保存后打开 **Nginx 安全部署向导**，复制唯一的首次 `install-auto --public-images ...` 命令到服务器 root/sudo 终端执行一次。这步只安装受限部署助手、白名单清单与固定 sudo 规则，**不会修改 Nginx 站点配置**。
+
+然后依次执行：**① 预览配置差异 → ② 备份并配置 WordPress 内部代理 → 用真实已购账号下载完整文件并验证 → ③ 确认购买测试 → ④ 应用严格公网封锁规则**。第三步的确认由站长明确提交，不是脚本自动证明订单有效。部署助手每次修改都运行 `nginx -t` 和 reload；出现语法错误会尝试恢复原文件。
+
+**拒绝安装是安全行为，不要绕过：** 如果图片目录留空、路径重叠、多域名不同 Nginx vhost、端口监听公网、无法执行 `ss` 检查、存在旧的托管标记、无 root 或配置文件权限不符合要求，新安装器必须报错且不创建不完整保护。不要为了安装成功而给 PHP 或网站目录赋予任意 root 权限。
+
+## 其它 Nginx 环境：只读生成配置
+
+不在宝塔标准目录、虚拟主机结构复杂或自动预检不支持的站点，仍可以使用最新版中的**只读片段生成器**。在后台的首次安装区域复制「非宝塔 / 自定义 Nginx」命令，或在插件目录运行类似：
+
+```bash
+python3 ops/jlwa-nginx-helper.py render-config \
+  --wordpress-host site.example.com \
+  --openlist-host files.example.com \
+  --openlist-hosts files.example.com,files-cdn.example.com \
+  --port 5244 \
+  --source /d/storage/private/ \
+  --public-images /d/public/图片/
 ```
 
-注意更改示例本地端口、源目录和 Host。先保存备份、`nginx -t` 成功才 reload，然后测试真实已购下载。
+它只打印 **WordPress 的 `internal` 代理片段**和 **OpenList 的严格公网入口片段**；不会获取 root 权限、写配置或重启服务。管理员必须分别放进正确的 Nginx `server { ... }` 块中；OpenList 若有多个独立 vhost，**每个公网入口都必须部署同等封锁**，并手动执行备份、`nginx -t`、reload、逐域名验证。WordPress 内部代理必须在封锁前先完成已购文件的实际下载测试。
 
-在 OpenList 网站的**同一个** Nginx 配置中，且只在已购下载测试成功后添加：
+此模式只是**配置生成**，不是对任何 Nginx 发行版的自动部署保证。
 
-```nginx
-location = /d/storage/private { return 403; }
-location ^~ /d/storage/private/ { return 403; }
-location = /p/storage/private { return 403; }
-location ^~ /p/storage/private/ { return 403; }
-```
+## 验收与边界
 
-再次执行 `nginx -t`，成功才 reload。OpenList 如同时绑定两个域名并共用一个 Nginx vhost，不需要在同一个文件重复添加这些规则。
+每个 OpenList 公网域名都必须核对：正常图片 200/206，`/`、`/api/fs/list`、`/api/auth/login`、WebDAV、其他挂载及真实私有 ZIP 为 403；图片目录下 POST 和双重编码的危险 URL 为 403。模拟伪造 `X-Forwarded-For: 127.0.0.1` 不应进入回环白名单。WordPress 首页、登录、支付、已购订单完整下载必须保持正常；本机 `127.0.0.1:<端口>` 访问 OpenList API 不能被误伤。
 
-## 4. 自定义下载出口域名及 CDN
+**绕过风险不止一个 vhost：** 未纳入规则的其它域名、直连 Docker 公网端口、额外反向代理、旧 CDN 缓存都应独立检查。如果已在 Cloudflare 缓存过私有资源，需要在 CDN 侧清理并验证；此 WordPress 插件不会静默操作用户的 Cloudflare 账号。
 
-例如：
+**回退风险：** 首次安装备份会保留。如果在严格保护部署后执行完整 `rollback`，可能重新开放原始 OpenList 地址。请先采取临时防护、确认操作风险，并在紧急恢复后重新验收全部公网入口。
 
-- WordPress 主站：`site.example.com`
-- 额外的下载出口：`download.example.com`
-- OpenList 文件站点：`files.example.com`
-
-首先确保 `download.example.com` **经过 HTTPS 正常抵达同一套 WordPress 实例**（DNS 指向和 TLS 证书由站长在 DNS/主机/CDN 平台配置，插件无法代替你拥有域名）。不能把下载出口直接指向 OpenList。
-
-然后在插件“下载页美化 → 私有安全交付”中设置：
-
-- 受保护源站域名：`files.example.com`，如有同一服务的 CDN 访问别名可再填一行；
-- 私有目录：`/d/storage/private/`（与内部代理目标完全相同）；
-- 下载出口域名：`download.example.com`（仅填主机名），确认能正确解析到同一个 WordPress 站点后再启用“自定义下载出口”；
-- 下载凭证有效期默认 180 秒，可设置 60～600 秒。
-
-工作机制：子比在主站授权后，插件创建 **48 位十六进制随机票据**，仅把短期票据通过 HTTPS 302 到下载域名的 `/?jlwa_dl=<票据>`。下载域名的 WordPress 对票据和 Host 校验，通过后再使用本机 Nginx 内部代理交付。票据不包含真实 OpenList 文件 URL 或路径。下载开始后持续传输；Range 续传需要在票据未过期前重新发起，过期后回到原文章再次获取。
-
-**特别注意：短期票据是 Bearer 访问凭证。拥有票据的人在有效期内可能重复使用；它不是一次一请求的不可转发凭证。** 不推荐做 IP 绑定，否则移动网络、断点续传和代理变化会误伤购买用户。
-
-**CDN 必须设置绕过缓存**：对于 `download.example.com` 上携带 `jlwa_dl` 参数的请求设置 Cache Rule → Bypass；对于主站的 `/pay-download/*`、`/download?post=...`，同样旁路整页缓存。插件发送 `Cache-Control: private, no-store`、`CDN-Cache-Control: no-store`，但 CDN 如果设置了忽略源站 Cache-Control 的强制缓存规则，仍有风险。
-
-> 此模式只提供 CDN 代理网络路径、TLS/链路层的便利，**不保证大文件内容会命中 CDN 边缘缓存加速**。要在边缘缓存私有付费 ZIP，必须另外设计边缘令牌校验（例如受控 Worker + 签名方案），不能直接把这个票据 URL 设成“Cache Everything”。
-
-### 游客已购下载的限流边界（v3.1.0 起）
-
-WordPress 未登录用户的 ID 都是 0。此前按 `用户 ID + 文章 ID` 计算下载频率时，同一资源的**所有游客订单共用一个一分钟额度**，一个游客可以把别人的下载请求挤成 HTTP 429。v3.1.0 对没有登录用户 ID 的访客不执行这套“按用户 ID 限流”，避免已付费买家相互误伤；真实子比订单权限校验仍然必须通过，匹配的付费源目录仍只能由 Nginx 内部代理读取。已登录用户仍按用户 ID 与文章记录限流。
-
-如果未来需要按游客订单单独限流，应使用子比提供的、经过验证的稳定订单身份，而不是用户 ID 0 或不可靠的访客 IP。**不应将未登录用户免这套限流误解为无需购买即可下载。**
-
-## 5. 审计、限流和验收
-
-- **审计默认开启**：最近 120 条授权事件，保留时间、用户 ID、文章 ID、线路和处理结果；不记录密码、票据、Cookie、完整真实文件 URL。
-- **限流默认关闭**：可选按用户与文章限制 60 秒内的重新申请下载次数（默认阈值 30），不对每次 Range/续传片段重复计数；不根据单纯 IP 判断购买身份。
-- **子比主题不修改**：原生 Nonce、订单、会员权限保持原样。下载页未购状态仍在服务端拦截。
-
-上线必须验证：游客和未购买者不能打开付费资源页、跨账号下载被子比拒绝、真实已购用户成功获取文件、旧 OpenList 付费 ZIP 公网地址返回 403、图片和 WebDAV 继续可用、CDN 不缓存任何带授权票据的下载内容。
-
-**回滚顺序**：先撤除源站公网封锁，保证买家暂时能正常下载；再关闭插件私有交付/自定义出口开关；最后恢复 WordPress 代理的本次备份。如果其他管理员已经修改过 Nginx，助手会拒绝覆盖，需人工对比备份。
-
-公开安装包不会携带任何真实站长域名、文件 IP、私有下载路径。详细开发边界见 [设计约束](private-download-design.md)。
+**现有已部署站点：** 更新 WordPress 插件不会覆写之前 root 所有的部署助手或已生效 Nginx。不要在生产服务器上用 `install-auto` 重新初始化已有保护；新版新安装器会拒绝已有托管标记。历史迁移过程不属于本新版全新安装向导。
