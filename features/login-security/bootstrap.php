@@ -3,6 +3,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 require_once __DIR__ . '/includes/class-jlwa-login-risk.php';
 require_once __DIR__ . '/includes/class-jlwa-login-scope.php';
+require_once __DIR__ . '/includes/class-jlwa-oauth-return.php';
 
 final class JLWA_Login_Security_Feature {
     const OPTION = 'jlwa_login_security_options';
@@ -17,7 +18,10 @@ final class JLWA_Login_Security_Feature {
     }
     private function __construct() {
         // The theme dispatches OAuth later. Block the request before it reaches the SDK.
+        add_action( 'init', array( $this, 'prepare_oauth_return' ), -20 );
         add_action( 'init', array( $this, 'guard_oauth_start' ), 0 );
+        add_filter( 'wp_redirect', array( $this, 'guard_oauth_callback_redirect' ), 1, 2 );
+        add_filter( 'wp_safe_redirect_fallback', array( $this, 'oauth_callback_safe_fallback' ), 10, 2 );
         add_action( 'admin_post_jlwa_login_security_save', array( $this, 'save' ) );
         add_action( 'login_form', array( $this, 'show_wp_login_widget' ) );
         add_filter( 'authenticate', array( $this, 'guard_wp_password' ), 5, 3 );
@@ -85,6 +89,39 @@ final class JLWA_Login_Security_Feature {
         wp_safe_redirect( add_query_arg( 'jlwa_login_notice', $notice, admin_url( 'admin.php?page=jlwa-login-security' ) ) );
         exit;
     }
+    /**
+     * Correct the Zibll default URL builder without editing commercial theme files.
+     * It uses $_GET['redirect_to'] before falling back to the current request URI.
+     * OAuth error pages may display a login link: force a safe destination there.
+     */
+    public function prepare_oauth_return() {
+        $home = home_url( '/' );
+        $uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ( self::is_oauth_start_path( $uri ) ) {
+            $_GET['redirect_to'] = $home;
+            $_REQUEST['redirect_to'] = $home;
+        } elseif ( isset( $_GET['redirect_to'] ) ) {
+            // Limit changes on ordinary pages to recursive login links; do not
+            // rewrite unrelated plugin/payment redirect_to values globally.
+            $value = $_GET['redirect_to'];
+            if ( ! is_string( $value ) || JLWA_OAuth_Return::contains_recursive_login( $value ) ) {
+                $_GET['redirect_to'] = $home;
+                $_REQUEST['redirect_to'] = $home;
+            }
+        }
+    }
+    public function oauth_callback_safe_fallback( $fallback, $status ) {
+        $uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = wp_parse_url( $uri, PHP_URL_PATH );
+        return is_string( $path ) && preg_match( '~(?:^|/)oauth/clogin/callback/?$~i', $path ) ? home_url( '/' ) : $fallback;
+    }
+    /** A safe redirect may still point back into a login loop; check the final callback. */
+    public function guard_oauth_callback_redirect( $location, $status ) {
+        $uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = wp_parse_url( $uri, PHP_URL_PATH );
+        if ( ! is_string( $path ) || ! preg_match( '~(?:^|/)oauth/clogin/callback/?$~i', $path ) ) { return $location; }
+        return JLWA_OAuth_Return::sanitize( $location, home_url( '/' ) );
+    }
     /** Only the login INITIATION route: never intercept /oauth/clogin/callback. */
     public static function is_oauth_start_path( $uri ) {
         if ( ! is_string( $uri ) || '' === $uri ) { return false; }
@@ -102,14 +139,50 @@ final class JLWA_Login_Security_Feature {
         }
         return (bool) preg_match( '~(?:^|[/?])oauth/clogin(?:[/?#&]|$)~i', $value );
     }
+    public static function is_canonical_oauth_host( $host_header, $home ) {
+        if ( ! is_string( $host_header ) || ! is_string( $home ) || '' === $host_header || preg_match( '/[\x00-\x20\x7f\\@]/', $host_header ) ) { return false; }
+        // Do not trust HTTP Host as an authentication signal: this only selects the canonical site.
+        $raw = wp_parse_url( 'https://' . $host_header );
+        $home_host = wp_parse_url( $home, PHP_URL_HOST );
+        return is_array( $raw ) && isset( $raw['host'] ) && ! isset( $raw['user'] ) && ! isset( $raw['pass'] )
+            && ! isset( $raw['path'] ) && ! isset( $raw['query'] ) && ! isset( $raw['fragment'] )
+            && ( ! isset( $raw['port'] ) || 443 === $raw['port'] ) && is_string( $home_host ) && strtolower( $raw['host'] ) === strtolower( $home_host );
+    }
     /** Untrusted request data must never cause a PHP redirect to an external destination. */
     public static function valid_login_type( $type ) {
         return is_string( $type ) && (bool) preg_match( '/\A[a-z][a-z0-9_-]{0,39}\z/D', $type );
     }
     public function guard_oauth_start() {
         $options = self::settings();
-        if ( ! $options['enabled'] ) { return; }
         $uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ( self::is_oauth_start_path( $uri ) ) {
+            $method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) : 'GET';
+            $home = home_url( '/' );
+            $raw_rurl = isset( $_GET['rurl'] ) ? $_GET['rurl'] : $home;
+            // Recursive returns are an error even when Turnstile is disabled.
+            if ( ! is_string( $raw_rurl ) || self::unsafe_return( $raw_rurl ) ) {
+                status_header( 403 );
+                exit;
+            }
+            // External / alternate-domain destinations are not sent back into the OAuth SDK.
+            $safe_rurl = JLWA_OAuth_Return::sanitize( $raw_rurl, $home );
+            if ( $safe_rurl !== $raw_rurl ) {
+                $_GET['rurl'] = $safe_rurl;
+                $_REQUEST['rurl'] = $safe_rurl;
+            }
+            // A secondary domain should not perform a separate OAuth/Session handshake.
+            // Only the canonical domain receives the login initiation and Turnstile token.
+            if ( ! self::is_canonical_oauth_host( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '', $home ) ) {
+                if ( 'GET' !== $method || ! isset( $_GET['type'] ) || ! self::valid_login_type( $_GET['type'] ) ) {
+                    status_header( 403 );
+                    exit;
+                }
+                $target = add_query_arg( array( 'type' => $_GET['type'], 'rurl' => rawurlencode( $safe_rurl ) ), home_url( '/oauth/clogin' ) );
+                wp_safe_redirect( $target, 302 );
+                exit;
+            }
+        }
+        if ( ! $options['enabled'] ) { return; }
         if ( ! self::is_oauth_start_path( $uri ) ) {
             if ( $options['wp_login'] && self::is_wp_password_post( $uri ) ) {
                 $this->wp_login_challenge = self::risk_required( $options, true );
@@ -286,7 +359,7 @@ final class JLWA_Login_Security_Feature {
                 <input type="hidden" name="action" value="jlwa_login_security_save" />
                 <?php wp_nonce_field( 'jlwa_login_security_save' ); ?>
                 <table class="form-table" role="presentation"><tbody>
-                  <tr><th scope="row">保护状态</th><td><label><input type="checkbox" name="jlwa_login_security[enabled]" value="1" <?php checked( $options['enabled'], 1 ); ?> /> 启用登录安全防护</label><p class="description">功能总开关默认关闭；启用后默认智能验证，不会让每个正常访问者都过验证码。已有 Nginx 异常 rurl 防护不受此开关影响。</p></td></tr>
+                  <tr><th scope="row">保护状态</th><td><label><input type="checkbox" name="jlwa_login_security[enabled]" value="1" <?php checked( $options['enabled'], 1 ); ?> /> 启用登录安全防护</label><p class="description">功能总开关默认关闭；启用后默认智能验证，不会让每个正常访问者都过验证码。OAuth 返回地址去递归和主域名归一化始终生效；Turnstile 开关不会关闭这些基础安全校验。已有 Nginx 异常 rurl 防护不受此开关影响。</p></td></tr>
                   <tr><th scope="row">验证码出现时机</th><td><label><input type="radio" name="jlwa_login_security[mode]" value="adaptive" <?php checked( $options['mode'], 'adaptive' ); ?> /> 智能验证（推荐，默认）</label><br><label><input type="radio" name="jlwa_login_security[mode]" value="always" <?php checked( $options['mode'], 'always' ); ?> /> 每次要求验证（高防护）</label><p class="description">智能模式以 60 秒窗口评估单来源和全站请求频率，触发后保持短期高风险状态。攻击者不断换 IP 时，全站阈值同样有效。<a href="<?php echo esc_url( $adaptive_guide_url ); ?>" target="_blank" rel="noopener noreferrer">查看策略说明</a></p></td></tr>
                   <tr><th scope="row">智能阈值</th><td><label>单来源 / 分钟 <input type="number" class="small-text" min="2" max="100" name="jlwa_login_security[ip_limit]" value="<?php echo esc_attr( $options['ip_limit'] ); ?>" /></label>　<label>全站 / 分钟 <input type="number" class="small-text" min="10" max="3000" name="jlwa_login_security[global_limit]" value="<?php echo esc_attr( $options['global_limit'] ); ?>" /></label>　<label>风险持续（秒） <input type="number" class="small-text" min="60" max="3600" step="30" name="jlwa_login_security[cooldown]" value="<?php echo esc_attr( $options['cooldown'] ); ?>" /></label><p class="description">默认每分钟单来源 6 次或全站 50 次触发，持续 300 秒。风险统计使用服务器临时文件和哈希来源，不在数据库逐条写入攻击 IP。</p></td></tr>
                   <tr><th scope="row">WordPress 后台登录</th><td><label><input type="checkbox" name="jlwa_login_security[wp_login]" value="1" <?php checked( $options['wp_login'], 1 ); ?> /> 保护原生 <code>/wp-login.php</code> 密码登录</label><p class="description">未登录访问 /wp-admin/ 通常会转至此处；在密码认证前强制验证。不会阻断后台管理、admin-ajax.php、admin-post.php 或 OAuth 回调。子比自定义 AJAX 登录需另行接入真实认证端点，不能只靠目录规则。</p></td></tr>
