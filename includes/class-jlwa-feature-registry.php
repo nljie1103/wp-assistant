@@ -95,6 +95,18 @@ class JLWA_Feature_Registry {
 				'standalone'  => array(),
 			),
 
+			'anti-scraping' => array(
+				'label'       => '反采集防护',
+				'short_label' => '反采集',
+				'icon'        => 'dashicons-shield-alt',
+				'slug'        => 'jlwa-anti-scraping',
+				'version'     => JLWA_VERSION,
+				'entry_class' => 'JLWA_Anti_Scraping_Feature',
+				'bootstrap'   => JLWA_PLUGIN_DIR . 'features/anti-scraping/bootstrap.php',
+				'description' => '严格限制 WordPress REST 文章导出、RSS、oEmbed 与 XML-RPC，无登录豁免；可独立开关。',
+				'eyebrow'     => 'CONTENT EXPORT PROTECTION',
+				'standalone'  => array(),
+			),
 			'login-security' => array(
 				'label'       => '登录安全',
 				'short_label' => '登录安全',
@@ -162,6 +174,9 @@ class JLWA_Feature_Registry {
 		if ( ! empty( self::$statuses['media-urls']['loaded'] ) && class_exists( 'JLWA_Media_Urls_Feature' ) ) {
 			JLWA_Media_Urls_Feature::instance()->on_activate();
 		}
+		if ( ! empty( self::$statuses['anti-scraping']['loaded'] ) && class_exists( 'JLWA_Anti_Scraping_Feature' ) ) {
+			JLWA_Anti_Scraping_Feature::activate();
+		}
 		update_option( 'jlwa_schema_version', JLWA_VERSION, false );
 	}
 
@@ -228,6 +243,11 @@ class JLWA_Feature_Registry {
 					JLWA_Download_Page_Feature::instance()->render_admin_page();
 				}
 				break;
+			case 'anti-scraping':
+				if ( class_exists( 'JLWA_Anti_Scraping_Feature' ) ) {
+					JLWA_Anti_Scraping_Feature::instance()->render_admin_page();
+				}
+				break;
 			case 'login-security':
 				if ( class_exists( 'JLWA_Login_Security_Feature' ) ) {
 					JLWA_Login_Security_Feature::instance()->render_admin_page();
@@ -287,6 +307,9 @@ class JLWA_Feature_Registry {
 			case 'download-page':
 				$options = get_option( 'jlwa_download_page_options', array() );
 				return ! empty( $options['enabled'] ) || ! empty( $options['private_enabled'] );
+			case 'anti-scraping':
+				$options = get_option( 'jlwa_anti_scraping_options', array() );
+				return ! empty( $options['enabled'] );
 			case 'login-security':
 				$options = get_option( 'jlwa_login_security_options', array() );
 				return ! empty( $options['enabled'] );
