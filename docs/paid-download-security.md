@@ -16,7 +16,7 @@
 
 新增的 PHP HTTP 集成测试验证短期票据的 302、下载域名 Host 校验、随机票据、`X-Accel-Redirect`、错误票据 404 以及无重复 Content-Disposition。它不模拟真实 Nginx/OpenList 文件字节传输；上线仍需使用已购测试资源完成真实文件验收。
 
-## 严格公网仅图片模式（v3.2.1 新增）
+## 严格公网仅图片模式（v3.2.1 起，v3.2.2 编码加固）
 
 **安全目标**：仅允许公网对预先批准的图片目录（例如 `/d/storage/public-images/`）执行 GET/HEAD。**所有其它 OpenList 公网路径（首页、登录、`/api/*`、WebDAV、`/dav/*`、`/p/*`、`/d/*` 等）都返回 403**。OpenList 只能通过 Docker 宿主机回环绑定的端口（例如 `127.0.0.1:5245`）完整访问；WordPress 的 Nginx `internal` 代理继续向本机端口传送购买后的文件。
 
@@ -26,6 +26,8 @@
 - 严格规则按 Nginx 标准化后的 `$uri` 判断，并只接受公网 GET/HEAD。不要以 `Referer` 或伪造的 X-Forwarded-For 作为唯一授权依据。
 - HTTP-01 ACME 证书续期若依赖 OpenList 域名的公网 `/.well-known/acme-challenge/`，会被严格模式拒绝；部署前改用 DNS-01 等续期方式或核对现有证书服务。不要暗中放行该路径。
 - 严格模式不会清除 Cloudflare 旧缓存；上线需要以匿名请求从不同网络分别核对两个域名。
+
+**v3.2.1 严格策略已部署，但修订尚未更新的站点：** 原严格规则只检查 Nginx 标准化后的 `$uri`，双重编码的异常图片 URL 可能仍被转发给 OpenList 产生 500。v3.2.2 新增对原始 `$request_uri` 中危险编码的前置封锁。将插件升级到 v3.2.2 后，root 先执行部署页中的 **`preview-strict-refresh`** 只读预览，再执行 **`refresh-strict-public`** 原子刷新受管规则；不会改变 WordPress 私有交付、历史备份和本地 OpenList 端口。新的严格初始部署与从 `images_only` 升级将直接使用修订 v2，无需再单独刷新。
 
 **旧站点已完成 `images_only` 的安全升级方式：** 升级 WordPress 插件后，在「下载页美化 → Nginx 安全部署 → 公网文件访问策略」复制两条 root 命令。**① `preview-strict-public`** 只读比较并检查当前部署；**② `upgrade-strict-public`** 在预览确认后原子写入完整站点公网限制。工具会保存并继续校验原有 OpenList Nginx 配置 SHA，保留历史备份、WordPress 内部付费代理和其它独立站点配置。更新过程中 `nginx -t` 或 reload 失败时自动恢复原配置。Root 管理员可使用 `rollback-strict-public` **仅退回原 `images_only`**，不取消原付费目录保护或 WordPress 内部代理。不要用旧版通用 `rollback` 回退这一改造。
 

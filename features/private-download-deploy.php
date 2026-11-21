@@ -104,7 +104,7 @@ class JLWA_Private_Deploy {
 
     /** Strict-public migration never runs under PHP-FPM or broad sudo privileges. */
     public static function strict_public_command( $operation, $plugin_dir = null ) {
-        if ( ! in_array( $operation, array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public' ), true ) ) {
+        if ( ! in_array( $operation, array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public', 'preview-strict-refresh', 'refresh-strict-public' ), true ) ) {
             return '';
         }
         $plugin_dir = null === $plugin_dir ? JLWA_PLUGIN_DIR : (string) $plugin_dir;
@@ -365,6 +365,16 @@ class JLWA_Private_Deploy {
                 <h4>🔐 公网文件访问策略</h4>
                 <?php if ( 'strict_images_only' === ( $status['public_access_policy'] ?? '' ) ) : ?>
                     <p><strong>严格公网入口限制已启用：</strong>仅允许公网 GET/HEAD <code><?php echo esc_html( $status['approved_public_images'] ?? '' ); ?></code>。OpenList 首页、API、WebDAV、登录与其它资源公网拒绝，本机端口和 WordPress 已购内部代理保留。</p>
+                    <?php if ( (int) ( $status['strict_rule_revision'] ?? 1 ) < 2 ) : ?>
+                        <details style="margin:12px 0" open>
+                            <summary><strong>重要：升级严格规则的异常编码拦截</strong></summary>
+                            <p>旧版严格规则只匹配规范化路径；畸形双重编码 URL 可能进入 OpenList 产生 500。新版在公网入口直接拒绝这类路径，本机访问不变。须由 root 执行一次定向刷新；不要重装或撤销保护。</p>
+                            <textarea id="jlwa-refresh-preview" class="large-text code" rows="2" readonly><?php echo esc_textarea( self::strict_public_command( 'preview-strict-refresh' ) ); ?></textarea>
+                            <button type="button" class="button button-secondary" onclick="var e=document.getElementById('jlwa-refresh-preview');e.focus();e.select();document.execCommand('copy')">复制只读预览命令</button>
+                            <textarea id="jlwa-refresh-apply" class="large-text code" rows="2" readonly><?php echo esc_textarea( self::strict_public_command( 'refresh-strict-public' ) ); ?></textarea>
+                            <button type="button" class="button button-secondary" onclick="var e=document.getElementById('jlwa-refresh-apply');e.focus();e.select();document.execCommand('copy')">复制严格规则更新命令</button>
+                        </details>
+                    <?php endif; ?>
                     <details style="margin:12px 0">
                         <summary>紧急回退到旧版图片白名单（保留付费文件封锁）</summary>
                         <p>仅当严格规则误伤业务时由 root 执行。回退后 OpenList 首页、API 可能重新向公网开放；不会卸载 WordPress 私有代理。</p>

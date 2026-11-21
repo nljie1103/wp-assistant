@@ -240,6 +240,7 @@ class NginxHelperTests(unittest.TestCase):
                     mod.main()
                 authorized = json.loads(config.read_text())
                 self.assertEqual("strict_images_only", authorized["public_access_policy"])
+                self.assertEqual(2, authorized["strict_rule_revision"])
                 self.assertEqual(images, authorized["public_images"])
                 self.assertEqual(WP_VHOST, wp_file.read_text())
                 self.assertEqual(OPENLIST_VHOST, openlist_file.read_text())
@@ -654,6 +655,7 @@ class StrictPublicImagesTests(unittest.TestCase):
                 mod.migrate_strict_images("upgrade-strict-public")
                 strict = json.loads(manifest.read_text())
                 self.assertEqual(strict["public_access_policy"],"strict_images_only")
+                self.assertEqual(strict["strict_rule_revision"],2)
                 self.assertEqual(wp_text,wp.read_text())
                 self.assertEqual("historical-sha-not-equal-after-cf-acl",json.loads((state/"state.json").read_text())["after"]["wp"])
                 self.assertIn("$jlwa_openlist_public_allowed",files.read_text())
@@ -699,3 +701,62 @@ class StrictPublicImagesTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,"nginx -t fails"):
                     mod.migrate_strict_images("upgrade-strict-public")
             for x,expected in originals.items():self.assertEqual(expected,x.read_text(),str(x))
+
+class EncodedPathHardeningTests(unittest.TestCase):
+    def test_revision2_rejects_encoded_dot_slash_and_double_escape(self):
+        cfg=dict(SETTINGS, public_access_policy="strict_images_only", public_images="/d/storage/图片/", strict_rule_revision=2)
+        snippet=mod.snippet("openlist",cfg)
+        self.assertIn('if ($request_uri ~* "%(?:25|2e|2f|5c|00)")',snippet)
+        self.assertLess(snippet.index('if ($request_uri ~*'),snippet.index('if ($remote_addr ~'))
+        # Literal unicode-encoded image URL does not contain those unsafe percent
+        # escapes; extensions like .jpg stay in the same public image subtree.
+        import re
+        bad=re.compile(r'%(?:25|2e|2f|5c|00)',re.I)
+        for uri in ("/d/storage/%E5%9B%BE%E7%89%87/%252e%252e/private.zip",
+                    "/d/storage/图片/%2e%2e/private.zip",
+                    "/d/storage/图片/%2fprivate.zip",
+                    "/d/storage/图片/%00file.jpg"):
+            self.assertIsNotNone(bad.search(uri),uri)
+        self.assertIsNone(bad.search("/d/storage/%E5%9B%BE%E7%89%87/a.jpg"))
+        self.assertNotIn('if ($request_uri ~*',mod.snippet("openlist",dict(cfg,strict_rule_revision=1)))
+
+    def test_revision2_refresh_from_existing_strict_keeps_scope_and_rollback(self):
+        with tempfile.TemporaryDirectory() as root:
+            d=Path(root)
+            cfg=dict(SETTINGS,public_access_policy="strict_images_only",public_images="/d/storage/图片/")
+            wp,files=d/"wp",d/"files"
+            cfg.update(wordpress_vhost=str(wp),openlist_vhost=str(files))
+            protected_wp=mod.transform(WP_VHOST,"wp",cfg)
+            protected_files=mod.transform(OPENLIST_VHOST,"openlist",cfg)
+            wp.write_text(protected_wp+"\n# Cloudflare ACL added independently")
+            files.write_text(protected_files)
+            state=d/"state";state.mkdir();(state/"lock").write_text("")
+            wb,fb=d/"wb",d/"fb";wb.write_text(WP_VHOST);fb.write_text(OPENLIST_VHOST)
+            (state/"state.json").write_text(json.dumps({"phase":"protected","confirmed":True,
+                "backups":{"wp":str(wb),"openlist":str(fb)},
+                "after":{"wp":mod.digest(protected_wp),"openlist":mod.digest(protected_files)}}))
+            manifest,helper,sudoers=d/"manifest",d/"helper",d/"sudoers"
+            manifest.write_text(json.dumps(cfg));helper.write_text("old installed");sudoers.write_text("sudo")
+            with (patch.object(mod,"STATE",state),patch.object(mod,"CONFIG",manifest),
+                  patch.object(mod,"TARGET",helper),patch.object(mod,"SUDOERS",sudoers),
+                  patch.object(mod,"secure_file"),patch.object(mod.os,"geteuid",return_value=0),
+                  patch.object(mod,"read_manifest",side_effect=lambda:json.loads(manifest.read_text())),
+                  patch.object(mod,"run_nginx")):
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    mod.migrate_strict_images("preview-strict-refresh")
+                self.assertIn("request_uri",log.getvalue())
+                self.assertEqual(protected_files,files.read_text())
+                mod.migrate_strict_images("refresh-strict-public")
+                self.assertEqual("strict_images_only",json.loads(manifest.read_text())["public_access_policy"])
+                self.assertEqual(2,json.loads(manifest.read_text())["strict_rule_revision"])
+                self.assertIn("request_uri",files.read_text())
+                self.assertEqual("sudo",sudoers.read_text())
+                self.assertEqual(WP_VHOST,wb.read_text())
+                self.assertEqual(OPENLIST_VHOST,fb.read_text())
+                self.assertTrue(wp.read_text().endswith("# Cloudflare ACL added independently"))
+                mod.migrate_strict_images("refresh-strict-public") # idempotent
+                mod.migrate_strict_images("rollback-strict-public")
+                self.assertEqual("images_only",json.loads(manifest.read_text())["public_access_policy"])
+                self.assertIn(mod.snippet("openlist",dict(cfg,public_access_policy="images_only")),files.read_text())
+                self.assertNotIn("request_uri",files.read_text())
+                self.assertIn("images_only",json.dumps(json.loads((state/"state.json").read_text())))

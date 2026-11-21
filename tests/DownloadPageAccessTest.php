@@ -190,7 +190,7 @@ final class DownloadPageAccessTest extends TestCase {
 
     public function test_strict_public_root_commands_are_read_only_or_explicit_and_never_sudo_web(): void {
         $folder = '/opt/wp/wp-content/plugins/wp-assistant';
-        foreach ( array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public' ) as $op ) {
+        foreach ( array( 'preview-strict-public', 'upgrade-strict-public', 'rollback-strict-public', 'preview-strict-refresh', 'refresh-strict-public' ) as $op ) {
             $this->assertSame(
                 "sudo python3 '/opt/wp/wp-content/plugins/wp-assistant/ops/jlwa-nginx-helper.py' " . $op,
                 JLWA_Private_Deploy::strict_public_command( $op, $folder )

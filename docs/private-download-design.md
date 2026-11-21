@@ -52,3 +52,8 @@
 ## v3.2.1 公网严格仅图片模式的回环边界
 
 初始 `images_only` 只限制 /d、/p；新版 `strict_images_only` 在 OpenList Nginx vhost 的 server rewrite phase 拒绝所有公网请求，唯一例外是指定图片目录 GET/HEAD。来自回环地址 `127.0.0.1` / `::1` 的完整 OpenList 路径仍可访问；WordPress 付费内部代理直接连接已验证的本机 OpenList 端口。新 root-only CLI `preview-strict-public` / `upgrade-strict-public` / `rollback-strict-public` 只接受锁定的 approved.json 指向的虚拟主机及其源文件 SHA，保留 WordPress vhost 不动。这样既适配生产博客后续增加的独立源站 ACL，也不扩大 WordPress PHP 的 sudo 权限。严格回退只恢复旧的图片目录文件路由白名单，依然禁止付费资源直链，不接受通用全量回滚操作代替。
+
+
+## v3.2.2 原始 URI 编码加固与 root-only 刷新
+
+严格图片前缀使用 `$uri` 规范化后的路径，但攻击者可构造双重百分号编码使不安全片段未在第一轮解码时被规范化。v2 规则对 `$request_uri` 中的 `%25/%2e/%2f/%5c/%00` 实施额外的入口拒绝；仍在回环地址检查之前进行，使本机完整接口不被误封。manifest 字段 `strict_rule_revision` 默认视旧部署为 v1；新部署直接记录为 2；一次性的 root-only `preview-strict-refresh/refresh-strict-public` 在 Nginx SHA 和托管块严格校验通过后原子替换 v1，再更新状态与安装助手。WordPress PHP 仍没有新增 root 执行权限。
