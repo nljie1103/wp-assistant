@@ -4,7 +4,7 @@
  * WordPress option doubles. No database, credentials or production site used.
  */
 define( 'ABSPATH', __DIR__ . '/' );
-define( 'JLWA_VERSION', '3.1.8' );
+define( 'JLWA_VERSION', '0.0.0' );
 define( 'WPAIAS_OPTION_KEY', 'wpaias_settings' );
 $GLOBALS['jlwa_activation_options'] = array();
 

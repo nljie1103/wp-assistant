@@ -4,7 +4,7 @@ Tags: wordpress, anti-debug, devtools protection, ai summary, media urls, effect
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.9
+Stable tag: 3.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,6 +43,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 旧设置会继续沿用；本插件不会在升级时删除现有文章、媒体、AI 缓存或配置。
 
 == Changelog ==
+
+= 3.2.0 =
+* 修复首次激活或重新激活时 AI 摘要旧版单字段 api_key 被删除却未迁移的问题；先用模块原有迁移机制转换到按模型/服务商保存的密钥映射，再保存默认设置。
+* 增加独立激活回归测试，覆盖旧密钥、现有密钥优先级、重复激活和空配置；修正 WordPress 集成测试的功能模块断言与 CLI 后台渲染依赖。
 
 = 3.1.9 =
 * 在线更新 SHA-256 校验文件必须精确匹配当前安装包文件名，拒绝无关文件、混入文本及重复条目。

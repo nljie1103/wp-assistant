@@ -31,6 +31,8 @@
 | 🔗 **媒体与链接** | 多入口域名适配（静态 CSS/JS 与图标字体同源改写可选）、分类设置、相对媒体 URL、扫描修复、可选 Nginx 静态缓存 |
 | 📦 **下载页美化** | 恢复六款完整经典下载页布局，另提供不替换主题页面的原生兼容模式；客服／社群可配置，私有文件交付独立管理 |
 
+**v3.2.0 AI 密钥兼容修复：** 插件激活、重新激活时先迁移旧版 `api_key` 为按模型/服务商存储的 `api_keys`，保留原有新式密钥与其他设置；增加自动化激活测试与 WordPress 集成验收。
+
 ### 🔑 登录安全：Site Key / Secret Key 在哪里获取？
 
 前往 Cloudflare **Turnstile** 创建 Widget，然后将 **Site Key** 与 **Secret Key** 填入「九流 WP 助手 → 登录安全」。详细操作及密钥安全注意事项请看 **[Turnstile 密钥获取与配置教程](docs/turnstile-keys-guide.md)**（无需开启 Cloudflare CDN）。

@@ -1,7 +1,7 @@
 {
   "name": "jiuliu-wp-assistant-admin",
   "private": true,
-  "version": "3.1.9",
+  "version": "3.2.0",
   "scripts": {
     "build": "vite build",
     "check:assets": "node tools/check-vue-build.mjs",
